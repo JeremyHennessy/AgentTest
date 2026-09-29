@@ -64,8 +64,11 @@ def _existing_review(
             continue
         if review.get("review_version") != REVIEW_VERSION:
             continue
-        if review.get("considered_diagnostic_ids", []) == current_diagnostics:
-            return review
+        if review.get("considered_diagnostic_ids", []) != current_diagnostics:
+            continue
+        if _cached_review_requires_lifecycle_recheck(state, proposal_id, review):
+            continue
+        return review
     return None
 
 
@@ -110,6 +113,78 @@ def _cited_experiment_design_diagnostic(
             continue
         return item
     return None
+
+
+def _same_cycle_untriaged_specification_backlog(
+    state: dict[str, Any],
+    diagnostic: dict[str, Any],
+) -> bool:
+    if diagnostic.get("outcome") != "specification_backlog":
+        return False
+    diagnostic_cycle = int(diagnostic.get("created_cycle", 0) or 0)
+    ids = [
+        str(item)
+        for item in diagnostic.get("result", {}).get(
+            "untriaged_specification_ids",
+            [],
+        )
+        if item
+    ]
+    if not ids:
+        return False
+    experiments = {
+        str(item.get("id")): item
+        for item in state.get("experiments", [])
+        if item.get("id")
+    }
+    matched = [experiments.get(identifier) for identifier in ids]
+    if any(item is None for item in matched):
+        return False
+    return all(
+        int(item.get("cycle", 0) or 0) >= diagnostic_cycle
+        for item in matched
+        if item is not None
+    )
+
+
+
+def _cached_review_requires_lifecycle_recheck(
+    state: dict[str, Any],
+    proposal_id: str,
+    review: dict[str, Any],
+) -> bool:
+    if review.get("verdict") != "supported_problem":
+        return False
+    proposal = next(
+        (
+            item
+            for item in state.get("change_proposals", [])
+            if str(item.get("id")) == proposal_id
+        ),
+        None,
+    )
+    if (
+        proposal is None
+        or proposal.get("selection_signal")
+        != "experiment_design_specification_backlog"
+    ):
+        return False
+    source_diagnostic_id = str(proposal.get("source_diagnostic_id") or "")
+    if not source_diagnostic_id:
+        return False
+    diagnostic = next(
+        (
+            item
+            for item in state.get("system_diagnostics", [])
+            if str(item.get("id")) == source_diagnostic_id
+            and item.get("status") == "completed"
+        ),
+        None,
+    )
+    return (
+        diagnostic is not None
+        and _same_cycle_untriaged_specification_backlog(state, diagnostic)
+    )
 
 
 def _cited_attention_control_diagnostic(
@@ -451,6 +526,25 @@ def classify_proposal(
                     ),
                     "resolved_evidence_count": len(cited),
                     "evidence_kinds": dict(kinds),
+                }
+            if (
+                selection_signal == "experiment_design_specification_backlog"
+                and _same_cycle_untriaged_specification_backlog(state, diagnostic)
+            ):
+                return {
+                    "verdict": "no_problem_observed",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The cited specification backlog contains only experiments "
+                        "created in the diagnostic's own cycle. They could not have "
+                        "been triaged before the cycle's experiment-creation step, so "
+                        "this is expected one-cycle lifecycle latency rather than a "
+                        "supported triage-code defect."
+                    ),
+                    "required_next_evidence": None,
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                    "direct_diagnostic_id": diagnostic.get("id"),
                 }
             return {
                 "verdict": "supported_problem",
