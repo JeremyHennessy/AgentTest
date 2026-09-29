@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument("--verification-event", default="push")
     parser.add_argument("--verification-conclusion", default="success")
     parser.add_argument("--authority", default="trusted_verification_workflow")
+    parser.add_argument("--attribution-text", required=True)
     parser.add_argument("--output")
     args = parser.parse_args()
 
@@ -36,6 +37,7 @@ def main() -> None:
         verification_event=args.verification_event,
         verification_conclusion=args.verification_conclusion,
         authority=args.authority,
+        attribution_text=args.attribution_text,
     )
 
     result = {"created": created, "receipt": receipt}
