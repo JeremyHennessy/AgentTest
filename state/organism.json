@@ -24,6 +24,30 @@
         "workflow": "verify"
       },
       "verification_scope": "applied_and_preserved"
+    },
+    {
+      "accepted_at": "2026-09-29T17:19:43.120947+00:00",
+      "accepted_cycle": 41,
+      "authority": "trusted_verification_workflow",
+      "changed_files": [
+        "src/agenttest/core.py",
+        "src/agenttest/drives.py",
+        "tests/test_core.py"
+      ],
+      "commit_sha": "27e3c88dc322336f6b53504ab1d8eb0c71c8501d",
+      "id": "A000002",
+      "improvement_claim": "not_implied",
+      "pr_number": 42,
+      "prior_proposal_status": "reviewed_supported_problem",
+      "proposal_id": "M000010",
+      "target_dimension": "learning",
+      "verification": {
+        "conclusion": "success",
+        "event": "push",
+        "run_id": 36604084495,
+        "workflow": "verify"
+      },
+      "verification_scope": "applied_and_preserved"
     }
   ],
   "change_proposals": [
@@ -414,6 +438,7 @@
       "title": "Resolve stale experiment evidence debt"
     },
     {
+      "accepted_change_id": "A000002",
       "baseline_metric": 1.0,
       "created_at": "2026-09-29T16:47:41.028481+00:00",
       "created_cycle": 39,
@@ -429,6 +454,7 @@
       ],
       "hypothesis": "Explicitly tracing each missing observable, evidence source, and resolution rule can distinguish internally resolvable experiment specifications from work blocked on unavailable evidence without inventing facts.",
       "id": "M000010",
+      "improvement_claim": "not_implied",
       "protected_paths": [
         ".github/workflows/growth.yml",
         ".github/workflows/interact.yml",
@@ -455,10 +481,13 @@
       "selection_signal": "experiment_design_specification_backlog",
       "source": "self-proposal-v1",
       "source_diagnostic_id": "SD000004",
-      "status": "reviewed_supported_problem",
+      "status": "closed_verified_intervention",
       "target_dimension": "learning",
       "test_plan": "Construct experiments with and without grounded resolvable evidence, verify missing contract fields and resolution paths are explicit, verify no evidence reference or executable contract is fabricated, and run the baseline-owned preservation gate.",
-      "title": "Triage experiment specification backlog"
+      "title": "Triage experiment specification backlog",
+      "verification_run_id": 36604084495,
+      "verification_scope": "applied_and_preserved",
+      "verified_commit_sha": "27e3c88dc322336f6b53504ab1d8eb0c71c8501d"
     }
   ],
   "cognition_candidates": [],
@@ -4075,7 +4104,7 @@
     }
   ],
   "metrics": {
-    "adaptation": 0.3333333333333333,
+    "adaptation": 0.6666666666666666,
     "agency": 1.0,
     "cognition": 0.0,
     "continuity": 1.0,
@@ -12285,7 +12314,7 @@
       "status": "completed"
     }
   ],
-  "updated_at": "2026-09-29T17:19:18.921255+00:00",
+  "updated_at": "2026-09-29T17:19:43.121021+00:00",
   "world_model": {
     "claims": [
       {
