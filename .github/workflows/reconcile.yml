@@ -66,12 +66,14 @@ jobs:
             exit 0
           fi
 
+          ATTRIBUTION_TEXT="$(git log -1 --format=%B "$VERIFIED_SHA")"
+
           ARGS=()
           for path in "${CHANGED_FILES[@]}"; do
             ARGS+=(--changed-file "$path")
           done
 
-          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/reconcile_verified_change.py             --commit-sha "$VERIFIED_SHA"             --verify-run-id "$VERIFY_RUN_ID"             --pr-number "$PR_NUMBER"             "${ARGS[@]}"             --output /tmp/reconciliation.json
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/reconcile_verified_change.py             --commit-sha "$VERIFIED_SHA"             --verify-run-id "$VERIFY_RUN_ID"             --pr-number "$PR_NUMBER"             --attribution-text "$ATTRIBUTION_TEXT"             "${ARGS[@]}"             --output /tmp/reconciliation.json
 
           cat /tmp/reconciliation.json
 
