@@ -66,6 +66,7 @@ def _render_response(
     intention = cycle_result.get("intention") or {}
     question = cycle_result.get("question") or {}
     experiment = cycle_result.get("experiment") or {}
+    prediction_experiment = cycle_result.get("prediction_experiment") or {}
     drives = cycle_result.get("drives") or {}
 
     dominant = intention.get("dominant_drive")
@@ -111,13 +112,27 @@ def _render_response(
         if isinstance(strength, (int, float))
         else "unknown"
     )
+    if experiment:
+        experiment_clause = (
+            f"The current proposed test is: {experiment.get('method', 'none')}."
+        )
+    elif prediction_experiment:
+        experiment_clause = (
+            "No separate grounded test was admitted for that exploratory question. "
+            "The active empirical contract is: "
+            f"{prediction_experiment.get('method', 'none')}."
+        )
+    else:
+        experiment_clause = (
+            "No grounded experiment is currently admitted for that question."
+        )
     return (
         f"I recorded your message in cycle {cycle_result.get('cycle')}. "
         f"My strongest current control pressure is {dominant or 'unknown'} "
         f"({strength_text}), selecting the intention {intention_kind or 'unknown'}. "
         f"{memory_clause} "
         f"The question this raised is: {question.get('text', 'none')}. "
-        f"The current proposed test is: {experiment.get('method', 'none')}. "
+        f"{experiment_clause} "
         f"{unverified_count} self-model capability claims remain explicitly unverified."
         f"{cognition_clause}"
     )
@@ -171,6 +186,9 @@ def interact(
         "intention_id": (cycle_result.get("intention") or {}).get("id"),
         "question_id": (cycle_result.get("question") or {}).get("id"),
         "experiment_id": (cycle_result.get("experiment") or {}).get("id"),
+        "prediction_experiment_id": (
+            (cycle_result.get("prediction_experiment") or {}).get("id")
+        ),
         "cognition_event_id": cognition_event.get("id") if cognition_event else None,
         "cognition_candidate_id": (
             (cycle_result.get("thought") or {}).get("id")
@@ -208,6 +226,7 @@ def interact(
             "input_episode_id": record["input_episode_id"],
             "question_id": record["question_id"],
             "experiment_id": record["experiment_id"],
+            "prediction_experiment_id": record["prediction_experiment_id"],
         }
     )
 
@@ -226,6 +245,7 @@ def interact(
             "intention": cycle_result.get("intention"),
             "question": cycle_result.get("question"),
             "experiment": cycle_result.get("experiment"),
+            "prediction_experiment": cycle_result.get("prediction_experiment"),
             "prediction": cycle_result.get("prediction"),
         },
         "cognition": {
