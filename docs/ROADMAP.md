@@ -34,29 +34,43 @@ The live organism generated its first change manifest, M000001, from its own acc
 
 M000001 targeted reproducibility and proposed deterministic replay checks. It was structurally valid and cited real evidence.
 
-## Phase 7 — Proposal evidence review — implementation under verification
+## Phase 7 — Proposal evidence review — verified
 
-A structurally valid proposal is no longer enough. Reviews classify evidence relevance as:
+A structurally valid proposal is not enough. Reviews distinguish:
 
 - supported_problem;
 - measurement_gap;
 - needs_evidence.
 
-M000001 is expected to be classified measurement_gap because its cited prediction reflections do not demonstrate replay divergence.
+The first live proposal M000001 was classified measurement_gap because its cited prediction evidence did not demonstrate replay divergence.
 
-A direct replay diagnostic reporting divergence would change that classification to supported_problem.
+## Phase 8 — Verified non-mutating evidence diagnostics — implementation under verification
 
-Reviewed unresolved proposals remain active, preventing proposal proliferation.
+Measurement gaps may request a diagnostic, but the diagnostic code belongs to the verified governance surface rather than the self-authored candidate.
 
-## Phase 8 — Evidence diagnostics
+Initial implementation:
 
-For measurement-gap and needs-evidence reviews, generate the smallest non-mutating diagnostic needed to resolve the uncertainty. Diagnostics must produce explicit evidence records and cannot modify production behavior.
+- deterministic replay runs twice in isolated temporary state;
+- only volatile timestamp fields are normalized;
+- all other structured output and state are compared;
+- the live source state is not used as the replay workspace;
+- exact divergence path is retained when results differ;
+- completed diagnostics become citable evidence;
+- proposal reviews are reconsidered only when completed diagnostic evidence changes;
+- a stable replay produces no_problem_observed and no patch authority;
+- replay divergence produces supported_problem and candidate_allowed;
+- a clean verified replay raises the reproducibility metric to 1.0 on the next adaptive cycle;
+- diagnostic, proposal-review, proposal-generation, and preservation code are protected from self-authored modification.
+
+Required evidence before promotion: the full candidate suite and base-owned preservation gate must pass, then the live M000001 diagnostic must run on autonomous/growth without history loss.
 
 ## Phase 9 — Isolated self-authored patches
 
-Only proposals classified supported_problem, or diagnostic-only proposals whose scope is strictly instrumentation, may become candidate patches.
+Only proposals with supported_problem may become bounded candidate patches.
 
-No automatic promotion. Every candidate must pass the base-owned preservation gate and show positive target evidence.
+A candidate may not modify governance, diagnostic, preservation, proposal-review, or autonomous-growth authority.
+
+No automatic promotion. Candidate code must pass the previous verified base evaluator and demonstrate positive evidence on its declared target.
 
 ## Phase 10 — Broader world interaction
 
