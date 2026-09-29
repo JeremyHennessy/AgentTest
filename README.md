@@ -2,43 +2,41 @@
 
 AgentTest is an original experiment in persistent machine growth.
 
-The project investigates whether persistent perception, memory, prediction, evidence review, diagnostics, and constrained evolution can accumulate into richer adaptive behavior without confusing code churn or human-like text with improvement.
+The project asks whether persistent perception, memory, prediction, evidence review, diagnostics, and constrained self-improvement can accumulate into richer adaptive behavior without confusing activity, code churn, or human-like language with progress.
 
 ## Current capabilities
 
 - persistent episodic and semantic memory;
 - auditable repository perception;
-- scoped predictions that can be confirmed, violated, or invalidated by intervention;
-- internal evidence-driven intention selection;
-- provenance-backed world claims;
-- optional grounded model cognition with no tools or write authority;
-- self-authored change manifests without patch authority;
-- evidence relevance review;
-- verified non-mutating diagnostics;
+- intervention-aware predictions;
+- endogenous drives and intention selection;
+- provenance-backed temporal world claims;
+- optional grounded model cognition with no tools or direct write authority;
+- self-authored change manifests;
+- evidence-relevance review;
+- protected non-mutating diagnostics;
+- evidence-grounded self-model calibration with explicit uncertainty;
+- baseline-scoped re-diagnostics after code interventions;
 - a base-owned behavioral preservation gate;
-- autonomous heartbeats on a separate growth branch.
-
-## Prediction discipline
-
-AgentTest distinguishes a failed expectation from a changed prediction context.
-
-A tracked non-state repository fingerprint defines the current code/configuration baseline. If that baseline changes, a prior stability prediction becomes invalidated_by_intervention rather than being counted as an unexpected failure.
-
-Persistent state files are excluded so memory/journal updates do not invalidate the code baseline.
+- autonomous heartbeats on a persistent growth branch.
 
 ## Evolution discipline
 
 No version may call itself improved because code changed.
 
-A proposed defect needs relevant evidence. Measurement gaps require verified diagnostics. Candidate patches, once enabled, must be evaluated by the previous verified baseline's preservation gate and must add positive target evidence.
+A proposed problem needs direct evidence. Measurement gaps are resolved with protected diagnostics. Corrective candidates run on isolated branches and are judged by the previous verified baseline. A repaired behavior is re-diagnosed on the new code baseline before the proposal can close.
 
-Governance and diagnostic authority cannot be modified by self-authored changes.
+The first real corrective cycle has already completed:
+
+M000002 grounding gap → candidate v1 rejected → preservation-governance flaw discovered → judge repaired → candidate v2 passed → live self-model grounded → post-intervention diagnostic passed → proposal closed.
+
+## Current research question
+
+M000003 asks whether open-endedness is genuine inquiry branching or paraphrase churn. A protected read-only inquiry-family diagnostic is being verified before any change to question generation or scoring.
 
 ## About consciousness
 
 AgentTest does not claim consciousness, sentience, subjective experience, or life.
-
-## Research question
 
 > What minimum set of persistent, falsifiable mechanisms can produce increasingly rich adaptive behavior while keeping every claimed improvement traceable to evidence?
 
