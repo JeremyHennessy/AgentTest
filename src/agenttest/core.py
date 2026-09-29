@@ -9,7 +9,12 @@ from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
 from .evidence import known_evidence_ids
 from .perception import COMPARABLE_FIELDS, changed_fields
-from .semantic import consolidate_inquiry_families, consolidate_semantic_memory
+from .semantic import (
+    actionable_open_questions,
+    consolidate_inquiry_families,
+    consolidate_semantic_memory,
+    question_has_active_experiment_path,
+)
 from .state import DIMENSIONS, StateStore, utc_now
 from .world import consolidate_world
 
@@ -848,7 +853,15 @@ class AgentCore:
         world_update = consolidate_world(state)
 
         self._update_metrics(state)
-        drives = compute_drives(state, surprise, prediction_result)
+        strict_question_attention = (
+            strict_experiment_admission and observation is not None
+        )
+        drives = compute_drives(
+            state,
+            surprise,
+            prediction_result,
+            strict_question_attention=strict_question_attention,
+        )
         state["drives"] = drives
         intention = choose_intention(state, drives)
         state["intentions"].append(intention)
@@ -862,7 +875,13 @@ class AgentCore:
                 cognition_provider,
             )
 
-        question_text = self._generate_question(state, surprise, intention, thought)
+        question_text = self._generate_question(
+            state,
+            surprise,
+            intention,
+            thought,
+            strict_question_attention=strict_question_attention,
+        )
         question = self._upsert_question(state, question_text)
         question["times_selected"] += 1
         question["last_selected_cycle"] = cycle
@@ -921,6 +940,14 @@ class AgentCore:
                 prediction_experiment["id"] if prediction_experiment else None
             ),
             "drives": drives,
+            "strict_actionable_question_ids": (
+                [
+                    str(item.get("id"))
+                    for item in actionable_open_questions(state)
+                ]
+                if strict_question_attention
+                else None
+            ),
             "metrics": state["metrics"],
         }
         self.store.append_journal(event)
@@ -937,6 +964,11 @@ class AgentCore:
             "world_update": world_update,
             "self_model_calibration": self_model_calibration,
             "drives": drives,
+            "strict_actionable_questions": (
+                actionable_open_questions(state)
+                if strict_question_attention
+                else None
+            ),
             "intention": intention,
             "cognition_event": cognition_event,
             "thought": thought,
@@ -1188,6 +1220,8 @@ class AgentCore:
         surprise: dict[str, Any] | None,
         intention: dict[str, Any],
         thought: dict[str, Any] | None,
+        *,
+        strict_question_attention: bool = False,
     ) -> str:
         if intention["kind"] == "specify_experiment" and intention.get("target"):
             return (
@@ -1259,9 +1293,12 @@ class AgentCore:
             eligible = self._least_selected_eligible_open_question(
                 state,
                 blocked_question_ids,
+                strict_question_attention=strict_question_attention,
             )
             if eligible is not None:
                 return str(eligible["text"])
+            if strict_question_attention:
+                return PREDICTION_EXPERIMENT_QUESTION
         return fallback
 
     def _blocked_question_ids(self, state: dict[str, Any]) -> set[str]:
@@ -1280,6 +1317,8 @@ class AgentCore:
         self,
         state: dict[str, Any],
         blocked_question_ids: set[str],
+        *,
+        strict_question_attention: bool = False,
     ) -> dict[str, Any] | None:
         eligible = [
             question
@@ -1287,6 +1326,10 @@ class AgentCore:
             if (
                 question.get("status") == "open"
                 and str(question.get("id")) not in blocked_question_ids
+                and (
+                    not strict_question_attention
+                    or question_has_active_experiment_path(state, question)
+                )
             )
         ]
         if not eligible:
