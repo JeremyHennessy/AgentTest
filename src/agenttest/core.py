@@ -232,6 +232,22 @@ def _calibrate_self_model(state: dict[str, Any]) -> dict[str, Any]:
                 if refs
                 else unverified("No proposal review has been persisted yet.")
             )
+        elif capability == "persistent human interaction surface with evidence-linked responses":
+            interaction_episode_refs = [
+                str(item.get("input_episode_id"))
+                for item in state.get("interactions", [])[-4:]
+                if item.get("input_episode_id")
+            ]
+            registry[capability] = (
+                observed(
+                    interaction_episode_refs,
+                    "Persisted human interaction records point to their source stimulus episodes.",
+                )
+                if interaction_episode_refs
+                else unverified(
+                    "No human interaction record with a citable stimulus episode exists yet."
+                )
+            )
         else:
             registry[capability] = unverified(
                 "No explicit calibration rule has been defined for this capability claim."
