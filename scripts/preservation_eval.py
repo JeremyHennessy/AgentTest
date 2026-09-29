@@ -16,11 +16,11 @@ from agenttest.interaction import interact
 from agenttest.diagnostics import run_proposal_diagnostic
 from agenttest.proposal_review import review_change_proposal
 from agenttest.semantic import retrieve_semantic_memory
-from agenttest.self_proposal import propose_self_change
+from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v9"
+SUITE = "behavioral-preservation-v10"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -983,6 +983,73 @@ def human_interaction_roundtrip() -> dict[str, Any]:
         temp.cleanup()
 
 
+def evidence_debt_evolution_governor() -> dict[str, Any]:
+    temp_debt, store_debt, core_debt = fresh()
+    temp_aligned, store_aligned, core_aligned = fresh()
+    try:
+        first = core_debt.cycle(observation=observation(100))
+        for _ in range(4):
+            core_debt.cycle(observation=observation(100))
+        debt_state = store_debt.load()
+        debt_state["metrics"]["learning"] = 1.0
+        debt_state["drives"]["evidence_hunger"] = 0.8
+        debt_selected = select_change_target(debt_state)
+
+        aligned_state = store_aligned.load()
+        aligned_state["cycles"] = 10
+        aligned_state["metrics"].update(
+            {
+                "learning": 1.0,
+                "reflection": 1.0,
+                "self_model": 1.0,
+                "agency": 1.0,
+                "curiosity": 1.0,
+                "reproducibility": 1.0,
+                "perception": 1.0,
+                "semantic_memory": 1.0,
+                "world_model": 1.0,
+                "memory": 1.0,
+                "continuity": 1.0,
+                "open_endedness": 0.3,
+                "cognition": 0.0,
+            }
+        )
+        aligned_state["semantic_memory"]["inquiry_families"] = {
+            "open_endedness": 0.3,
+            "family_count": 3,
+            "question_count": 6,
+        }
+        aligned_state["questions"] = [
+            {"id": "Q000001", "text": "Question one", "status": "open"},
+        ]
+        aligned_state["episodes"] = [
+            {"id": "E000001", "kind": "stimulus", "cycle": 1, "concepts": ["one"]},
+        ]
+        aligned_state["cognition_candidates"] = []
+        aligned_state["cognition_events"] = []
+        aligned_selected = select_change_target(aligned_state)
+
+        return {
+            "passed": (
+                debt_selected is not None
+                and debt_selected.get("dimension") == "learning"
+                and debt_selected.get("selection_signal") == "stale_evidence_debt"
+                and debt_selected.get("experiment_id") == first["experiment"]["id"]
+                and first["experiment"]["id"] in debt_selected.get("evidence_refs", [])
+                and aligned_selected is None
+            ),
+            "debt_target": debt_selected.get("dimension") if debt_selected else None,
+            "debt_signal": debt_selected.get("selection_signal") if debt_selected else None,
+            "debt_experiment": debt_selected.get("experiment_id") if debt_selected else None,
+            "aligned_open_endedness_target": (
+                aligned_selected.get("dimension") if aligned_selected else None
+            ),
+        }
+    finally:
+        temp_debt.cleanup()
+        temp_aligned.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -1000,6 +1067,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("diagnostic_rechecks_after_intervention", diagnostic_rechecks_after_intervention),
     ("inquiry_family_evidence_review", inquiry_family_evidence_review),
     ("human_interaction_roundtrip", human_interaction_roundtrip),
+    ("evidence_debt_evolution_governor", evidence_debt_evolution_governor),
 ]
 
 
