@@ -263,7 +263,7 @@ class AgentCoreTests(unittest.TestCase):
     def test_repository_sensor_is_safe_outside_git(self) -> None:
         snapshot = repository_snapshot(self.tmp.name)
 
-        self.assertEqual(snapshot["sensor"], "repository-v1")
+        self.assertEqual(snapshot["sensor"], "repository-v2")
         self.assertFalse(snapshot["git_available"])
         self.assertIn("fingerprint", snapshot)
 
@@ -726,6 +726,60 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(second_review["verdict"], "supported_problem")
         self.assertEqual(second_review["patch_authority"], "candidate_allowed")
         self.assertEqual(second_review["direct_diagnostic_id"], "D000001")
+
+    def test_repository_intervention_invalidates_prediction_without_error_drive(self) -> None:
+        first_observation = observation(100)
+        first_observation["baseline_fingerprint"] = "baseline-a"
+        second_observation = observation(120)
+        second_observation["baseline_fingerprint"] = "baseline-b"
+
+        self.core.cycle(observation=first_observation)
+        result = self.core.cycle(observation=second_observation)
+
+        self.assertEqual(
+            result["prediction_result"]["status"],
+            "invalidated_by_intervention",
+        )
+        self.assertEqual(result["drives"]["prediction_error"], 0.0)
+        self.assertNotEqual(result["intention"]["kind"], "explain_change")
+        state = self.store.load()
+        self.assertEqual(
+            state["reflections"][-1]["outcome"],
+            "invalidated_by_intervention",
+        )
+
+    def test_same_baseline_unexpected_change_still_violates_prediction(self) -> None:
+        first_observation = observation(100)
+        first_observation["baseline_fingerprint"] = "baseline-a"
+        second_observation = observation(100)
+        second_observation["baseline_fingerprint"] = "baseline-a"
+        second_observation["working_tree_clean"] = False
+
+        self.core.cycle(observation=first_observation)
+        result = self.core.cycle(observation=second_observation)
+
+        self.assertEqual(result["prediction_result"]["status"], "violated")
+        self.assertEqual(result["drives"]["prediction_error"], 1.0)
+        self.assertEqual(result["intention"]["kind"], "explain_change")
+
+    def test_baseline_fingerprint_excludes_persistent_state_files(self) -> None:
+        from agenttest.perception import baseline_content_fingerprint
+
+        root = Path(self.tmp.name)
+        (root / "src").mkdir()
+        (root / "state").mkdir()
+        (root / "src" / "module.py").write_text("value = 1\n", encoding="utf-8")
+        (root / "state" / "organism.json").write_text('{"cycle": 1}\n', encoding="utf-8")
+        tracked = ["src/module.py", "state/organism.json"]
+
+        first = baseline_content_fingerprint(root, tracked)
+        (root / "state" / "organism.json").write_text('{"cycle": 2}\n', encoding="utf-8")
+        second = baseline_content_fingerprint(root, tracked)
+        self.assertEqual(first, second)
+
+        (root / "src" / "module.py").write_text("value = 2\n", encoding="utf-8")
+        third = baseline_content_fingerprint(root, tracked)
+        self.assertNotEqual(second, third)
 
 
 if __name__ == "__main__":
