@@ -19,19 +19,19 @@ _TEMPLATES = {
     ),
     "self_model": (
         "Test calibration of a claimed capability.",
-        "Predict performance on a capability check before executing it, then compare.",
+        "Make a one-step prediction before observation, then compare expected and observed fields.",
     ),
     "curiosity": (
         "Test internally generated novelty.",
         "Run without a user question and measure whether a non-duplicate testable question appears.",
     ),
     "agency": (
-        "Test explicit choice among competing actions.",
-        "Generate at least three candidate actions and record why one is selected.",
+        "Test endogenous choice among competing pressures.",
+        "Record current drives and verify the selected intention follows the reproducible priority rule.",
     ),
     "learning": (
-        "Test behavioral update after evidence.",
-        "Record an experiment outcome and verify that later prioritization changes.",
+        "Test behavioral update after prediction error.",
+        "Violate one measured prediction and verify the next intention prioritizes explaining that change.",
     ),
     "adaptation": (
         "Test a reversible self-change.",
@@ -39,7 +39,7 @@ _TEMPLATES = {
     ),
     "reflection": (
         "Test prediction/outcome comparison.",
-        "Make a prediction before an action and require a post-action error analysis.",
+        "Make a prediction before an observation and require a post-observation error analysis.",
     ),
     "open_endedness": (
         "Test whether inquiry branches rather than loops.",
