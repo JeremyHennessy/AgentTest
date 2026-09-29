@@ -1,4 +1,50 @@
 {
-  "created": false,
-  "proposal": null
+  "created": true,
+  "proposal": {
+    "baseline_metric": 1.0,
+    "created_at": "2026-09-29T16:47:41.028481+00:00",
+    "created_cycle": 39,
+    "evidence_refs": [
+      "SD000004"
+    ],
+    "expected_effect": "Underspecified experiments retain their history while recording what contract fields are missing and whether current grounded evidence can supply them; blocked work does not masquerade as executable experimentation.",
+    "falsification": "Reject if the candidate invents observables or evidence references, hides unresolved backlog, promotes blocked work to evidence-ready, or regresses preserved behavior.",
+    "files": [
+      "src/agenttest/core.py",
+      "src/agenttest/drives.py",
+      "tests/test_core.py"
+    ],
+    "hypothesis": "Explicitly tracing each missing observable, evidence source, and resolution rule can distinguish internally resolvable experiment specifications from work blocked on unavailable evidence without inventing facts.",
+    "id": "M000010",
+    "protected_paths": [
+      ".github/workflows/growth.yml",
+      ".github/workflows/interact.yml",
+      ".github/workflows/reconcile.yml",
+      ".github/workflows/verify.yml",
+      "scripts/compare_eval.py",
+      "scripts/experiment_design_eval.py",
+      "scripts/preservation_eval.py",
+      "scripts/reconcile_verified_change.py",
+      "src/agenttest/change_control.py",
+      "src/agenttest/diagnostic_experiments.py",
+      "src/agenttest/diagnostic_inquiry.py",
+      "src/agenttest/diagnostic_replay.py",
+      "src/agenttest/diagnostic_self_model.py",
+      "src/agenttest/diagnostics.py",
+      "src/agenttest/evidence.py",
+      "src/agenttest/intervention.py",
+      "src/agenttest/proposal_review.py",
+      "src/agenttest/self_proposal.py"
+    ],
+    "rollback": "Revert the candidate change and restore the previous verified baseline.",
+    "schema_version": 1,
+    "selection_rationale": "Protected system diagnostic SD000004 reported specification_backlog; this direct diagnostic signal takes priority over aggregate metric saturation.",
+    "selection_signal": "experiment_design_specification_backlog",
+    "source": "self-proposal-v1",
+    "source_diagnostic_id": "SD000004",
+    "status": "proposed",
+    "target_dimension": "learning",
+    "test_plan": "Construct experiments with and without grounded resolvable evidence, verify missing contract fields and resolution paths are explicit, verify no evidence reference or executable contract is fabricated, and run the baseline-owned preservation gate.",
+    "title": "Triage experiment specification backlog"
+  }
 }
