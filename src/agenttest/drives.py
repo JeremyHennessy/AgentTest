@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .semantic import actionable_open_questions
+
 DRIVE_ORDER = (
     "prediction_error",
     "specification_pressure",
@@ -17,6 +19,8 @@ def compute_drives(
     state: dict[str, Any],
     surprise: dict[str, Any] | None = None,
     prediction_result: dict[str, Any] | None = None,
+    *,
+    strict_question_attention: bool = False,
 ) -> dict[str, float]:
     metrics = state.get("metrics", {})
     pending = [
@@ -37,10 +41,14 @@ def compute_drives(
             )
         )
     ]
-    open_questions = [
-        item for item in state.get("questions", [])
-        if item.get("status") == "open"
-    ]
+    open_questions = (
+        actionable_open_questions(state)
+        if strict_question_attention
+        else [
+            item for item in state.get("questions", [])
+            if item.get("status") == "open"
+        ]
+    )
 
     status = prediction_result.get("status") if prediction_result else None
     violated = status == "violated"
