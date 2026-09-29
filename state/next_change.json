@@ -1,39 +1,43 @@
 {
-  "created": false,
+  "created": true,
   "proposal": {
-    "baseline_metric": 0.8,
-    "created_at": "2026-09-29T04:29:07.456289+00:00",
-    "created_cycle": 6,
+    "baseline_metric": 0.9,
+    "created_at": "2026-09-29T10:58:53.760365+00:00",
+    "created_cycle": 9,
     "evidence_refs": [
+      "R000008",
+      "R000007",
+      "R000006",
       "R000005",
       "R000004",
-      "R000003",
-      "R000002",
-      "R000001",
-      "P000005"
+      "R000003"
     ],
-    "expected_effect": "A recorded deterministic cycle can be replayed to an equivalent structured result after volatile timestamps and identifiers are normalized.",
-    "falsification": "Reject if identical controlled inputs produce materially different normalized behavior or if replay mutates the source state.",
+    "expected_effect": "Capability claims distinguish implemented, behaviorally verified, and unverified states.",
+    "falsification": "Reject if capability labels can advance without evidence or if prior evidence is lost.",
     "files": [
-      "src/agenttest/replay.py",
+      "src/agenttest/core.py",
       "tests/test_core.py"
     ],
-    "hypothesis": "Replaying recorded deterministic inputs against an isolated state can reveal unintended behavioral drift.",
-    "id": "M000001",
+    "hypothesis": "Connecting self-model capability claims to explicit passing behavioral evidence can reduce unsupported self-description.",
+    "id": "M000002",
     "protected_paths": [
       ".github/workflows/growth.yml",
       ".github/workflows/verify.yml",
       "scripts/compare_eval.py",
       "scripts/preservation_eval.py",
-      "src/agenttest/change_control.py"
+      "src/agenttest/change_control.py",
+      "src/agenttest/diagnostic_replay.py",
+      "src/agenttest/diagnostics.py",
+      "src/agenttest/proposal_review.py",
+      "src/agenttest/self_proposal.py"
     ],
     "rollback": "Revert the candidate change and restore the previous verified baseline.",
     "schema_version": 1,
-    "selection_rationale": "reproducibility was the highest eligible evidence-backed deficit (0.200) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
+    "selection_rationale": "self_model was the highest eligible evidence-backed deficit (0.100) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
     "source": "self-proposal-v1",
-    "status": "reviewed_measurement_gap",
-    "target_dimension": "reproducibility",
-    "test_plan": "Record a controlled cycle fixture, replay it twice, compare normalized outputs, and run the baseline-owned preservation gate.",
-    "title": "Add deterministic cycle replay checks"
+    "status": "proposed",
+    "target_dimension": "self_model",
+    "test_plan": "Attach evidence status to selected capability claims and verify a failed behavior cannot remain labeled verified.",
+    "title": "Calibrate self-model claims against behavioral checks"
   }
 }
