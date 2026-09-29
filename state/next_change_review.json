@@ -1,20 +1,23 @@
 {
-  "created": false,
+  "created": true,
   "review": {
-    "considered_diagnostic_ids": [],
-    "created_at": "2026-09-29T10:58:53.874610+00:00",
+    "considered_diagnostic_ids": [
+      "D000002"
+    ],
+    "created_at": "2026-09-29T12:17:37.072029+00:00",
+    "direct_diagnostic_id": "D000002",
     "evidence_kinds": {
       "reflections": 6
     },
-    "id": "V000003",
-    "patch_authority": "diagnostic_only",
+    "id": "V000004",
+    "patch_authority": "candidate_allowed",
     "proposal_id": "M000002",
-    "reason": "The manifest primarily proposes better measurement or traceability. Existing evidence does not establish a behavioral defect requiring corrective code.",
-    "required_next_evidence": "Add or run a non-mutating diagnostic that can demonstrate a specific failure before authorizing corrective behavior changes.",
+    "reason": "A verified read-only self-model diagnostic found capability claims without explicit calibration records. This supports a traceability problem, not a claim that the capabilities themselves are false.",
+    "required_next_evidence": null,
     "resolved_evidence_count": 6,
-    "review_version": "proposal-review-v1",
-    "reviewed_cycle": 9,
+    "review_version": "proposal-review-v2",
+    "reviewed_cycle": 10,
     "target_dimension": "self_model",
-    "verdict": "measurement_gap"
+    "verdict": "supported_problem"
   }
 }
