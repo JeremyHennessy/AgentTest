@@ -257,6 +257,11 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(migrated["episodes"][0]["id"], "E000001")
         self.assertIn("semantic_memory", migrated)
         self.assertIn("world_model", migrated)
+        self.assertIn("empirical_learning", migrated)
+        self.assertEqual(
+            migrated["empirical_learning"]["version"],
+            "empirical-learning-v1",
+        )
         self.assertIn("semantic_memory", migrated["metrics"])
         self.assertIn("world_model", migrated["metrics"])
 
@@ -2281,6 +2286,193 @@ class AgentCoreTests(unittest.TestCase):
             and claim.get("predicate") == "outcome"
         )
         self.assertEqual(world_claim["value"], "inconclusive")
+
+    def test_empirical_learning_consolidates_raw_prediction_outcomes(self) -> None:
+        from agenttest.learning import (
+            REPOSITORY_STABILITY_FAMILY,
+            consolidate_empirical_learning,
+        )
+
+        state = initial_state()
+        state["cycles"] = 10
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "cycle": 4,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "outcome": "supported",
+                "observed_prediction_status": "confirmed",
+                "evidence_refs": ["P000001", "R000001"],
+            },
+            {
+                "id": "X000002",
+                "cycle": 5,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "outcome": "inconclusive",
+                "observed_prediction_status": "invalidated_by_intervention",
+                "evidence_refs": ["P000002", "R000002"],
+            },
+            {
+                "id": "X000003",
+                "cycle": 6,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "outcome": "falsified",
+                "observed_prediction_status": "violated",
+                "evidence_refs": ["P000003", "R000003"],
+            },
+        ]
+
+        update = consolidate_empirical_learning(state)
+        family = update["families"][REPOSITORY_STABILITY_FAMILY]
+
+        self.assertEqual(family["completed_trials"], 3)
+        self.assertEqual(family["evaluable_trials"], 2)
+        self.assertEqual(family["stable_observations"], 1)
+        self.assertEqual(family["change_observations"], 1)
+        self.assertEqual(family["inconclusive_trials"], 1)
+        self.assertEqual(family["stability_rate"], 0.5)
+        self.assertEqual(family["next_expected_status"], "confirmed")
+        self.assertIn("X000001", family["experiment_refs"])
+        self.assertIn("P000003", family["evidence_refs"])
+        self.assertEqual(
+            state["empirical_learning"]["families"][REPOSITORY_STABILITY_FAMILY],
+            family,
+        )
+
+    def test_empirical_learning_requires_enough_contradiction_before_stance_change(self) -> None:
+        from agenttest.learning import (
+            REPOSITORY_STABILITY_FAMILY,
+            consolidate_empirical_learning,
+        )
+
+        state = initial_state()
+        state["cycles"] = 10
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "violated",
+                "evidence_refs": [f"P{index:06d}"],
+            }
+            for index in range(1, 3)
+        ]
+
+        consolidate_empirical_learning(state)
+        before = self.core._make_prediction(
+            state,
+            observation(100),
+            "2026-09-29T00:00:00+00:00",
+        )
+
+        state["experiments"].append(
+            {
+                "id": "X000003",
+                "cycle": 3,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "violated",
+                "evidence_refs": ["P000003"],
+            }
+        )
+        consolidate_empirical_learning(state)
+        after = self.core._make_prediction(
+            state,
+            observation(100),
+            "2026-09-29T00:01:00+00:00",
+        )
+        family = state["empirical_learning"]["families"][
+            REPOSITORY_STABILITY_FAMILY
+        ]
+
+        self.assertEqual(before["expected_status"], "confirmed")
+        self.assertEqual(after["expected_status"], "violated")
+        self.assertEqual(family["evaluable_trials"], 3)
+        self.assertEqual(family["evidence_state"], "provisional_change")
+        self.assertIn("At least one measured repository field will change", after["statement"])
+
+    def test_empirical_prediction_stance_changes_experiment_contract(self) -> None:
+        from agenttest.learning import consolidate_empirical_learning
+
+        state = initial_state()
+        state["cycles"] = 10
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "violated",
+                "evidence_refs": [f"P{index:06d}"],
+            }
+            for index in range(1, 4)
+        ]
+        consolidate_empirical_learning(state)
+
+        prediction = self.core._make_prediction(
+            state,
+            observation(100),
+            "2026-09-29T00:00:00+00:00",
+        )
+        state["predictions"].append(prediction)
+        experiment = self.core._create_prediction_experiment(
+            state,
+            prediction,
+            "2026-09-29T00:00:00+00:00",
+        )
+
+        self.assertEqual(prediction["expected_status"], "violated")
+        self.assertEqual(
+            experiment["evidence_contract"]["expected_status"],
+            "violated",
+        )
+        self.assertEqual(
+            experiment["learning_family"],
+            "repository_stability_without_intervention",
+        )
+        self.assertIn("differs in at least one measured field", experiment["predicted_observation"])
+        self.assertEqual(
+            experiment["empirical_basis"]["change_observations"],
+            3,
+        )
+
+    def test_empirical_learning_excludes_intervention_invalidations_from_stance(self) -> None:
+        from agenttest.learning import consolidate_empirical_learning
+
+        state = initial_state()
+        state["cycles"] = 10
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "invalidated_by_intervention",
+                "evidence_refs": [f"P{index:06d}"],
+            }
+            for index in range(1, 6)
+        ]
+
+        consolidate_empirical_learning(state)
+        prediction = self.core._make_prediction(
+            state,
+            observation(100),
+            "2026-09-29T00:00:00+00:00",
+        )
+
+        self.assertEqual(prediction["expected_status"], "confirmed")
+        self.assertEqual(
+            prediction["empirical_basis"]["evaluable_trials"],
+            0,
+        )
+        self.assertEqual(
+            prediction["empirical_basis"]["inconclusive_trials"],
+            5,
+        )
 
     def test_prediction_contract_resolves_only_matching_experiment(self) -> None:
         first = self.core.cycle(observation=observation(100))

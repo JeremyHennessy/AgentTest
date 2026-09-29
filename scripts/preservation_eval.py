@@ -17,6 +17,10 @@ from agenttest.diagnostic_attention import evaluate_blocked_attention
 from agenttest.diagnostic_experiments import evaluate_experiment_design
 from agenttest.interaction import interact
 from agenttest.intervention import record_verified_intervention
+from agenttest.learning import (
+    REPOSITORY_STABILITY_FAMILY,
+    consolidate_empirical_learning,
+)
 from agenttest.diagnostics import run_proposal_diagnostic
 from agenttest.proposal_review import review_change_proposal
 from agenttest.semantic import actionable_open_questions, retrieve_semantic_memory
@@ -25,7 +29,7 @@ from agenttest.state import StateStore, initial_state
 from agenttest.world import current_world_claims
 from agenttest.drives import compute_drives
 
-SUITE = "behavioral-preservation-v22"
+SUITE = "behavioral-preservation-v23"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1875,6 +1879,91 @@ def specification_backlog_lifecycle_scope() -> dict[str, Any]:
         temp_stale.cleanup()
 
 
+def empirical_learning_changes_future_prediction_stance() -> dict[str, Any]:
+    temp, store, core = fresh()
+    try:
+        state = store.load()
+        state["cycles"] = 10
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "cycle": 1,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "violated",
+                "evidence_refs": ["P000001", "R000001"],
+            },
+            {
+                "id": "X000002",
+                "cycle": 2,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "violated",
+                "evidence_refs": ["P000002", "R000002"],
+            },
+        ]
+
+        provisional = consolidate_empirical_learning(state)
+        before = core._make_prediction(
+            state,
+            observation(100),
+            "2026-09-29T00:00:00+00:00",
+        )
+
+        state["experiments"].append(
+            {
+                "id": "X000003",
+                "cycle": 3,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "violated",
+                "evidence_refs": ["P000003", "R000003"],
+            }
+        )
+        learned = consolidate_empirical_learning(state)
+        after = core._make_prediction(
+            state,
+            observation(100),
+            "2026-09-29T00:01:00+00:00",
+        )
+        state["predictions"].append(after)
+        contract = core._create_prediction_experiment(
+            state,
+            after,
+            "2026-09-29T00:01:00+00:00",
+        )
+        family = learned["families"][REPOSITORY_STABILITY_FAMILY]
+
+        return {
+            "passed": (
+                before.get("expected_status") == "confirmed"
+                and after.get("expected_status") == "violated"
+                and family.get("evaluable_trials") == 3
+                and family.get("stable_observations") == 0
+                and family.get("change_observations") == 3
+                and family.get("next_expected_status") == "violated"
+                and contract.get("evidence_contract", {}).get("expected_status")
+                == "violated"
+                and contract.get("learning_family")
+                == REPOSITORY_STABILITY_FAMILY
+                and "P000003" in family.get("evidence_refs", [])
+                and provisional["families"][
+                    REPOSITORY_STABILITY_FAMILY
+                ].get("next_expected_status") == "confirmed"
+            ),
+            "provisional_status": before.get("expected_status"),
+            "learned_status": after.get("expected_status"),
+            "evaluable_trials": family.get("evaluable_trials"),
+            "stable_observations": family.get("stable_observations"),
+            "change_observations": family.get("change_observations"),
+            "contract_expected_status": contract.get(
+                "evidence_contract", {}
+            ).get("expected_status"),
+        }
+    finally:
+        temp.cleanup()
+
+
 def parked_question_attention_scope() -> dict[str, Any]:
     state = initial_state()
     state["cycles"] = 55
@@ -2036,6 +2125,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
     ("autonomous_grounded_experiment_admission", autonomous_grounded_experiment_admission),
+    ("empirical_learning_changes_future_prediction_stance", empirical_learning_changes_future_prediction_stance),
     ("parked_question_attention_scope", parked_question_attention_scope),
     ("blocked_experiment_parking_lifecycle", blocked_experiment_parking_lifecycle),
     ("executable_prediction_experiment_lifecycle", executable_prediction_experiment_lifecycle),
