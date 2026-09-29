@@ -22,7 +22,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v14"
+SUITE = "behavioral-preservation-v15"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1306,6 +1306,46 @@ def blocked_attention_diagnostic_governance() -> dict[str, Any]:
         ]
         clean_selected = select_change_target(clean)
 
+        addressed = store_clean.load()
+        addressed["cycles"] = 44
+        addressed["metrics"].update(
+            {name: 1.0 for name in addressed.get("metrics", {})}
+        )
+        addressed["drives"] = {"uncertainty": 0.8}
+        addressed["system_diagnostics"] = [
+            {
+                "id": "SD000013",
+                "kind": "attention_control",
+                "status": "completed",
+                "diagnostic_version": "blocked-attention-v1",
+                "outcome": "blocked_attention_loop",
+                "created_cycle": 44,
+                "source_state_mutated": False,
+            }
+        ]
+        addressed["change_proposals"] = [
+            {
+                "id": "M000011",
+                "status": "closed_verified_intervention",
+                "selection_signal": "attention_control_blocked_attention_loop",
+                "accepted_change_id": "A000003",
+            }
+        ]
+        addressed["accepted_changes"] = [
+            {
+                "id": "A000003",
+                "proposal_id": "M000011",
+                "accepted_cycle": 44,
+            }
+        ]
+        addressed_selected = select_change_target(addressed)
+
+        newer = json.loads(json.dumps(addressed))
+        newer["cycles"] = 45
+        newer["system_diagnostics"][0]["id"] = "SD000014"
+        newer["system_diagnostics"][0]["created_cycle"] = 45
+        newer_selected = select_change_target(newer)
+
         return {
             "passed": (
                 "SD000009" in known_evidence_ids(loop)
@@ -1323,6 +1363,9 @@ def blocked_attention_diagnostic_governance() -> dict[str, Any]:
                 and review.get("patch_authority") == "candidate_allowed"
                 and review.get("direct_diagnostic_id") == "SD000009"
                 and clean_selected is None
+                and addressed_selected is None
+                and newer_selected is not None
+                and newer_selected.get("source_diagnostic_id") == "SD000014"
             ),
             "proposal_id": proposal.get("id") if proposal else None,
             "target_dimension": (
@@ -1340,6 +1383,14 @@ def blocked_attention_diagnostic_governance() -> dict[str, Any]:
             "patch_authority": review.get("patch_authority") if review else None,
             "clean_target": (
                 clean_selected.get("dimension") if clean_selected else None
+            ),
+            "addressed_target": (
+                addressed_selected.get("dimension")
+                if addressed_selected else None
+            ),
+            "newer_source_diagnostic_id": (
+                newer_selected.get("source_diagnostic_id")
+                if newer_selected else None
             ),
         }
     finally:

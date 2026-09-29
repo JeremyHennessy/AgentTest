@@ -392,6 +392,34 @@ def _latest_experiment_design_signal(
     }
 
 
+def _diagnostic_addressed_by_verified_intervention(
+    state: dict[str, Any],
+    diagnostic: dict[str, Any],
+    selection_signal: str,
+) -> bool:
+    diagnostic_cycle = int(diagnostic.get("created_cycle", 0) or 0)
+    accepted_by_id = {
+        str(item.get("id")): item
+        for item in state.get("accepted_changes", [])
+        if item.get("id")
+    }
+    for proposal in state.get("change_proposals", []):
+        if proposal.get("status") != "closed_verified_intervention":
+            continue
+        if proposal.get("selection_signal") != selection_signal:
+            continue
+        accepted_change_id = proposal.get("accepted_change_id")
+        if not accepted_change_id:
+            continue
+        accepted = accepted_by_id.get(str(accepted_change_id))
+        if accepted is None:
+            continue
+        accepted_cycle = int(accepted.get("accepted_cycle", 0) or 0)
+        if accepted_cycle >= diagnostic_cycle:
+            return True
+    return False
+
+
 def _latest_attention_control_signal(
     state: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -411,6 +439,9 @@ def _latest_attention_control_signal(
     if not identifier:
         return None
     signal = "attention_control_blocked_attention_loop"
+    if _diagnostic_addressed_by_verified_intervention(state, latest, signal):
+        return None
+
     spec = SYSTEM_DIAGNOSTIC_TARGETS[signal]
     return {
         "dimension": spec["dimension"],

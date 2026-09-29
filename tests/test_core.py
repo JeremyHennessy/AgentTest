@@ -1654,6 +1654,83 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(review["patch_authority"], "candidate_allowed")
         self.assertEqual(review["direct_diagnostic_id"], "SD000009")
 
+    def test_accepted_attention_intervention_suppresses_same_cycle_diagnostic(self) -> None:
+        from agenttest.self_proposal import select_change_target
+
+        state = self.store.load()
+        state["cycles"] = 44
+        state["metrics"].update({name: 1.0 for name in state["metrics"]})
+        state["drives"] = {"uncertainty": 0.8}
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000013",
+                "kind": "attention_control",
+                "status": "completed",
+                "outcome": "blocked_attention_loop",
+                "created_cycle": 44,
+            }
+        ]
+        state["change_proposals"] = [
+            {
+                "id": "M000011",
+                "status": "closed_verified_intervention",
+                "selection_signal": "attention_control_blocked_attention_loop",
+                "accepted_change_id": "A000003",
+            }
+        ]
+        state["accepted_changes"] = [
+            {
+                "id": "A000003",
+                "proposal_id": "M000011",
+                "accepted_cycle": 44,
+            }
+        ]
+
+        selected = select_change_target(state)
+
+        self.assertIsNone(selected)
+
+    def test_newer_post_intervention_attention_failure_remains_eligible(self) -> None:
+        from agenttest.self_proposal import select_change_target
+
+        state = self.store.load()
+        state["cycles"] = 45
+        state["metrics"].update({name: 1.0 for name in state["metrics"]})
+        state["drives"] = {"uncertainty": 0.8}
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000014",
+                "kind": "attention_control",
+                "status": "completed",
+                "outcome": "blocked_attention_loop",
+                "created_cycle": 45,
+            }
+        ]
+        state["change_proposals"] = [
+            {
+                "id": "M000011",
+                "status": "closed_verified_intervention",
+                "selection_signal": "attention_control_blocked_attention_loop",
+                "accepted_change_id": "A000003",
+            }
+        ]
+        state["accepted_changes"] = [
+            {
+                "id": "A000003",
+                "proposal_id": "M000011",
+                "accepted_cycle": 44,
+            }
+        ]
+
+        selected = select_change_target(state)
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(
+            selected["selection_signal"],
+            "attention_control_blocked_attention_loop",
+        )
+        self.assertEqual(selected["source_diagnostic_id"], "SD000014")
+
     def test_aligned_open_endedness_is_not_reproposed_as_defect(self) -> None:
         from agenttest.self_proposal import select_change_target
 
