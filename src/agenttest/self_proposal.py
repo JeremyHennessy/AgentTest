@@ -261,6 +261,54 @@ TARGETS: dict[str, dict[str, Any]] = {
     },
 }
 
+SYSTEM_DIAGNOSTIC_TARGETS: dict[str, dict[str, Any]] = {
+    "experiment_design_specification_churn": {
+        "dimension": "learning",
+        "files": ["src/agenttest/core.py", "tests/test_core.py"],
+        "title": "Prevent duplicate experiment proliferation",
+        "hypothesis": (
+            "Reusing one canonical unresolved question/method experiment can stop "
+            "specification churn without deleting historical attempts."
+        ),
+        "expected_effect": (
+            "Exact uncontracted duplicate experiments remain preserved as history while "
+            "only one canonical copy remains active and future equivalent selections reuse it."
+        ),
+        "test_plan": (
+            "Construct repeated question/method experiments, verify history is preserved, "
+            "duplicate active copies are superseded with provenance, and run preservation checks."
+        ),
+        "falsification": (
+            "Reject if experiment history is deleted, evidence-contracted work is collapsed, "
+            "duplicates remain active, or preserved behavior regresses."
+        ),
+    },
+    "experiment_design_specification_backlog": {
+        "dimension": "learning",
+        "files": ["src/agenttest/core.py", "src/agenttest/drives.py", "tests/test_core.py"],
+        "title": "Triage experiment specification backlog",
+        "hypothesis": (
+            "Explicitly tracing each missing observable, evidence source, and resolution rule "
+            "can distinguish internally resolvable experiment specifications from work blocked "
+            "on unavailable evidence without inventing facts."
+        ),
+        "expected_effect": (
+            "Underspecified experiments retain their history while recording what contract fields "
+            "are missing and whether current grounded evidence can supply them; blocked work does "
+            "not masquerade as executable experimentation."
+        ),
+        "test_plan": (
+            "Construct experiments with and without grounded resolvable evidence, verify missing "
+            "contract fields and resolution paths are explicit, verify no evidence reference or "
+            "executable contract is fabricated, and run the baseline-owned preservation gate."
+        ),
+        "falsification": (
+            "Reject if the candidate invents observables or evidence references, hides unresolved "
+            "backlog, promotes blocked work to evidence-ready, or regresses preserved behavior."
+        ),
+    },
+}
+
 
 def _active_proposal(state: dict[str, Any]) -> dict[str, Any] | None:
     unresolved = {
@@ -273,6 +321,52 @@ def _active_proposal(state: dict[str, Any]) -> dict[str, Any] | None:
         if proposal.get("status") in unresolved:
             return proposal
     return None
+
+
+def _latest_experiment_design_signal(
+    state: dict[str, Any],
+) -> dict[str, Any] | None:
+    latest = next(
+        (
+            diagnostic
+            for diagnostic in reversed(state.get("system_diagnostics", []))
+            if diagnostic.get("kind") == "experiment_design"
+            and diagnostic.get("status") == "completed"
+        ),
+        None,
+    )
+    if latest is None:
+        return None
+
+    outcome = str(latest.get("outcome") or "")
+    signal_by_outcome = {
+        "specification_churn": "experiment_design_specification_churn",
+        "specification_backlog": "experiment_design_specification_backlog",
+    }
+    signal = signal_by_outcome.get(outcome)
+    if signal is None:
+        return None
+
+    identifier = latest.get("id")
+    if not identifier:
+        return None
+    return {
+        "dimension": SYSTEM_DIAGNOSTIC_TARGETS[signal]["dimension"],
+        "baseline_metric": float(
+            state.get("metrics", {}).get(
+                SYSTEM_DIAGNOSTIC_TARGETS[signal]["dimension"],
+                0.0,
+            )
+        ),
+        "deficit": float(
+            state.get("drives", {}).get("specification_pressure", 0.0)
+        ),
+        "priority": -2,
+        "evidence_refs": [str(identifier)],
+        "selection_signal": signal,
+        "source_diagnostic_id": str(identifier),
+        "diagnostic_outcome": outcome,
+    }
 
 
 def _cognition_is_externally_blocked(state: dict[str, Any]) -> bool:
@@ -408,6 +502,10 @@ def select_change_target(state: dict[str, Any]) -> dict[str, Any] | None:
     metrics = state.get("metrics", {})
     ranked: list[tuple[float, int, str, list[str]]] = []
 
+    diagnostic_signal = _latest_experiment_design_signal(state)
+    if diagnostic_signal is not None:
+        return diagnostic_signal
+
     evidence_debt = _learning_evidence_debt(state)
     if evidence_debt is not None:
         return {
@@ -462,7 +560,12 @@ def propose_self_change(
         return None, False
 
     target = selected["dimension"]
-    spec = TARGETS[target]
+    selection_signal = selected.get("selection_signal")
+    spec = (
+        SYSTEM_DIAGNOSTIC_TARGETS[selection_signal]
+        if selection_signal in SYSTEM_DIAGNOSTIC_TARGETS
+        else TARGETS[target]
+    )
     manifest = make_change_manifest(
         state,
         title=spec["title"],
@@ -480,6 +583,8 @@ def propose_self_change(
             "id": f"M{len(state.get('change_proposals', [])) + 1:06d}",
             "source": "self-proposal-v1",
             "created_cycle": state.get("cycles", 0),
+            "selection_signal": selection_signal,
+            "source_diagnostic_id": selected.get("source_diagnostic_id"),
             "selection_rationale": (
                 (
                     f"Stale evidence debt was detected in experiment "
@@ -487,12 +592,20 @@ def propose_self_change(
                     f"{selected.get('age_cycles')} cycles despite later evaluated evidence; "
                     "this overrides the saturated aggregate learning metric."
                 )
-                if selected.get("selection_signal") == "stale_evidence_debt"
+                if selection_signal == "stale_evidence_debt"
                 else (
+                    (
+                        f"Protected system diagnostic {selected.get('source_diagnostic_id')} "
+                        f"reported {selected.get('diagnostic_outcome')}; this direct diagnostic "
+                        "signal takes priority over aggregate metric saturation."
+                    )
+                    if selection_signal in SYSTEM_DIAGNOSTIC_TARGETS
+                    else (
                     f"{target} was the highest eligible evidence-backed deficit "
                     f"({selected['deficit']:.3f}) after excluding saturated dimensions, "
                     "process-only adaptation, externally blocked cognition, and metrics "
                     "already aligned with their verified derived measurement."
+                    )
                 )
             ),
         }
