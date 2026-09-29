@@ -411,7 +411,7 @@ def _trace_experiment_specifications(state: dict[str, Any]) -> dict[str, Any]:
     ready: list[str] = []
 
     for experiment in state.get("experiments", []):
-        if experiment.get("status") != "proposed":
+        if experiment.get("status") not in {"proposed", "parked_blocked"}:
             continue
 
         experiment_id = str(experiment.get("id", ""))
@@ -575,6 +575,77 @@ def _trace_experiment_specifications(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _reconcile_blocked_experiment_parking(
+    state: dict[str, Any],
+    *,
+    allow_parking: bool,
+) -> dict[str, Any]:
+    """Park mature blocked work while preserving automatic evidence-based re-entry."""
+
+    cycle = int(state.get("cycles", 0))
+    parked: list[str] = []
+    reactivated: list[str] = []
+
+    for experiment in state.get("experiments", []):
+        experiment_id = str(experiment.get("id", ""))
+        status = experiment.get("status")
+        specification = experiment.get("specification", {})
+        actionability = (
+            specification.get("actionability")
+            if isinstance(specification, dict)
+            else None
+        )
+
+        if status == "parked_blocked":
+            if actionability in {"actionable", "evidence_ready"}:
+                experiment["status"] = "proposed"
+                experiment["reactivated_cycle"] = cycle
+                experiment["reactivation_reason"] = (
+                    "Grounded specification evidence became available after parking."
+                )
+                experiment.setdefault("status_history", []).append(
+                    {
+                        "cycle": cycle,
+                        "from": "parked_blocked",
+                        "to": "proposed",
+                        "reason": "grounded_specification_became_actionable",
+                    }
+                )
+                reactivated.append(experiment_id)
+            continue
+
+        if not allow_parking or status != "proposed":
+            continue
+        if experiment.get("readiness") != "needs_specification":
+            continue
+        if actionability != "blocked":
+            continue
+
+        experiment["status"] = "parked_blocked"
+        experiment["parked_cycle"] = cycle
+        experiment["parked_reason"] = "grounded_specification_unavailable"
+        experiment.setdefault("status_history", []).append(
+            {
+                "cycle": cycle,
+                "from": "proposed",
+                "to": "parked_blocked",
+                "reason": "grounded_specification_unavailable",
+                "missing_fields": list(specification.get("missing_fields", [])),
+                "grounded_evidence_refs": list(
+                    specification.get("grounded_evidence_refs", [])
+                ),
+            }
+        )
+        parked.append(experiment_id)
+
+    return {
+        "cycle": cycle,
+        "parking_enabled": allow_parking,
+        "parked_experiment_ids": parked,
+        "reactivated_experiment_ids": reactivated,
+    }
+
+
 def _review_experiment_readiness(state: dict[str, Any]) -> dict[str, Any]:
     cycle = int(state.get("cycles", 0))
     changed: list[str] = []
@@ -729,6 +800,10 @@ class AgentCore:
         experiment_dedup_update = _reconcile_duplicate_experiments(state)
         experiment_readiness_update = _review_experiment_readiness(state)
         experiment_specification_update = _trace_experiment_specifications(state)
+        experiment_parking_update = _reconcile_blocked_experiment_parking(
+            state,
+            allow_parking=strict_experiment_admission,
+        )
 
         if observation is not None:
             prediction_result = self._evaluate_prediction(state, observation, now)
@@ -831,6 +906,7 @@ class AgentCore:
             "experiment_dedup_update": experiment_dedup_update,
             "experiment_readiness_update": experiment_readiness_update,
             "experiment_specification_update": experiment_specification_update,
+            "experiment_parking_update": experiment_parking_update,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
@@ -855,6 +931,7 @@ class AgentCore:
             "experiment_dedup_update": experiment_dedup_update,
             "experiment_readiness_update": experiment_readiness_update,
             "experiment_specification_update": experiment_specification_update,
+            "experiment_parking_update": experiment_parking_update,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
@@ -1192,7 +1269,7 @@ class AgentCore:
             str(experiment.get("question_id"))
             for experiment in state.get("experiments", [])
             if (
-                experiment.get("status") == "proposed"
+                experiment.get("status") in {"proposed", "parked_blocked"}
                 and experiment.get("question_id")
                 and experiment.get("specification", {}).get("actionability")
                 == "blocked"
