@@ -27,10 +27,13 @@ def compute_drives(
     specification_backlog = [
         item for item in state.get("experiments", [])
         if (
-            item.get("status") == "needs_specification"
-            or (
-                item.get("status") == "proposed"
-                and item.get("readiness") == "needs_specification"
+            item.get("specification", {}).get("actionability") != "blocked"
+            and (
+                item.get("status") == "needs_specification"
+                or (
+                    item.get("status") == "proposed"
+                    and item.get("readiness") == "needs_specification"
+                )
             )
         )
     ]
@@ -73,10 +76,13 @@ def choose_intention(
         [
             item for item in state.get("experiments", [])
             if (
-                item.get("status") == "needs_specification"
-                or (
-                    item.get("status") == "proposed"
-                    and item.get("readiness") == "needs_specification"
+                item.get("specification", {}).get("actionability") != "blocked"
+                and (
+                    item.get("status") == "needs_specification"
+                    or (
+                        item.get("status") == "proposed"
+                        and item.get("readiness") == "needs_specification"
+                    )
                 )
             )
         ],

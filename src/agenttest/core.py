@@ -7,6 +7,7 @@ from typing import Any
 
 from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
+from .evidence import known_evidence_ids
 from .perception import COMPARABLE_FIELDS, changed_fields
 from .semantic import consolidate_inquiry_families, consolidate_semantic_memory
 from .state import DIMENSIONS, StateStore, utc_now
@@ -382,6 +383,194 @@ def _reconcile_duplicate_experiments(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+SPECIFICATION_VERSION = "experiment-specification-v1"
+SPECIFICATION_REQUIRED_FIELDS = (
+    "observable",
+    "evidence_source",
+    "resolution_rule",
+)
+
+
+def _trace_experiment_specifications(state: dict[str, Any]) -> dict[str, Any]:
+    """Trace specification readiness without inventing observations or evidence."""
+
+    cycle = int(state.get("cycles", 0))
+    known_ids = known_evidence_ids(state)
+    cognition_candidates = {
+        str(item.get("id")): item
+        for item in state.get("cognition_candidates", [])
+        if item.get("id")
+    }
+    changed: list[str] = []
+    blocked: list[str] = []
+    actionable: list[str] = []
+    ready: list[str] = []
+
+    for experiment in state.get("experiments", []):
+        if experiment.get("status") != "proposed":
+            continue
+
+        experiment_id = str(experiment.get("id", ""))
+        if _valid_prediction_contract(experiment):
+            contract = experiment["evidence_contract"]
+            traced = {
+                "version": SPECIFICATION_VERSION,
+                "actionability": "evidence_ready",
+                "observable": {
+                    "kind": "prediction_status",
+                    "prediction_id": str(contract.get("prediction_id")),
+                },
+                "evidence_source": {
+                    "kind": "prediction",
+                    "refs": [str(contract.get("prediction_id"))],
+                },
+                "resolution_rule": {
+                    "kind": "expected_prediction_status",
+                    "expected_status": str(contract.get("expected_status")),
+                },
+                "available_fields": list(SPECIFICATION_REQUIRED_FIELDS),
+                "missing_fields": [],
+                "grounded_evidence_refs": [
+                    str(contract.get("prediction_id"))
+                ],
+                "current_grounded_evidence_can_supply": True,
+                "blocking_reason": None,
+                "source_candidate_id": experiment.get("cognition_candidate_id"),
+            }
+            ready.append(experiment_id)
+        else:
+            candidate_id = experiment.get("cognition_candidate_id")
+            candidate = (
+                cognition_candidates.get(str(candidate_id))
+                if candidate_id
+                else None
+            )
+
+            observable_text = experiment.get("predicted_observation")
+            if (
+                (not isinstance(observable_text, str) or not observable_text.strip())
+                and candidate is not None
+                and isinstance(candidate.get("predicted_observation"), str)
+                and candidate.get("predicted_observation", "").strip()
+            ):
+                observable_text = candidate["predicted_observation"]
+            observable = (
+                str(observable_text).strip()
+                if isinstance(observable_text, str) and observable_text.strip()
+                else None
+            )
+
+            candidate_refs = (
+                [
+                    str(ref)
+                    for ref in candidate.get("evidence_refs", [])
+                    if isinstance(ref, str) and ref in known_ids
+                ]
+                if candidate is not None
+                else []
+            )
+            all_candidate_refs_grounded = (
+                candidate is not None
+                and bool(candidate.get("evidence_refs"))
+                and len(candidate_refs) == len(candidate.get("evidence_refs", []))
+            )
+            evidence_source = (
+                {
+                    "kind": "grounded_candidate_evidence",
+                    "refs": candidate_refs,
+                }
+                if all_candidate_refs_grounded
+                else None
+            )
+
+            falsification = experiment.get("falsification")
+            if (
+                (not isinstance(falsification, str) or not falsification.strip())
+                and candidate is not None
+                and isinstance(candidate.get("falsification"), str)
+            ):
+                falsification = candidate.get("falsification")
+            resolution_rule = (
+                str(falsification).strip()
+                if observable is not None
+                and isinstance(falsification, str)
+                and falsification.strip()
+                else None
+            )
+
+            available_fields = []
+            if observable is not None:
+                available_fields.append("observable")
+            if evidence_source is not None:
+                available_fields.append("evidence_source")
+            if resolution_rule is not None:
+                available_fields.append("resolution_rule")
+            missing_fields = [
+                field
+                for field in SPECIFICATION_REQUIRED_FIELDS
+                if field not in available_fields
+            ]
+
+            can_supply = not missing_fields
+            actionability = "actionable" if can_supply else "blocked"
+            blocking_reason = (
+                None
+                if can_supply
+                else (
+                    "Current grounded state does not explicitly supply: "
+                    + ", ".join(missing_fields)
+                    + "."
+                )
+            )
+            traced = {
+                "version": SPECIFICATION_VERSION,
+                "actionability": actionability,
+                "observable": observable,
+                "evidence_source": evidence_source,
+                "resolution_rule": resolution_rule,
+                "available_fields": available_fields,
+                "missing_fields": missing_fields,
+                "grounded_evidence_refs": candidate_refs,
+                "current_grounded_evidence_can_supply": can_supply,
+                "blocking_reason": blocking_reason,
+                "source_candidate_id": str(candidate_id) if candidate_id else None,
+            }
+            (actionable if can_supply else blocked).append(experiment_id)
+
+        previous = experiment.get("specification")
+        previous_comparable = (
+            {
+                key: value
+                for key, value in previous.items()
+                if key != "evaluated_cycle"
+            }
+            if isinstance(previous, dict)
+            else None
+        )
+        if previous_comparable != traced:
+            traced["evaluated_cycle"] = cycle
+            experiment["specification"] = traced
+            experiment.setdefault("specification_history", []).append(
+                {
+                    "cycle": cycle,
+                    "actionability": traced["actionability"],
+                    "missing_fields": list(traced["missing_fields"]),
+                    "grounded_evidence_refs": list(
+                        traced["grounded_evidence_refs"]
+                    ),
+                }
+            )
+            changed.append(experiment_id)
+
+    return {
+        "cycle": cycle,
+        "changed_experiment_ids": changed,
+        "blocked_experiment_ids": blocked,
+        "actionable_experiment_ids": actionable,
+        "evidence_ready_experiment_ids": ready,
+    }
+
+
 def _review_experiment_readiness(state: dict[str, Any]) -> dict[str, Any]:
     cycle = int(state.get("cycles", 0))
     changed: list[str] = []
@@ -521,6 +710,7 @@ class AgentCore:
         prediction_result = None
         experiment_dedup_update = _reconcile_duplicate_experiments(state)
         experiment_readiness_update = _review_experiment_readiness(state)
+        experiment_specification_update = _trace_experiment_specifications(state)
 
         if observation is not None:
             prediction_result = self._evaluate_prediction(state, observation, now)
@@ -614,6 +804,7 @@ class AgentCore:
             ),
             "experiment_dedup_update": experiment_dedup_update,
             "experiment_readiness_update": experiment_readiness_update,
+            "experiment_specification_update": experiment_specification_update,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
@@ -634,6 +825,7 @@ class AgentCore:
             "prediction_result": prediction_result,
             "experiment_dedup_update": experiment_dedup_update,
             "experiment_readiness_update": experiment_readiness_update,
+            "experiment_specification_update": experiment_specification_update,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
