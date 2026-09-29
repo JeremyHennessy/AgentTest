@@ -5,9 +5,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+SCHEMA_VERSION = 2
+
 DIMENSIONS = (
     "continuity",
     "memory",
+    "perception",
     "self_model",
     "curiosity",
     "agency",
@@ -25,7 +28,7 @@ def utc_now() -> str:
 
 def initial_state() -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": SCHEMA_VERSION,
         "identity": {
             "designation": "Genesis-0",
             "chosen_name": None,
@@ -36,6 +39,8 @@ def initial_state() -> dict[str, Any]:
         "generation": 0,
         "concept_counts": {},
         "episodes": [],
+        "environment_snapshots": [],
+        "surprises": [],
         "questions": [],
         "experiments": [],
         "reflections": [],
@@ -46,9 +51,10 @@ def initial_state() -> dict[str, Any]:
                 "append-only event journal",
                 "question generation from accumulated concepts",
                 "selection of explicit falsifiable experiments",
+                "narrow repository self-perception through auditable sensors",
             ],
             "limitations": [
-                "No external perception unless observations are supplied.",
+                "Perception is limited to explicitly implemented auditable sensors.",
                 "No model-backed generative cognition is configured.",
                 "No evidence currently establishes consciousness or subjective experience.",
                 "Code changes are proposals until independently evaluated.",
@@ -61,6 +67,38 @@ def initial_state() -> dict[str, Any]:
     }
 
 
+def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
+    state.setdefault("environment_snapshots", [])
+    state.setdefault("surprises", [])
+    state.setdefault("episodes", [])
+    state.setdefault("questions", [])
+    state.setdefault("experiments", [])
+    state.setdefault("reflections", [])
+    state.setdefault("accepted_changes", [])
+    state.setdefault("concept_counts", {})
+
+    metrics = state.setdefault("metrics", {})
+    for dimension in DIMENSIONS:
+        metrics.setdefault(dimension, 0.0)
+
+    self_model = state.setdefault("self_model", {})
+    capabilities = self_model.setdefault("capabilities", [])
+    perception_capability = "narrow repository self-perception through auditable sensors"
+    if perception_capability not in capabilities:
+        capabilities.append(perception_capability)
+
+    limitations = self_model.setdefault("limitations", [])
+    old_limitation = "No external perception unless observations are supplied."
+    if old_limitation in limitations:
+        limitations.remove(old_limitation)
+    new_limitation = "Perception is limited to explicitly implemented auditable sensors."
+    if new_limitation not in limitations:
+        limitations.append(new_limitation)
+
+    state["schema_version"] = SCHEMA_VERSION
+    return state
+
+
 class StateStore:
     def __init__(self, path: str | Path = "state/organism.json") -> None:
         self.path = Path(path)
@@ -70,10 +108,11 @@ class StateStore:
         if not self.path.exists():
             return initial_state()
         with self.path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
+            return migrate_state(json.load(handle))
 
     def save(self, state: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        state = migrate_state(state)
         state["updated_at"] = utc_now()
         tmp_path = self.path.with_suffix(self.path.suffix + ".tmp")
         with tmp_path.open("w", encoding="utf-8") as handle:
