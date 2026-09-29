@@ -1,16 +1,16 @@
 {
   "created": true,
   "diagnostic": {
-    "baseline_fingerprint": "d485ca464e4cefa6",
-    "context_hash": "3d2bfa0b35b43c9550c441aed632daa1f0e16e4f04c6591f834f993a35c2091c",
-    "created_at": "2026-09-29T18:06:11.151696+00:00",
-    "created_cycle": 46,
-    "diagnostic_version": "blocked-attention-v1",
-    "id": "SD000017",
+    "baseline_fingerprint": "cbce183b4582e63e",
+    "context_hash": "690e4e10acf6360d55fa51d6d24a6d4f59c12dc9132d74918fc118c1cc5c6cd0",
+    "created_at": "2026-09-29T18:09:54.351229+00:00",
+    "created_cycle": 47,
+    "diagnostic_version": "blocked-attention-v2",
+    "id": "SD000019",
     "kind": "attention_control",
-    "outcome": "blocked_attention_loop",
+    "outcome": "attention_redirected",
     "result": {
-      "blocked_experiment_count": 13,
+      "blocked_experiment_count": 14,
       "blocked_experiment_ids": [
         "X000001",
         "X000002",
@@ -24,38 +24,23 @@
         "X000010",
         "X000011",
         "X000020",
-        "X000021"
+        "X000021",
+        "X000022"
       ],
-      "diagnostic_version": "blocked-attention-v1",
-      "loop_count": 1,
-      "loop_experiment_ids": [
+      "diagnostic_version": "blocked-attention-v2",
+      "historical_reselected_after_block_count": 1,
+      "historical_reselected_after_block_ids": [
         "X000011"
       ],
-      "loop_records": [
-        {
-          "blocking_reason": "Current grounded state does not explicitly supply: observable, evidence_source, resolution_rule.",
-          "evaluated_cycle": 41,
-          "experiment_id": "X000011",
-          "experiment_times_selected": 6,
-          "last_selected_cycle": 43,
-          "missing_fields": [
-            "observable",
-            "evidence_source",
-            "resolution_rule"
-          ],
-          "question_id": "Q000012",
-          "question_text": "Which assumption in my current decision process has gone longest without an attempt to falsify it?",
-          "question_times_selected": 24,
-          "selected_after_block": true
-        }
-      ],
+      "latest_relevant_intervention_cycle": 44,
+      "loop_count": 0,
+      "loop_experiment_ids": [],
+      "loop_records": [],
       "max_blocked_experiment_times_selected": 6,
       "max_blocked_question_times_selected": 24,
-      "outcome": "blocked_attention_loop",
-      "reselected_after_block_count": 1,
-      "reselected_after_block_ids": [
-        "X000011"
-      ],
+      "outcome": "attention_redirected",
+      "reselected_after_block_count": 0,
+      "reselected_after_block_ids": [],
       "source_state_mutated": false
     },
     "source_state_mutated": false,
