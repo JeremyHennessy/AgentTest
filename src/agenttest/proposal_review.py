@@ -278,15 +278,14 @@ def classify_proposal(
             str(proposal.get("id")),
             "inquiry_family",
         )
-        if inquiry is not None and inquiry.get("outcome") == "paraphrase_churn":
+        if inquiry is not None and inquiry.get("outcome") == "metric_inflation":
             return {
                 "verdict": "supported_problem",
                 "patch_authority": "candidate_allowed",
                 "reason": (
-                    "The latest verified read-only inquiry-family diagnostic found "
-                    "multiple question strings collapsing into a repeated semantic "
-                    "family. This directly supports paraphrase churn in the current "
-                    "open-endedness measurement."
+                    "The latest verified inquiry-family diagnostic found repeated "
+                    "question families and showed that exact-string scoring materially "
+                    "overstates family-based open-endedness."
                 ),
                 "required_next_evidence": None,
                 "resolved_evidence_count": len(cited),
@@ -294,13 +293,17 @@ def classify_proposal(
                 "direct_diagnostic_id": inquiry.get("id"),
             }
 
-        if inquiry is not None and inquiry.get("outcome") == "diverse":
+        if inquiry is not None and inquiry.get("outcome") in {
+            "diverse",
+            "paraphrase_churn_metric_aligned",
+        }:
             return {
                 "verdict": "no_problem_observed",
                 "patch_authority": "none",
                 "reason": (
-                    "The latest verified inquiry-family diagnostic found sufficient "
-                    "family diversity and no material paraphrase-churn signal."
+                    "The latest verified inquiry-family diagnostic found no material "
+                    "inflation in the reported open-endedness metric relative to "
+                    "distinct inquiry families."
                 ),
                 "required_next_evidence": None,
                 "resolved_evidence_count": len(cited),
@@ -314,7 +317,7 @@ def classify_proposal(
                 "patch_authority": "none",
                 "reason": (
                     "The verified inquiry-family diagnostic does not yet have enough "
-                    "questions to classify open-endedness."
+                    "questions to evaluate metric alignment."
                 ),
                 "required_next_evidence": (
                     "Accumulate at least four evidence-backed questions, then rerun "
@@ -330,11 +333,11 @@ def classify_proposal(
             "patch_authority": "none",
             "reason": (
                 "The cited questions are real, but exact-string uniqueness does not "
-                "show whether they represent distinct inquiry families."
+                "show whether the reported metric matches distinct inquiry families."
             ),
             "required_next_evidence": (
-                "Run the verified read-only inquiry-family diagnostic to measure "
-                "paraphrase churn versus distinct evidence-grounded question families."
+                "Run the verified read-only inquiry-family diagnostic to compare "
+                "reported open-endedness with family-based open-endedness."
             ),
             "resolved_evidence_count": len(cited),
             "evidence_kinds": dict(kinds),
