@@ -37,6 +37,10 @@ def main() -> None:
 
     context = {
         "cycle": int(state.get("cycles", 0)),
+        "diagnostic_version": result.get("diagnostic_version"),
+        "latest_relevant_intervention_cycle": result.get(
+            "latest_relevant_intervention_cycle"
+        ),
         "blocked_ids": result.get("blocked_experiment_ids", []),
         "reselected_ids": result.get("reselected_after_block_ids", []),
         "loop_ids": result.get("loop_experiment_ids", []),
