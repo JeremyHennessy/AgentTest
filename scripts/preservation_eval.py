@@ -23,7 +23,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v17"
+SUITE = "behavioral-preservation-v18"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1401,6 +1401,144 @@ def blocked_attention_diagnostic_governance() -> dict[str, Any]:
 
 
 
+def system_diagnostic_baseline_authority() -> dict[str, Any]:
+    temp, store, _ = fresh()
+    try:
+        state = store.load()
+        state["cycles"] = 48
+        state["generation"] = 48
+        state["metrics"].update(
+            {name: 1.0 for name in state.get("metrics", {})}
+        )
+        state["drives"] = {
+            "prediction_error": 0.0,
+            "specification_pressure": 0.0,
+            "evidence_hunger": 0.0,
+            "uncertainty": 0.8,
+            "continuity_repair": 0.0,
+            "calibration_gap": 0.0,
+            "novelty_hunger": 0.0,
+        }
+        state["environment_snapshots"] = [
+            {"baseline_fingerprint": "current-baseline"}
+        ]
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000017",
+                "kind": "attention_control",
+                "status": "completed",
+                "baseline_fingerprint": "old-baseline",
+                "outcome": "blocked_attention_loop",
+                "created_cycle": 46,
+                "result": {"loop_count": 1},
+            }
+        ]
+
+        stale_selected = select_change_target(state)
+        stale_proposal, stale_created = propose_self_change(state)
+
+        state["system_diagnostics"].append(
+            {
+                "id": "SD000019",
+                "kind": "attention_control",
+                "status": "completed",
+                "baseline_fingerprint": "current-baseline",
+                "outcome": "attention_redirected",
+                "created_cycle": 47,
+                "result": {"loop_count": 0},
+            }
+        )
+        proposal = make_change_manifest(
+            state,
+            title="Redirect inquiry away from blocked experiments",
+            target_dimension="agency",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Blocked questions should not monopolize inquiry.",
+            expected_effect="Attention moves to eligible unresolved inquiry.",
+            test_plan="Compare blocked and eligible selection.",
+            falsification="Blocked attention still loops.",
+            rollback="Revert.",
+            evidence_refs=["SD000017"],
+        )
+        proposal.update(
+            {
+                "id": "M000013",
+                "source": "test",
+                "created_cycle": 47,
+                "selection_signal": "attention_control_blocked_attention_loop",
+                "source_diagnostic_id": "SD000017",
+                "status": "reviewed_supported_problem",
+            }
+        )
+        state["change_proposals"].append(proposal)
+        state["proposal_reviews"].append(
+            {
+                "id": "V000025",
+                "proposal_id": "M000013",
+                "review_version": "proposal-review-v4",
+                "considered_diagnostic_ids": [],
+                "considered_system_diagnostic_ids": ["SD000017"],
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+            }
+        )
+
+        review, review_created = review_change_proposal(state, proposal)
+
+        current_failure = store.load()
+        current_failure["cycles"] = 48
+        current_failure["generation"] = 48
+        current_failure["metrics"].update(
+            {name: 1.0 for name in current_failure.get("metrics", {})}
+        )
+        current_failure["drives"] = {"uncertainty": 0.8}
+        current_failure["environment_snapshots"] = [
+            {"baseline_fingerprint": "current-baseline"}
+        ]
+        current_failure["system_diagnostics"] = [
+            {
+                "id": "SD000020",
+                "kind": "attention_control",
+                "status": "completed",
+                "baseline_fingerprint": "current-baseline",
+                "outcome": "blocked_attention_loop",
+                "created_cycle": 48,
+                "result": {"loop_count": 1},
+            }
+        ]
+        current_selected = select_change_target(current_failure)
+
+        return {
+            "passed": (
+                stale_selected is None
+                and not stale_created
+                and stale_proposal is None
+                and review_created
+                and review is not None
+                and review.get("verdict") == "no_problem_observed"
+                and review.get("patch_authority") == "none"
+                and review.get("direct_diagnostic_id") == "SD000019"
+                and proposal.get("status") == "closed_no_problem_observed"
+                and current_selected is not None
+                and current_selected.get("source_diagnostic_id") == "SD000020"
+            ),
+            "stale_target": (
+                stale_selected.get("dimension") if stale_selected else None
+            ),
+            "stale_proposal_created": stale_created,
+            "re_review_verdict": review.get("verdict") if review else None,
+            "re_review_direct_diagnostic_id": (
+                review.get("direct_diagnostic_id") if review else None
+            ),
+            "current_failure_source": (
+                current_selected.get("source_diagnostic_id")
+                if current_selected else None
+            ),
+        }
+    finally:
+        temp.cleanup()
+
+
 def post_intervention_attention_measurement_scope() -> dict[str, Any]:
     state = {
         "questions": [
@@ -1570,6 +1708,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("verified_intervention_reconciliation", verified_intervention_reconciliation),
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
+    ("system_diagnostic_baseline_authority", system_diagnostic_baseline_authority),
     ("post_intervention_attention_measurement_scope", post_intervention_attention_measurement_scope),
     ("specification_backlog_lifecycle_scope", specification_backlog_lifecycle_scope),
 ]
