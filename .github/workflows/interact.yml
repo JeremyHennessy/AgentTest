@@ -1,0 +1,174 @@
+name: human-interaction
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Message to AgentTest"
+        required: true
+        type: string
+      cognition:
+        description: "Allow configured model cognition"
+        required: false
+        default: false
+        type: boolean
+  issue_comment:
+    types: [created]
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/interact.yml"
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: agenttest-autonomous-growth
+  cancel-in-progress: false
+
+jobs:
+  interact:
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.actor == github.repository_owner &&
+       startsWith(github.event.comment.body, '/agent '))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Prepare persistent growth branch
+        shell: bash
+        run: |
+          git config user.name "agenttest-interaction"
+          git config user.email "agenttest-interaction@users.noreply.github.com"
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth || true
+          if git show-ref --verify --quiet refs/remotes/origin/autonomous/growth; then
+            git checkout -B autonomous/growth origin/autonomous/growth
+            git merge --no-edit origin/main
+          else
+            git checkout -b autonomous/growth origin/main
+          fi
+
+      - name: Resolve authorized message
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_MESSAGE: ${{ inputs.message }}
+          DISPATCH_COGNITION: ${{ inputs.cognition }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          event = os.environ.get("EVENT_NAME", "")
+          cognition = "false"
+          skip = False
+
+          if event == "workflow_dispatch":
+              message = os.environ.get("DISPATCH_MESSAGE", "").strip()
+              cognition = os.environ.get("DISPATCH_COGNITION", "false").lower()
+          elif event == "issue_comment":
+              body = os.environ.get("COMMENT_BODY", "")
+              message = body[len("/agent "):].strip() if body.startswith("/agent ") else ""
+          else:
+              state_path = Path("state/organism.json")
+              has_interaction = False
+              if state_path.exists():
+                  try:
+                      state = json.loads(state_path.read_text(encoding="utf-8"))
+                      has_interaction = bool(state.get("interactions"))
+                  except Exception:
+                      has_interaction = False
+              if has_interaction:
+                  skip = True
+                  message = ""
+              else:
+                  message = (
+                      "Jeremy: Continue doing whatever you think is best to evolve. "
+                      "Let me know if you need anything."
+                  )
+
+          if not skip and not message:
+              raise SystemExit("No authorized interaction message was supplied.")
+
+          Path("/tmp/agenttest-message.txt").write_text(message, encoding="utf-8")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              handle.write(f"SKIP_INTERACTION={'true' if skip else 'false'}\n")
+              handle.write(f"INTERACTION_COGNITION={cognition}\n")
+          PY
+
+      - name: Run evidence-linked interaction
+        if: env.SKIP_INTERACTION != 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AGENTTEST_MODEL: gpt-6-luna
+        shell: bash
+        run: |
+          mkdir -p state
+          MESSAGE="$(cat /tmp/agenttest-message.txt)"
+          if [ "$INTERACTION_COGNITION" = "true" ]; then
+            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src               python -m agenttest interact --self-observe --cognition "$MESSAGE"               | tee state/last_interaction.json
+          else
+            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src               python -m agenttest interact --self-observe "$MESSAGE"               | tee state/last_interaction.json
+          fi
+
+      - name: Verify invariant and preservation suites
+        if: env.SKIP_INTERACTION != 'true'
+        shell: bash
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src             python -m unittest discover -s tests -v
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src             python scripts/preservation_eval.py --strict --output /tmp/interaction-preservation.json
+
+      - name: Persist interaction
+        if: env.SKIP_INTERACTION != 'true'
+        shell: bash
+        run: |
+          git add state/
+          if git diff --cached --quiet; then
+            echo "No interaction state change to preserve."
+            exit 0
+          fi
+          git commit -m "Record human interaction"
+          git push origin autonomous/growth
+
+      - name: Render response for GitHub comment
+        if: env.SKIP_INTERACTION != 'true' && github.event_name == 'issue_comment'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("state/last_interaction.json").read_text(encoding="utf-8"))
+          record = data["interaction"]
+          current = data["current"]
+          question = (current.get("question") or {}).get("text", "none")
+          experiment = (current.get("experiment") or {}).get("method", "none")
+          body = (
+              f"**AgentTest {record['id']} · cycle {record['cycle']}**\n\n"
+              f"{data['response_text']}\n\n"
+              f"**Current question:** {question}\n\n"
+              f"**Proposed test:** {experiment}\n\n"
+              "_This is an evidence-linked state rendering, not a claim of consciousness._\n"
+          )
+          Path("/tmp/agenttest-reply.md").write_text(body, encoding="utf-8")
+          PY
+
+      - name: Reply to owner comment
+        if: env.SKIP_INTERACTION != 'true' && github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        shell: bash
+        run: gh issue comment "$ISSUE_NUMBER" --body-file /tmp/agenttest-reply.md
