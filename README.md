@@ -39,6 +39,8 @@ Two corrective cycles have now completed:
 
 The reply is a deterministic rendering of state. It is not evidence of consciousness and does not turn generated language into fact.
 
+The owner-authorized GitHub channel is now live. Real interactions persist on `autonomous/growth`, and a transport self-observation bug discovered by live use has already been repaired and re-tested.
+
 ### GitHub-native interaction
 
 The repository owner can also interact without a local clone:
