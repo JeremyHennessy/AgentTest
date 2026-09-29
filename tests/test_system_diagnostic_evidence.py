@@ -355,6 +355,168 @@ class SystemDiagnosticEvidenceTests(unittest.TestCase):
         self.assertEqual(review["patch_authority"], "none")
         self.assertEqual(proposal["status"], "closed_no_problem_observed")
 
+    def test_old_baseline_attention_diagnostic_cannot_author_self_change(self) -> None:
+        state = saturated_state()
+        state["drives"] = {
+            "prediction_error": 0.0,
+            "specification_pressure": 0.0,
+            "evidence_hunger": 0.0,
+            "uncertainty": 0.8,
+            "continuity_repair": 0.0,
+            "calibration_gap": 0.0,
+            "novelty_hunger": 0.0,
+        }
+        state["environment_snapshots"] = [
+            {"baseline_fingerprint": "current-baseline"}
+        ]
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000017",
+                "kind": "attention_control",
+                "status": "completed",
+                "baseline_fingerprint": "old-baseline",
+                "outcome": "blocked_attention_loop",
+                "created_cycle": 46,
+                "result": {"loop_count": 1},
+            }
+        ]
+
+        proposal, created = propose_self_change(state)
+
+        self.assertFalse(created)
+        self.assertIsNone(proposal)
+
+    def test_current_baseline_attention_diagnostic_can_author_self_change(self) -> None:
+        state = saturated_state()
+        state["drives"] = {
+            "prediction_error": 0.0,
+            "specification_pressure": 0.0,
+            "evidence_hunger": 0.0,
+            "uncertainty": 0.8,
+            "continuity_repair": 0.0,
+            "calibration_gap": 0.0,
+            "novelty_hunger": 0.0,
+        }
+        state["environment_snapshots"] = [
+            {"baseline_fingerprint": "current-baseline"}
+        ]
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000020",
+                "kind": "attention_control",
+                "status": "completed",
+                "baseline_fingerprint": "current-baseline",
+                "outcome": "blocked_attention_loop",
+                "created_cycle": 48,
+                "result": {"loop_count": 1},
+            }
+        ]
+
+        proposal, created = propose_self_change(state)
+
+        self.assertTrue(created)
+        self.assertIsNotNone(proposal)
+        self.assertEqual(proposal["source_diagnostic_id"], "SD000020")
+
+    def test_old_baseline_experiment_diagnostic_cannot_author_self_change(self) -> None:
+        state = saturated_state()
+        state["environment_snapshots"] = [
+            {"baseline_fingerprint": "current-baseline"}
+        ]
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000018",
+                "kind": "experiment_design",
+                "status": "completed",
+                "baseline_fingerprint": "old-baseline",
+                "diagnostic_version": "experiment-design-v3",
+                "outcome": "specification_backlog",
+                "created_cycle": 47,
+                "result": {
+                    "specification_backlog_count": 10,
+                    "untriaged_specification_ids": [],
+                },
+            }
+        ]
+
+        selected = select_change_target(state)
+
+        self.assertTrue(
+            selected is None
+            or selected.get("selection_signal")
+            != "experiment_design_specification_backlog"
+        )
+
+    def test_cached_old_baseline_attention_review_closes_on_current_redirect(self) -> None:
+        state = saturated_state()
+        state["cycles"] = 48
+        state["environment_snapshots"] = [
+            {"baseline_fingerprint": "current-baseline"}
+        ]
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000017",
+                "kind": "attention_control",
+                "status": "completed",
+                "baseline_fingerprint": "old-baseline",
+                "outcome": "blocked_attention_loop",
+                "created_cycle": 46,
+                "result": {"loop_count": 1},
+            },
+            {
+                "id": "SD000019",
+                "kind": "attention_control",
+                "status": "completed",
+                "baseline_fingerprint": "current-baseline",
+                "outcome": "attention_redirected",
+                "created_cycle": 47,
+                "result": {"loop_count": 0},
+            },
+        ]
+        proposal = make_change_manifest(
+            state,
+            title="Redirect inquiry away from blocked experiments",
+            target_dimension="agency",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Blocked questions should not monopolize inquiry.",
+            expected_effect="Attention moves to eligible unresolved inquiry.",
+            test_plan="Compare blocked and eligible selection.",
+            falsification="Blocked attention still loops.",
+            rollback="Revert.",
+            evidence_refs=["SD000017"],
+        )
+        proposal.update(
+            {
+                "id": "M000013",
+                "source": "test",
+                "created_cycle": 47,
+                "selection_signal": "attention_control_blocked_attention_loop",
+                "source_diagnostic_id": "SD000017",
+                "status": "reviewed_supported_problem",
+            }
+        )
+        state["change_proposals"].append(proposal)
+        state["proposal_reviews"].append(
+            {
+                "id": "V000025",
+                "proposal_id": "M000013",
+                "review_version": "proposal-review-v4",
+                "considered_diagnostic_ids": [],
+                "considered_system_diagnostic_ids": ["SD000017"],
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+            }
+        )
+
+        review, created = review_change_proposal(state, proposal)
+
+        self.assertTrue(created)
+        self.assertNotEqual(review["id"], "V000025")
+        self.assertEqual(review["verdict"], "no_problem_observed")
+        self.assertEqual(review["patch_authority"], "none")
+        self.assertEqual(review["direct_diagnostic_id"], "SD000019")
+        self.assertEqual(proposal["status"], "closed_no_problem_observed")
+
     def test_evidence_ready_system_diagnostic_does_not_trigger_self_change(self) -> None:
         state = saturated_state()
         state["system_diagnostics"] = [
