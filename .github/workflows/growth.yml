@@ -54,6 +54,14 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest diagnose-change
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
 
+      - name: Measure experiment design health
+        shell: bash
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+            python scripts/experiment_design_eval.py \
+              --state state/organism.json \
+              --output state/experiment_design_diagnostic.json
+
       - name: Verify invariants
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 
