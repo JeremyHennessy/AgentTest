@@ -260,8 +260,14 @@ TARGETS: dict[str, dict[str, Any]] = {
 
 
 def _active_proposal(state: dict[str, Any]) -> dict[str, Any] | None:
+    unresolved = {
+        "proposed",
+        "reviewed_measurement_gap",
+        "reviewed_needs_evidence",
+        "reviewed_supported_problem",
+    }
     for proposal in state.get("change_proposals", []):
-        if proposal.get("status") == "proposed":
+        if proposal.get("status") in unresolved:
             return proposal
     return None
 
