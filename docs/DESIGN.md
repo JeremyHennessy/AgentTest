@@ -1,4 +1,4 @@
-# Design: Genesis Phases 0–4
+# Design: Genesis Phases 0–5
 
 ## Premise
 
@@ -24,6 +24,20 @@ AgentTest is an original experiment in persistent adaptive computation. It is no
           ↓
        next heartbeat
 
+Code evolution is deliberately outside that heartbeat:
+
+    evidence-backed change proposal
+          ↓
+    isolated candidate branch
+          ↓
+    candidate tests
+          ↓
+    BASELINE-OWNED preservation evaluator
+          ↓
+    baseline vs candidate comparison
+          ↓
+    human/verified promotion or rejection
+
 ## Episodic versus semantic memory
 
 Raw episodes remain immutable evidence. Semantic memory is a derived index over those episodes.
@@ -46,20 +60,37 @@ Confirmed or violated predictions and completed experiment outcomes also create 
 
 Current world claims may be supplied to the cognition boundary and cited by ID, but the claim itself retains links to raw evidence. Semantic memory is used for retrieval and context, not as unquestionable evidence.
 
+## Evolution gate
+
+A candidate version must not be allowed to redefine success for itself.
+
+The preservation harness and comparator are therefore part of the verified baseline. On future pull requests, the workflow checks out both the base and candidate commits, then uses the BASE commit's preservation evaluator against both codebases. A candidate that deletes a capability, causes a previously passing behavior to fail, or removes a required behavior is rejected as a regression.
+
+The first protected paths are:
+
+- .github/workflows/verify.yml
+- scripts/preservation_eval.py
+- scripts/compare_eval.py
+
+A future self-authored change manifest may not target those files. It must also state a target dimension, evidence references, expected effect, test plan, falsification condition, and rollback.
+
+Phase 5 establishes the judge before granting the organism authority to author patches.
+
 ## Trust ordering
 
 1. Raw sensor observations and explicitly recorded experiment outcomes.
 2. Derived world claims with source references.
 3. Semantic memory used for retrieval.
 4. Model-generated candidate thoughts.
+5. Proposed code changes.
 
-Lower layers may guide attention but cannot overwrite higher-evidence layers.
+Lower layers may guide attention but cannot overwrite higher-evidence layers, and code changes cannot redefine the preservation gate that judges them.
 
 ## Still missing
 
+- self-authored code proposals and patches;
 - broader external perception;
 - causal models richer than temporal claim revision;
 - independent environmental action;
-- self-authored code proposals;
 - measured evidence that optional model cognition improves research outcomes;
 - any evidence of subjective experience.
