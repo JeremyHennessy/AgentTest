@@ -1290,5 +1290,142 @@ class AgentCoreTests(unittest.TestCase):
         )
 
 
+    def test_interaction_persists_turn_and_links_source_episode(self) -> None:
+        from agenttest.interaction import interact
+
+        result = interact(
+            "How do you remember what I say?",
+            store=self.store,
+        )
+        state = self.store.load()
+
+        self.assertEqual(len(state["interactions"]), 1)
+        interaction = state["interactions"][0]
+        self.assertEqual(interaction["id"], "H000001")
+        self.assertEqual(result["interaction"]["id"], interaction["id"])
+        self.assertIsNotNone(interaction["input_episode_id"])
+        episode = next(
+            item
+            for item in state["episodes"]
+            if item["id"] == interaction["input_episode_id"]
+        )
+        self.assertEqual(episode["source"], "human_interaction")
+        self.assertEqual(episode["interaction_id"], interaction["id"])
+        self.assertEqual(interaction["question_id"], result["current"]["question"]["id"])
+        self.assertEqual(
+            interaction["experiment_id"],
+            result["current"]["experiment"]["id"],
+        )
+        self.assertIn("I recorded your message", result["response_text"])
+
+    def test_interaction_retrieves_prior_memory_before_writing_new_turn(self) -> None:
+        from agenttest.interaction import interact
+
+        self.core.cycle("alpha persistence memory evidence")
+        result = interact(
+            "alpha continuity",
+            store=self.store,
+        )
+
+        concepts = [
+            item["concept"]
+            for item in result["memory"]["prior_semantic"]
+        ]
+        self.assertIn("alpha", concepts)
+        self.assertEqual(
+            result["interaction"]["prior_memory_concepts"],
+            concepts,
+        )
+
+    def test_interaction_unavailable_cognition_never_fakes_candidate(self) -> None:
+        from agenttest.interaction import interact
+
+        result = interact(
+            "What are you thinking about?",
+            store=self.store,
+            cognition=True,
+            cognition_provider=None,
+        )
+
+        self.assertEqual(
+            result["cognition"]["event"]["status"],
+            "unavailable",
+        )
+        self.assertIsNone(result["cognition"]["candidate"])
+        self.assertIn(
+            "deterministic evidence loop",
+            result["response_text"],
+        )
+
+    def test_interaction_capability_is_observed_only_after_real_turn(self) -> None:
+        from agenttest.interaction import interact
+
+        initial = self.store.load()
+        self.core.cycle("calibration baseline")
+        before = self.store.load()
+        before_claim = before["self_model"]["capability_claims"][
+            "persistent human interaction surface with evidence-linked responses"
+        ]
+        self.assertEqual(before_claim["status"], "unverified")
+
+        interact(
+            "This is a real interaction turn.",
+            store=self.store,
+        )
+        after = self.store.load()
+        after_claim = after["self_model"]["capability_claims"][
+            "persistent human interaction surface with evidence-linked responses"
+        ]
+
+        self.assertEqual(after_claim["status"], "observed")
+        self.assertTrue(after_claim["evidence_refs"])
+        self.assertIn("E000002", after_claim["evidence_refs"])
+
+    def test_interaction_exposes_prior_world_claims_without_promoting_them(self) -> None:
+        from agenttest.interaction import interact
+
+        self.core.cycle(observation=observation(100))
+        result = interact(
+            "What do you know about your environment?",
+            store=self.store,
+        )
+
+        claims = result["world"]["prior_current_claims"]
+        self.assertTrue(claims)
+        self.assertTrue(
+            all(claim.get("status") == "current" for claim in claims)
+        )
+        self.assertTrue(
+            all(claim.get("evidence_refs") for claim in claims)
+        )
+
+    def test_interaction_rejects_empty_message(self) -> None:
+        from agenttest.interaction import interact
+
+        with self.assertRaises(ValueError):
+            interact("   ", store=self.store)
+
+    def test_v12_state_migrates_interaction_history_without_loss(self) -> None:
+        legacy = {
+            "schema_version": 12,
+            "cycles": 4,
+            "generation": 4,
+            "episodes": [{"id": "E000001", "cycle": 1, "concepts": ["alpha"]}],
+            "metrics": {"continuity": 1.0},
+            "self_model": {"capabilities": [], "limitations": []},
+        }
+        self.state_path.write_text(json.dumps(legacy), encoding="utf-8")
+
+        migrated = self.store.load()
+
+        self.assertEqual(migrated["schema_version"], SCHEMA_VERSION)
+        self.assertEqual(migrated["episodes"][0]["id"], "E000001")
+        self.assertEqual(migrated["interactions"], [])
+        self.assertIn(
+            "persistent human interaction surface with evidence-linked responses",
+            migrated["self_model"]["capabilities"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
