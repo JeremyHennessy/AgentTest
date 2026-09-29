@@ -22,24 +22,27 @@ TARGET_ORDER = (
 
 TARGETS: dict[str, dict[str, Any]] = {
     "learning": {
-        "files": ["src/agenttest/core.py", "tests/test_core.py"],
-        "title": "Close measurable experiment loops from later evidence",
+        "files": ["src/agenttest/core.py", "src/agenttest/drives.py", "tests/test_core.py"],
+        "title": "Resolve stale experiment evidence debt",
         "hypothesis": (
-            "Linking eligible pending experiments to later measured outcomes can increase "
-            "evidence-backed learning without manufacturing experiment results."
+            "Separating evidence-ready experiments from underspecified investigations can "
+            "prevent stale unresolved work from dominating attention while preserving every "
+            "historical experiment and its provenance."
         ),
         "expected_effect": (
-            "At least one eligible experiment can transition from proposed to completed "
-            "only when a matching later observation or prediction result supplies evidence."
+            "An experiment with a concrete evidence contract can close only from matching later "
+            "evidence; an underspecified stale experiment is retained but marked as needing "
+            "specification and no longer contributes to resolvable evidence hunger."
         ),
         "test_plan": (
-            "Add a controlled experiment whose predicted observation is later confirmed or "
-            "violated; verify only the matching experiment closes, then run the baseline-owned "
-            "behavioral preservation gate."
+            "Construct evidence-ready and underspecified experiments, provide later evaluated "
+            "prediction evidence, verify only a legitimate match closes, verify stale "
+            "underspecified work remains preserved with an explicit non-ready status, and run "
+            "the baseline-owned preservation gate."
         ),
         "falsification": (
-            "Reject if no eligible experiment closes after matching evidence, if an unrelated "
-            "experiment closes, if evidence provenance is missing, or if any preserved behavior regresses."
+            "Reject if unrelated evidence closes an experiment, history is deleted, evidence "
+            "hunger still counts work that cannot be resolved, or any preserved behavior regresses."
         ),
     },
     "reflection": {
@@ -283,6 +286,65 @@ def _cognition_is_externally_blocked(state: dict[str, Any]) -> bool:
     return True
 
 
+def _learning_evidence_debt(
+    state: dict[str, Any],
+    *,
+    min_age_cycles: int = 3,
+) -> dict[str, Any] | None:
+    current_cycle = int(state.get("cycles", 0))
+    prediction_reflections = [
+        reflection
+        for reflection in state.get("reflections", [])
+        if reflection.get("source") == "prediction"
+        and reflection.get("prediction_id")
+    ]
+
+    for experiment in state.get("experiments", []):
+        if experiment.get("status") != "proposed":
+            continue
+        created_cycle = int(experiment.get("cycle", 0))
+        age = current_cycle - created_cycle
+        if age < min_age_cycles:
+            continue
+
+        later = [
+            reflection
+            for reflection in prediction_reflections
+            if int(reflection.get("cycle", 0)) > created_cycle
+        ]
+        if not later:
+            continue
+
+        refs = [str(experiment["id"])]
+        for reflection in later[-2:]:
+            prediction_id = reflection.get("prediction_id")
+            reflection_id = reflection.get("id")
+            for identifier in (prediction_id, reflection_id):
+                if identifier and str(identifier) not in refs:
+                    refs.append(str(identifier))
+        return {
+            "experiment_id": str(experiment["id"]),
+            "age_cycles": age,
+            "evidence_refs": refs,
+        }
+    return None
+
+
+def _open_endedness_metric_is_aligned(
+    state: dict[str, Any],
+    *,
+    tolerance: float = 0.05,
+) -> bool:
+    summary = state.get("semantic_memory", {}).get("inquiry_families", {})
+    if not isinstance(summary, dict):
+        return False
+    expected = summary.get("open_endedness")
+    reported = state.get("metrics", {}).get("open_endedness")
+    if not isinstance(expected, (int, float)) or not isinstance(reported, (int, float)):
+        return False
+    return abs(float(reported) - float(expected)) <= tolerance
+
+
 def _recent_evidence_refs(
     state: dict[str, Any],
     target: str,
@@ -341,11 +403,26 @@ def select_change_target(state: dict[str, Any]) -> dict[str, Any] | None:
     metrics = state.get("metrics", {})
     ranked: list[tuple[float, int, str, list[str]]] = []
 
+    evidence_debt = _learning_evidence_debt(state)
+    if evidence_debt is not None:
+        return {
+            "dimension": "learning",
+            "baseline_metric": float(metrics.get("learning", 0.0)),
+            "deficit": float(state.get("drives", {}).get("evidence_hunger", 0.8)),
+            "priority": -1,
+            "evidence_refs": evidence_debt["evidence_refs"],
+            "selection_signal": "stale_evidence_debt",
+            "experiment_id": evidence_debt["experiment_id"],
+            "age_cycles": evidence_debt["age_cycles"],
+        }
+
     for priority, dimension in enumerate(TARGET_ORDER):
         metric = float(metrics.get(dimension, 0.0))
         if metric >= 0.999:
             continue
         if dimension == "cognition" and _cognition_is_externally_blocked(state):
+            continue
+        if dimension == "open_endedness" and _open_endedness_metric_is_aligned(state):
             continue
 
         refs = _recent_evidence_refs(state, dimension)
@@ -399,9 +476,19 @@ def propose_self_change(
             "source": "self-proposal-v1",
             "created_cycle": state.get("cycles", 0),
             "selection_rationale": (
-                f"{target} was the highest eligible evidence-backed deficit "
-                f"({selected['deficit']:.3f}) after excluding saturated dimensions, "
-                "process-only adaptation, and externally blocked cognition."
+                (
+                    f"Stale evidence debt was detected in experiment "
+                    f"{selected.get('experiment_id')} after "
+                    f"{selected.get('age_cycles')} cycles despite later evaluated evidence; "
+                    "this overrides the saturated aggregate learning metric."
+                )
+                if selected.get("selection_signal") == "stale_evidence_debt"
+                else (
+                    f"{target} was the highest eligible evidence-backed deficit "
+                    f"({selected['deficit']:.3f}) after excluding saturated dimensions, "
+                    "process-only adaptation, externally blocked cognition, and metrics "
+                    "already aligned with their verified derived measurement."
+                )
             ),
         }
     )

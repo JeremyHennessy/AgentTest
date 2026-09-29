@@ -1449,5 +1449,108 @@ class AgentCoreTests(unittest.TestCase):
             )
 
 
+    def test_self_proposal_prioritizes_stale_evidence_debt_over_saturated_learning_metric(self) -> None:
+        from agenttest.self_proposal import select_change_target
+
+        first = self.core.cycle(observation=observation(100))
+        for _ in range(4):
+            self.core.cycle(observation=observation(100))
+        state = self.store.load()
+        state["metrics"]["learning"] = 1.0
+        state["metrics"]["open_endedness"] = 0.1
+        state["drives"]["evidence_hunger"] = 0.8
+
+        selected = select_change_target(state)
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["dimension"], "learning")
+        self.assertEqual(selected["selection_signal"], "stale_evidence_debt")
+        self.assertEqual(selected["experiment_id"], first["experiment"]["id"])
+        self.assertIn(first["experiment"]["id"], selected["evidence_refs"])
+        self.assertGreaterEqual(selected["age_cycles"], 3)
+
+    def test_aligned_open_endedness_is_not_reproposed_as_defect(self) -> None:
+        from agenttest.self_proposal import select_change_target
+
+        state = self.store.load()
+        state["cycles"] = 10
+        state["metrics"].update(
+            {
+                "learning": 1.0,
+                "reflection": 1.0,
+                "self_model": 1.0,
+                "agency": 1.0,
+                "curiosity": 1.0,
+                "reproducibility": 1.0,
+                "perception": 1.0,
+                "semantic_memory": 1.0,
+                "world_model": 1.0,
+                "memory": 1.0,
+                "continuity": 1.0,
+                "open_endedness": 0.3,
+                "cognition": 0.0,
+            }
+        )
+        state["semantic_memory"]["inquiry_families"] = {
+            "open_endedness": 0.3,
+            "family_count": 3,
+            "question_count": 6,
+        }
+        state["questions"] = [
+            {"id": "Q000001", "text": "Question one", "status": "open"},
+        ]
+        state["episodes"] = [
+            {"id": "E000001", "kind": "stimulus", "cycle": 1, "concepts": ["one"]},
+        ]
+        state["cognition_candidates"] = []
+        state["cognition_events"] = []
+
+        selected = select_change_target(state)
+
+        self.assertIsNone(selected)
+
+    def test_misaligned_open_endedness_remains_eligible_for_governance_review(self) -> None:
+        from agenttest.self_proposal import select_change_target
+
+        state = self.store.load()
+        state["cycles"] = 10
+        state["metrics"].update(
+            {
+                "learning": 1.0,
+                "reflection": 1.0,
+                "self_model": 1.0,
+                "agency": 1.0,
+                "curiosity": 1.0,
+                "reproducibility": 1.0,
+                "perception": 1.0,
+                "semantic_memory": 1.0,
+                "world_model": 1.0,
+                "memory": 1.0,
+                "continuity": 1.0,
+                "open_endedness": 0.8,
+                "cognition": 0.0,
+            }
+        )
+        state["semantic_memory"]["inquiry_families"] = {
+            "open_endedness": 0.3,
+            "family_count": 3,
+            "question_count": 6,
+        }
+        state["questions"] = [
+            {"id": "Q000001", "text": "Question one", "status": "open"},
+            {"id": "Q000002", "text": "Question two", "status": "open"},
+        ]
+        state["episodes"] = [
+            {"id": "E000001", "kind": "stimulus", "cycle": 1, "concepts": ["one"]},
+        ]
+        state["cognition_candidates"] = []
+        state["cognition_events"] = []
+
+        selected = select_change_target(state)
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["dimension"], "open_endedness")
+
+
 if __name__ == "__main__":
     unittest.main()

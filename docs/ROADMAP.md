@@ -64,7 +64,7 @@ A human turn must:
 
 The first interface is CLI-based and intentionally structured before any web UI or persona layer.
 
-## Phase 13 — Owner-authorized GitHub interaction channel — implementation under verification
+## Phase 13 — Owner-authorized GitHub interaction channel — verified
 
 Expose the Phase 12 interaction contract through GitHub without requiring a local clone.
 
@@ -78,6 +78,22 @@ The channel:
 - posts the evidence-linked response back to authorized issue comments;
 - protects the interaction workflow from self-authored change manifests;
 - creates one bootstrap interaction only if no prior human interaction exists.
+
+Live owner-authorized interactions H000001–H000003 have now persisted successfully. A transport self-interference defect was found from H000002 and repaired; H000003 subsequently observed a clean worktree.
+
+## Phase 14 — Evidence-debt-aware evolution governor — implementation under verification
+
+Live state exposed a mismatch between aggregate metrics and unresolved work:
+
+- learning reported 1.0;
+- ten experiments remained proposed;
+- evidence_hunger remained at 0.8;
+- X000001, created in cycle 1, was still selected in cycle 25 despite later evaluated evidence;
+- correctly aligned open-endedness repeatedly generated new no-problem proposals because its truthful value was below 1.0.
+
+The governor now treats direct stale evidence debt as a higher-priority signal than a saturated aggregate learning metric. It also suppresses open-endedness defect proposals when the runtime family-based measurement and reported metric already agree.
+
+The resulting learning manifest is reframed around experiment evidence readiness: unresolved history must be preserved, but underspecified work should not masquerade as immediately resolvable evidence debt.
 
 ## Next phases — evidence dependent
 
