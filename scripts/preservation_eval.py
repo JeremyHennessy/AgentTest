@@ -23,7 +23,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v18"
+SUITE = "behavioral-preservation-v19"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1401,6 +1401,119 @@ def blocked_attention_diagnostic_governance() -> dict[str, Any]:
 
 
 
+def executable_prediction_experiment_lifecycle() -> dict[str, Any]:
+    temp_support, store_support, core_support = fresh()
+    temp_intervention, store_intervention, core_intervention = fresh()
+    try:
+        first = core_support.cycle(observation=observation(100))
+        first_experiment = first.get("prediction_experiment")
+        second = core_support.cycle(observation=observation(100))
+        support_state = store_support.load()
+        resolved = next(
+            (
+                item
+                for item in support_state.get("experiments", [])
+                if first_experiment is not None
+                and item.get("id") == first_experiment.get("id")
+            ),
+            None,
+        )
+        support_claim = next(
+            (
+                claim
+                for claim in support_state.get("world_model", {}).get("claims", [])
+                if resolved is not None
+                and claim.get("subject") == f"experiment.{resolved.get('id')}"
+                and claim.get("predicate") == "outcome"
+            ),
+            None,
+        )
+
+        intervention_a = observation(100)
+        intervention_a["baseline_fingerprint"] = "baseline-a"
+        intervention_b = observation(100)
+        intervention_b["baseline_fingerprint"] = "baseline-b"
+        intervention_first = core_intervention.cycle(
+            observation=intervention_a
+        )
+        intervention_second = core_intervention.cycle(
+            observation=intervention_b
+        )
+        intervention_state = store_intervention.load()
+        intervention_experiment = next(
+            (
+                item
+                for item in intervention_state.get("experiments", [])
+                if intervention_first.get("prediction_experiment") is not None
+                and item.get("id")
+                == intervention_first["prediction_experiment"].get("id")
+            ),
+            None,
+        )
+
+        return {
+            "passed": (
+                first_experiment is not None
+                and first_experiment.get("readiness") == "evidence_ready"
+                and first_experiment.get("evidence_contract", {}).get("prediction_id")
+                == first.get("prediction", {}).get("id")
+                and first_experiment.get("evidence_contract", {}).get(
+                    "expected_status"
+                )
+                == "confirmed"
+                and second.get("prediction_result", {}).get("status") == "confirmed"
+                and resolved is not None
+                and resolved.get("status") == "completed"
+                and resolved.get("outcome") == "supported"
+                and first_experiment.get("id")
+                in second.get("prediction_result", {}).get(
+                    "resolved_experiment_ids",
+                    [],
+                )
+                and support_claim is not None
+                and support_claim.get("value") == "supported"
+                and second.get("prediction_experiment") is not None
+                and second["prediction_experiment"].get("status") == "proposed"
+                and intervention_second.get("prediction_result", {}).get("status")
+                == "invalidated_by_intervention"
+                and intervention_experiment is not None
+                and intervention_experiment.get("status") == "completed"
+                and intervention_experiment.get("outcome") == "inconclusive"
+            ),
+            "first_prediction_id": (
+                first.get("prediction", {}).get("id")
+                if first.get("prediction") else None
+            ),
+            "first_experiment_id": (
+                first_experiment.get("id") if first_experiment else None
+            ),
+            "resolved_outcome": (
+                resolved.get("outcome") if resolved else None
+            ),
+            "world_claim": (
+                support_claim.get("value") if support_claim else None
+            ),
+            "next_experiment_id": (
+                second.get("prediction_experiment", {}).get("id")
+                if second.get("prediction_experiment")
+                else None
+            ),
+            "intervention_prediction_status": (
+                intervention_second.get("prediction_result", {}).get("status")
+                if intervention_second.get("prediction_result")
+                else None
+            ),
+            "intervention_experiment_outcome": (
+                intervention_experiment.get("outcome")
+                if intervention_experiment
+                else None
+            ),
+        }
+    finally:
+        temp_support.cleanup()
+        temp_intervention.cleanup()
+
+
 def system_diagnostic_baseline_authority() -> dict[str, Any]:
     temp, store, _ = fresh()
     try:
@@ -1708,6 +1821,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("verified_intervention_reconciliation", verified_intervention_reconciliation),
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
+    ("executable_prediction_experiment_lifecycle", executable_prediction_experiment_lifecycle),
     ("system_diagnostic_baseline_authority", system_diagnostic_baseline_authority),
     ("post_intervention_attention_measurement_scope", post_intervention_attention_measurement_scope),
     ("specification_backlog_lifecycle_scope", specification_backlog_lifecycle_scope),
