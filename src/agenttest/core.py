@@ -275,6 +275,166 @@ def _calibrate_self_model(state: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+PREDICTION_CONTRACT_KIND = "prediction_status"
+EXPERIMENT_STALE_AFTER_CYCLES = 3
+
+
+def _valid_prediction_contract(experiment: dict[str, Any]) -> bool:
+    contract = experiment.get("evidence_contract")
+    if not isinstance(contract, dict):
+        return False
+    if contract.get("kind") != PREDICTION_CONTRACT_KIND:
+        return False
+    prediction_id = contract.get("prediction_id")
+    expected_status = contract.get("expected_status")
+    return (
+        isinstance(prediction_id, str)
+        and bool(prediction_id)
+        and expected_status in {"confirmed", "violated"}
+    )
+
+
+def _later_prediction_evidence_refs(
+    state: dict[str, Any],
+    *,
+    after_cycle: int,
+    limit: int = 4,
+) -> list[str]:
+    refs: list[str] = []
+    for reflection in reversed(state.get("reflections", [])):
+        if reflection.get("source") != "prediction":
+            continue
+        if int(reflection.get("cycle", 0)) <= after_cycle:
+            continue
+        if reflection.get("outcome") not in {"confirmed", "violated"}:
+            continue
+        for identifier in (
+            reflection.get("prediction_id"),
+            reflection.get("id"),
+        ):
+            if identifier and str(identifier) not in refs:
+                refs.append(str(identifier))
+            if len(refs) >= limit:
+                return list(reversed(refs))
+    return list(reversed(refs))
+
+
+def _review_experiment_readiness(state: dict[str, Any]) -> dict[str, Any]:
+    cycle = int(state.get("cycles", 0))
+    changed: list[str] = []
+    ready: list[str] = []
+    preserved_pending: list[str] = []
+
+    for experiment in state.get("experiments", []):
+        if experiment.get("status") != "proposed":
+            continue
+
+        experiment_id = str(experiment.get("id", ""))
+        if _valid_prediction_contract(experiment):
+            experiment["readiness"] = "evidence_ready"
+            experiment["readiness_reason"] = (
+                "A structured prediction-status evidence contract is present."
+            )
+            ready.append(experiment_id)
+            continue
+
+        created_cycle = int(experiment.get("cycle", 0))
+        age = cycle - created_cycle
+        later_refs = _later_prediction_evidence_refs(
+            state,
+            after_cycle=created_cycle,
+        )
+        if age < EXPERIMENT_STALE_AFTER_CYCLES or not later_refs:
+            experiment["readiness"] = "awaiting_specification_or_evidence"
+            preserved_pending.append(experiment_id)
+            continue
+
+        experiment["status"] = "needs_specification"
+        experiment["readiness"] = "needs_specification"
+        experiment["readiness_reason"] = (
+            "The experiment remained proposed for multiple cycles while later "
+            "evaluated prediction evidence accumulated, but no structured evidence "
+            "contract identifies what observation could resolve it."
+        )
+        experiment["readiness_review_cycle"] = cycle
+        experiment["readiness_evidence_refs"] = later_refs
+        history = experiment.setdefault("status_history", [])
+        history.append(
+            {
+                "cycle": cycle,
+                "from": "proposed",
+                "to": "needs_specification",
+                "reason": "stale_without_structured_evidence_contract",
+                "evidence_refs": later_refs,
+            }
+        )
+        changed.append(experiment_id)
+
+    return {
+        "reviewed_cycle": cycle,
+        "stale_marked_needs_specification": changed,
+        "evidence_ready": ready,
+        "preserved_pending": preserved_pending,
+    }
+
+
+def _resolve_experiments_from_prediction(
+    state: dict[str, Any],
+    prediction: dict[str, Any],
+    reflection: dict[str, Any],
+    *,
+    completed_at: str,
+) -> list[str]:
+    status = prediction.get("status")
+    if status not in {"confirmed", "violated"}:
+        return []
+
+    prediction_id = str(prediction.get("id", ""))
+    reflection_id = str(reflection.get("id", ""))
+    resolved: list[str] = []
+
+    for experiment in state.get("experiments", []):
+        if experiment.get("status") != "proposed":
+            continue
+        if not _valid_prediction_contract(experiment):
+            continue
+
+        contract = experiment["evidence_contract"]
+        if contract.get("prediction_id") != prediction_id:
+            continue
+
+        expected = contract.get("expected_status")
+        outcome = "supported" if status == expected else "falsified"
+        evidence_refs = [
+            identifier
+            for identifier in (prediction_id, reflection_id)
+            if identifier
+        ]
+
+        experiment["status"] = "completed"
+        experiment["readiness"] = "resolved"
+        experiment["outcome"] = outcome
+        experiment["observed_prediction_status"] = status
+        experiment["evidence_strength"] = 1.0
+        experiment["evidence_refs"] = evidence_refs
+        experiment["completion_source"] = "prediction_status_contract"
+        experiment["completed_at"] = completed_at
+        history = experiment.setdefault("status_history", [])
+        history.append(
+            {
+                "cycle": state.get("cycles", 0),
+                "from": "proposed",
+                "to": "completed",
+                "reason": "prediction_status_contract_resolved",
+                "evidence_refs": evidence_refs,
+                "outcome": outcome,
+            }
+        )
+        resolved.append(str(experiment.get("id")))
+
+    return resolved
+
+
 class AgentCore:
     """Persistent loop with memory, world model, prediction, drives and cognition."""
 
@@ -295,6 +455,7 @@ class AgentCore:
         now = utc_now()
         surprise = None
         prediction_result = None
+        experiment_readiness_update = _review_experiment_readiness(state)
 
         if observation is not None:
             prediction_result = self._evaluate_prediction(state, observation, now)
@@ -386,6 +547,7 @@ class AgentCore:
             "prediction_result_id": (
                 prediction_result["id"] if prediction_result else None
             ),
+            "experiment_readiness_update": experiment_readiness_update,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
@@ -404,6 +566,7 @@ class AgentCore:
             "cycle": cycle,
             "surprise": surprise,
             "prediction_result": prediction_result,
+            "experiment_readiness_update": experiment_readiness_update,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
@@ -517,6 +680,7 @@ class AgentCore:
                 ),
             }
             state["reflections"].append(reflection)
+            prediction["resolved_experiment_ids"] = []
             return prediction
 
         changes = {}
@@ -545,6 +709,12 @@ class AgentCore:
             ),
         }
         state["reflections"].append(reflection)
+        prediction["resolved_experiment_ids"] = _resolve_experiments_from_prediction(
+            state,
+            prediction,
+            reflection,
+            completed_at=now,
+        )
         return prediction
 
     def _make_prediction(
