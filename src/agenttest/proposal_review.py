@@ -37,12 +37,28 @@ def _evidence_index(state: dict[str, Any]) -> dict[str, tuple[str, dict[str, Any
     return index
 
 
+def _completed_diagnostic_ids(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> list[str]:
+    return sorted(
+        str(diagnostic["id"])
+        for diagnostic in state.get("proposal_diagnostics", [])
+        if diagnostic.get("proposal_id") == proposal_id
+        and diagnostic.get("status") == "completed"
+        and diagnostic.get("id")
+    )
+
+
 def _existing_review(
     state: dict[str, Any],
     proposal_id: str,
 ) -> dict[str, Any] | None:
+    current_diagnostics = _completed_diagnostic_ids(state, proposal_id)
     for review in reversed(state.get("proposal_reviews", [])):
-        if review.get("proposal_id") == proposal_id:
+        if review.get("proposal_id") != proposal_id:
+            continue
+        if review.get("considered_diagnostic_ids", []) == current_diagnostics:
             return review
     return None
 
@@ -66,6 +82,21 @@ def _direct_replay_failure(
             and diagnostic.get("kind") == "deterministic_replay"
             and diagnostic.get("status") == "completed"
             and diagnostic.get("outcome") in {"divergent", "failure"}
+        ):
+            return diagnostic
+    return None
+
+
+def _direct_replay_stable(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> dict[str, Any] | None:
+    for diagnostic in reversed(state.get("proposal_diagnostics", [])):
+        if (
+            diagnostic.get("proposal_id") == proposal_id
+            and diagnostic.get("kind") == "deterministic_replay"
+            and diagnostic.get("status") == "completed"
+            and diagnostic.get("outcome") == "stable"
         ):
             return diagnostic
     return None
@@ -164,6 +195,23 @@ def classify_proposal(
                 "evidence_kinds": dict(kinds),
                 "direct_diagnostic_id": failure.get("id"),
             }
+
+        stable = _direct_replay_stable(state, str(proposal.get("id")))
+        if stable is not None:
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "The requested verified deterministic-replay diagnostic completed on "
+                    "isolated temporary state and produced equivalent normalized results. "
+                    "No reproducibility defect is currently supported by direct evidence."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": stable.get("id"),
+            }
+
         return {
             "verdict": "measurement_gap",
             "patch_authority": "diagnostic_only",
@@ -294,6 +342,7 @@ def review_change_proposal(
         "supported_problem": "reviewed_supported_problem",
         "measurement_gap": "reviewed_measurement_gap",
         "needs_evidence": "reviewed_needs_evidence",
+        "no_problem_observed": "closed_no_problem_observed",
     }
     proposal["status"] = status_by_verdict[verdict]
 
@@ -304,6 +353,10 @@ def review_change_proposal(
         "review_version": REVIEW_VERSION,
         "created_at": utc_now(),
         "reviewed_cycle": state.get("cycles", 0),
+        "considered_diagnostic_ids": _completed_diagnostic_ids(
+            state,
+            str(proposal["id"]),
+        ),
         **classification,
     }
     state.setdefault("proposal_reviews", []).append(review)
