@@ -4,7 +4,7 @@ import json
 from collections import Counter, defaultdict
 from typing import Any
 
-DIAGNOSTIC_VERSION = "experiment-design-v2"
+DIAGNOSTIC_VERSION = "experiment-design-v3"
 PREDICTION_CONTRACT_KIND = "prediction_status"
 SPECIFICATION_READINESS = {
     "awaiting_specification_or_evidence",
@@ -125,14 +125,32 @@ def evaluate_experiment_design(state: dict[str, Any]) -> dict[str, Any]:
     unresolved_count = len(unresolved)
     contracted_count = len(contracted)
     backlog_ids = [str(item.get("id", "")) for item in backlog]
+    blocked_backlog_ids = [
+        str(item.get("id", ""))
+        for item in backlog
+        if item.get("specification", {}).get("actionability") == "blocked"
+    ]
+    actionable_backlog_ids = [
+        str(item.get("id", ""))
+        for item in backlog
+        if item.get("specification", {}).get("actionability") == "actionable"
+    ]
+    triaged_ids = set(blocked_backlog_ids) | set(actionable_backlog_ids)
+    untriaged_backlog_ids = [
+        identifier
+        for identifier in backlog_ids
+        if identifier not in triaged_ids
+    ]
 
     if any(
         cluster["size"] >= 2 and not cluster["contracted_ids"]
         for cluster in duplicate_clusters
     ):
         outcome = "specification_churn"
-    elif backlog_ids:
+    elif untriaged_backlog_ids or actionable_backlog_ids:
         outcome = "specification_backlog"
+    elif blocked_backlog_ids:
+        outcome = "blocked_specification_backlog"
     elif active_count == 0:
         outcome = "no_active_experiments"
     else:
@@ -146,6 +164,9 @@ def evaluate_experiment_design(state: dict[str, Any]) -> dict[str, Any]:
             1 for item in active if _valid_prediction_contract(item)
         ),
         "specification_backlog_count": len(backlog_ids),
+        "blocked_specification_count": len(blocked_backlog_ids),
+        "actionable_specification_count": len(actionable_backlog_ids),
+        "untriaged_specification_count": len(untriaged_backlog_ids),
         "unresolved_experiment_count": unresolved_count,
         "active_question_count": len(active_question_groups),
         "unresolved_question_count": len(question_groups),
@@ -170,6 +191,9 @@ def evaluate_experiment_design(state: dict[str, Any]) -> dict[str, Any]:
         "contracted_experiment_ids": contracted,
         "uncontracted_experiment_ids": uncontracted,
         "specification_backlog_ids": backlog_ids,
+        "blocked_specification_ids": blocked_backlog_ids,
+        "actionable_specification_ids": actionable_backlog_ids,
+        "untriaged_specification_ids": untriaged_backlog_ids,
         "source_state_mutated": False,
     }
 
