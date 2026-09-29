@@ -43,6 +43,14 @@ def main() -> None:
         action="store_true",
         help="Allow an optional configured model to propose one validated candidate thought.",
     )
+    cycle.add_argument(
+        "--grounded-experiments-only",
+        action="store_true",
+        help=(
+            "Do not admit a new generic experiment from an ungrounded exploratory "
+            "question; evidence-backed and explicitly targeted experiments remain eligible."
+        ),
+    )
     cycle.add_argument("--root", default=".", help="Repository root for self-observation.")
 
     interact = sub.add_parser(
@@ -99,7 +107,14 @@ def main() -> None:
 
     if args.command == "cycle":
         observation = repository_snapshot(args.root) if args.self_observe else None
-        _print(core.cycle(args.stimulus, observation, cognition=args.cognition))
+        _print(
+            core.cycle(
+                args.stimulus,
+                observation,
+                cognition=args.cognition,
+                strict_experiment_admission=args.grounded_experiments_only,
+            )
+        )
     elif args.command == "interact":
         observation = repository_snapshot(args.root) if args.self_observe else None
         _print(

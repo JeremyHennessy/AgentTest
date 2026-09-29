@@ -1848,6 +1848,48 @@ class AgentCoreTests(unittest.TestCase):
             stale["id"],
         )
 
+    def test_strict_observed_cycle_does_not_admit_ungrounded_generic_experiment(self) -> None:
+        result = self.core.cycle(
+            observation=observation(100),
+            strict_experiment_admission=True,
+        )
+        state = self.store.load()
+
+        self.assertIsNone(result["experiment"])
+        self.assertIsNotNone(result["prediction_experiment"])
+        self.assertEqual(len(state["experiments"]), 1)
+        self.assertEqual(
+            state["experiments"][0]["source"],
+            "repository_stability_prediction",
+        )
+
+    def test_default_observed_cycle_preserves_generic_experiment_contract(self) -> None:
+        result = self.core.cycle(observation=observation(100))
+
+        self.assertIsNotNone(result["experiment"])
+        self.assertIsNotNone(result["prediction_experiment"])
+        self.assertEqual(result["experiment"]["status"], "proposed")
+        self.assertNotIn("evidence_contract", result["experiment"])
+
+    def test_strict_observed_cycle_still_admits_grounded_cognition_experiment(self) -> None:
+        provider = StaticCognitionProvider(candidate("E000001"))
+
+        result = self.core.cycle(
+            "grounded evidence",
+            observation=observation(100),
+            cognition=True,
+            cognition_provider=provider,
+            strict_experiment_admission=True,
+        )
+
+        self.assertIsNotNone(result["thought"])
+        self.assertIsNotNone(result["experiment"])
+        self.assertEqual(
+            result["experiment"]["cognition_candidate_id"],
+            result["thought"]["id"],
+        )
+        self.assertIsNotNone(result["prediction_experiment"])
+
     def test_self_observation_creates_executable_prediction_experiment(self) -> None:
         from agenttest.diagnostic_experiments import evaluate_experiment_design
 
