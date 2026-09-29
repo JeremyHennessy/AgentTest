@@ -1848,6 +1848,135 @@ class AgentCoreTests(unittest.TestCase):
             stale["id"],
         )
 
+    def test_self_observation_creates_executable_prediction_experiment(self) -> None:
+        from agenttest.diagnostic_experiments import evaluate_experiment_design
+
+        result = self.core.cycle(observation=observation(100))
+        state = self.store.load()
+        experiment = result["prediction_experiment"]
+        prediction = result["prediction"]
+
+        self.assertIsNotNone(experiment)
+        self.assertIsNotNone(prediction)
+        self.assertEqual(experiment["status"], "proposed")
+        self.assertEqual(experiment["readiness"], "evidence_ready")
+        self.assertEqual(
+            experiment["source"],
+            "repository_stability_prediction",
+        )
+        self.assertEqual(
+            experiment["evidence_contract"],
+            {
+                "kind": "prediction_status",
+                "prediction_id": prediction["id"],
+                "expected_status": "confirmed",
+            },
+        )
+        self.assertEqual(
+            experiment["question_id"],
+            next(
+                question["id"]
+                for question in state["questions"]
+                if question.get("source") == "repository_stability_prediction"
+            ),
+        )
+
+        diagnostic = evaluate_experiment_design(state)
+        self.assertEqual(diagnostic["executable_experiment_count"], 1)
+        self.assertIn(
+            experiment["id"],
+            diagnostic["contracted_experiment_ids"],
+        )
+        self.assertNotIn(
+            experiment["id"],
+            diagnostic["specification_backlog_ids"],
+        )
+
+    def test_prediction_experiment_resolves_and_updates_world_model(self) -> None:
+        first = self.core.cycle(observation=observation(100))
+        first_experiment_id = first["prediction_experiment"]["id"]
+        first_prediction_id = first["prediction"]["id"]
+
+        second = self.core.cycle(observation=observation(100))
+        state = self.store.load()
+        resolved = next(
+            item
+            for item in state["experiments"]
+            if item["id"] == first_experiment_id
+        )
+
+        self.assertEqual(second["prediction_result"]["status"], "confirmed")
+        self.assertIn(
+            first_experiment_id,
+            second["prediction_result"]["resolved_experiment_ids"],
+        )
+        self.assertEqual(resolved["status"], "completed")
+        self.assertEqual(resolved["readiness"], "resolved")
+        self.assertEqual(resolved["outcome"], "supported")
+        self.assertEqual(
+            resolved["observed_prediction_status"],
+            "confirmed",
+        )
+        self.assertIn(first_prediction_id, resolved["evidence_refs"])
+
+        world_claim = next(
+            claim
+            for claim in state["world_model"]["claims"]
+            if claim.get("subject") == f"experiment.{first_experiment_id}"
+            and claim.get("predicate") == "outcome"
+        )
+        self.assertEqual(world_claim["value"], "supported")
+        self.assertEqual(world_claim["source_type"], "experiment_outcome")
+
+        self.assertIsNotNone(second["prediction_experiment"])
+        self.assertNotEqual(
+            second["prediction_experiment"]["id"],
+            first_experiment_id,
+        )
+
+    def test_prediction_experiment_becomes_inconclusive_after_intervention(self) -> None:
+        first_observation = observation(100)
+        first_observation["baseline_fingerprint"] = "baseline-a"
+        second_observation = observation(100)
+        second_observation["baseline_fingerprint"] = "baseline-b"
+
+        first = self.core.cycle(observation=first_observation)
+        first_experiment_id = first["prediction_experiment"]["id"]
+        second = self.core.cycle(observation=second_observation)
+        state = self.store.load()
+        resolved = next(
+            item
+            for item in state["experiments"]
+            if item["id"] == first_experiment_id
+        )
+
+        self.assertEqual(
+            second["prediction_result"]["status"],
+            "invalidated_by_intervention",
+        )
+        self.assertIn(
+            first_experiment_id,
+            second["prediction_result"]["resolved_experiment_ids"],
+        )
+        self.assertEqual(resolved["status"], "completed")
+        self.assertEqual(resolved["outcome"], "inconclusive")
+        self.assertEqual(
+            resolved["observed_prediction_status"],
+            "invalidated_by_intervention",
+        )
+        self.assertEqual(
+            resolved["completion_source"],
+            "prediction_contract_invalidated_by_intervention",
+        )
+
+        world_claim = next(
+            claim
+            for claim in state["world_model"]["claims"]
+            if claim.get("subject") == f"experiment.{first_experiment_id}"
+            and claim.get("predicate") == "outcome"
+        )
+        self.assertEqual(world_claim["value"], "inconclusive")
+
     def test_prediction_contract_resolves_only_matching_experiment(self) -> None:
         first = self.core.cycle(observation=observation(100))
         state = self.store.load()
