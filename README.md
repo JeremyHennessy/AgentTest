@@ -2,7 +2,7 @@
 
 AgentTest is an original experiment in persistent machine growth.
 
-The project asks whether persistent perception, memory, prediction, evidence review, diagnostics, and constrained self-improvement can accumulate into richer adaptive behavior without confusing activity, code churn, or human-like language with progress.
+The project asks whether persistent perception, memory, prediction, evidence review, diagnostics, constrained self-improvement, and human interaction can accumulate into richer adaptive behavior without confusing activity, code churn, or human-like language with progress.
 
 ## Current capabilities
 
@@ -16,9 +16,11 @@ The project asks whether persistent perception, memory, prediction, evidence rev
 - evidence-relevance review;
 - protected non-mutating diagnostics;
 - evidence-grounded self-model calibration with explicit uncertainty;
+- family-based open-endedness measurement;
 - baseline-scoped re-diagnostics after code interventions;
 - a base-owned behavioral preservation gate;
-- autonomous heartbeats on a persistent growth branch.
+- autonomous heartbeats on a persistent growth branch;
+- a persistent evidence-linked human interaction membrane.
 
 ## Evolution discipline
 
@@ -26,13 +28,16 @@ No version may call itself improved because code changed.
 
 A proposed problem needs direct evidence. Measurement gaps are resolved with protected diagnostics. Corrective candidates run on isolated branches and are judged by the previous verified baseline. A repaired behavior is re-diagnosed on the new code baseline before the proposal can close.
 
-The first real corrective cycle has already completed:
+Two corrective cycles have now completed:
 
-M000002 grounding gap → candidate v1 rejected → preservation-governance flaw discovered → judge repaired → candidate v2 passed → live self-model grounded → post-intervention diagnostic passed → proposal closed.
+- M000002: self-model grounding gap → rejected candidate → governance repair → passing candidate → live post-intervention diagnostic → closed.
+- M000003: exact-string open-endedness inflation → verified family diagnostic → family-based metric candidate → independent post-merge alignment diagnostic → closed.
 
-## Current research question
+## Human interaction
 
-M000003 asks whether open-endedness is genuine inquiry branching or paraphrase churn. A protected read-only inquiry-family diagnostic is being verified before any change to question generation or scoring.
+`agenttest interact "message"` records a real stimulus episode, runs the adaptive cycle, and returns a structured response grounded in prior semantic memory, current world claims, internal drives, self-model calibration, the selected question, and the current experiment.
+
+The reply is a deterministic rendering of state. It is not evidence of consciousness and does not turn generated language into fact.
 
 ## About consciousness
 
