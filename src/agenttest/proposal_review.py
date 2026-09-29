@@ -1,0 +1,310 @@
+from __future__ import annotations
+
+from collections import Counter
+from typing import Any
+
+from .change_control import validate_change_manifest
+from .state import utc_now
+
+REVIEW_VERSION = "proposal-review-v1"
+
+
+def _evidence_index(state: dict[str, Any]) -> dict[str, tuple[str, dict[str, Any]]]:
+    index: dict[str, tuple[str, dict[str, Any]]] = {}
+    for key in (
+        "episodes",
+        "surprises",
+        "predictions",
+        "intentions",
+        "questions",
+        "experiments",
+        "reflections",
+        "cognition_events",
+        "cognition_candidates",
+    ):
+        for item in state.get(key, []):
+            identifier = item.get("id")
+            if identifier:
+                index[str(identifier)] = (key, item)
+    for claim in state.get("world_model", {}).get("claims", []):
+        identifier = claim.get("id")
+        if identifier:
+            index[str(identifier)] = ("world_claims", claim)
+    for diagnostic in state.get("proposal_diagnostics", []):
+        identifier = diagnostic.get("id")
+        if identifier:
+            index[str(identifier)] = ("proposal_diagnostics", diagnostic)
+    return index
+
+
+def _existing_review(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> dict[str, Any] | None:
+    for review in reversed(state.get("proposal_reviews", [])):
+        if review.get("proposal_id") == proposal_id:
+            return review
+    return None
+
+
+def _successful_cognition_exists(state: dict[str, Any]) -> bool:
+    if state.get("cognition_candidates"):
+        return True
+    return any(
+        event.get("status") == "accepted"
+        for event in state.get("cognition_events", [])
+    )
+
+
+def _direct_replay_failure(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> dict[str, Any] | None:
+    for diagnostic in reversed(state.get("proposal_diagnostics", [])):
+        if (
+            diagnostic.get("proposal_id") == proposal_id
+            and diagnostic.get("kind") == "deterministic_replay"
+            and diagnostic.get("status") == "completed"
+            and diagnostic.get("outcome") in {"divergent", "failure"}
+        ):
+            return diagnostic
+    return None
+
+
+def _learning_loop_gap(state: dict[str, Any]) -> tuple[bool, list[str]]:
+    predictions = {
+        str(prediction.get("id")): prediction
+        for prediction in state.get("predictions", [])
+        if prediction.get("status") in {"confirmed", "violated"}
+        and prediction.get("id")
+    }
+    prediction_reflections = [
+        reflection
+        for reflection in state.get("reflections", [])
+        if reflection.get("source") == "prediction"
+        and str(reflection.get("prediction_id")) in predictions
+    ]
+
+    for experiment in state.get("experiments", []):
+        if experiment.get("status") != "proposed":
+            continue
+        created_cycle = int(experiment.get("cycle", 0))
+        later = [
+            reflection
+            for reflection in prediction_reflections
+            if int(reflection.get("cycle", 0)) > created_cycle
+        ]
+        if later:
+            refs = [str(experiment["id"])]
+            for reflection in later[-2:]:
+                prediction_id = str(reflection["prediction_id"])
+                if prediction_id not in refs:
+                    refs.append(prediction_id)
+                reflection_id = str(reflection.get("id"))
+                if reflection_id and reflection_id != "None" and reflection_id not in refs:
+                    refs.append(reflection_id)
+            return True, refs
+    return False, []
+
+
+def _repeated_reflection_pattern(state: dict[str, Any]) -> tuple[bool, list[str]]:
+    reflections = state.get("reflections", [])
+    groups: dict[str, list[str]] = {}
+    for reflection in reflections:
+        lesson = " ".join(str(reflection.get("lesson", "")).lower().split())
+        if not lesson:
+            continue
+        groups.setdefault(lesson, []).append(str(reflection.get("id")))
+    repeated = [
+        refs
+        for refs in groups.values()
+        if len([ref for ref in refs if ref and ref != "None"]) >= 2
+    ]
+    if not repeated:
+        return False, []
+    refs = max(repeated, key=len)
+    return True, refs[-6:]
+
+
+def classify_proposal(
+    state: dict[str, Any],
+    proposal: dict[str, Any],
+) -> dict[str, Any]:
+    valid, validation_reason = validate_change_manifest(proposal, state)
+    evidence_index = _evidence_index(state)
+    cited = [
+        evidence_index[ref]
+        for ref in proposal.get("evidence_refs", [])
+        if ref in evidence_index
+    ]
+    kinds = Counter(kind for kind, _ in cited)
+    target = proposal.get("target_dimension")
+
+    if not valid:
+        return {
+            "verdict": "needs_evidence",
+            "patch_authority": "none",
+            "reason": "The manifest does not currently satisfy change-control validation.",
+            "required_next_evidence": validation_reason or "A structurally valid manifest.",
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+    if target == "reproducibility":
+        failure = _direct_replay_failure(state, str(proposal.get("id")))
+        if failure is not None:
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "A completed deterministic-replay diagnostic directly reports divergence."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": failure.get("id"),
+            }
+        return {
+            "verdict": "measurement_gap",
+            "patch_authority": "diagnostic_only",
+            "reason": (
+                "The cited evidence shows evaluated predictions and reflections, but no "
+                "direct deterministic-replay comparison demonstrates divergence. The proposal "
+                "may add measurement, but it is not evidence of a reproducibility defect."
+            ),
+            "required_next_evidence": (
+                "Run a non-mutating deterministic replay diagnostic on equivalent controlled "
+                "inputs and record whether normalized outputs diverge."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+    if target == "learning":
+        gap, direct_refs = _learning_loop_gap(state)
+        if gap:
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "At least one experiment remains proposed despite later evaluated prediction "
+                    "evidence, directly demonstrating an unresolved evidence-closure gap."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_evidence_refs": direct_refs,
+            }
+
+    if target == "reflection":
+        repeated, direct_refs = _repeated_reflection_pattern(state)
+        if repeated:
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "Repeated reflections contain the same evidence-backed lesson, supporting "
+                    "a need for structured pattern consolidation."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_evidence_refs": direct_refs,
+            }
+
+    if target == "cognition" and not _successful_cognition_exists(state):
+        return {
+            "verdict": "needs_evidence",
+            "patch_authority": "none",
+            "reason": (
+                "No successful cognition-provider evidence exists, so a cognition deficit "
+                "cannot currently be attributed to code."
+            ),
+            "required_next_evidence": (
+                "Configure a provider and record at least one grounded cognition attempt before "
+                "diagnosing cognition code."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+    measurement_targets = {"memory", "perception", "semantic_memory", "self_model"}
+    if target in measurement_targets:
+        return {
+            "verdict": "measurement_gap",
+            "patch_authority": "diagnostic_only",
+            "reason": (
+                "The manifest primarily proposes better measurement or traceability. Existing "
+                "evidence does not establish a behavioral defect requiring corrective code."
+            ),
+            "required_next_evidence": (
+                "Add or run a non-mutating diagnostic that can demonstrate a specific failure "
+                "before authorizing corrective behavior changes."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+    return {
+        "verdict": "needs_evidence",
+        "patch_authority": "none",
+        "reason": (
+            "The cited evidence is real but does not yet demonstrate that the proposed code "
+            "surface is the first layer where behavior becomes incorrect."
+        ),
+        "required_next_evidence": (
+            "Gather a direct observation or controlled diagnostic that connects the target "
+            "behavior to the proposed code layer."
+        ),
+        "resolved_evidence_count": len(cited),
+        "evidence_kinds": dict(kinds),
+    }
+
+
+def review_change_proposal(
+    state: dict[str, Any],
+    proposal: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, bool]:
+    if proposal is None:
+        proposals = state.get("change_proposals", [])
+        proposal = next(
+            (
+                item
+                for item in proposals
+                if item.get("status")
+                in {
+                    "proposed",
+                    "reviewed_measurement_gap",
+                    "reviewed_needs_evidence",
+                    "reviewed_supported_problem",
+                }
+            ),
+            None,
+        )
+    if proposal is None:
+        return None, False
+
+    existing = _existing_review(state, str(proposal.get("id")))
+    if existing is not None:
+        return existing, False
+
+    classification = classify_proposal(state, proposal)
+    verdict = classification["verdict"]
+    status_by_verdict = {
+        "supported_problem": "reviewed_supported_problem",
+        "measurement_gap": "reviewed_measurement_gap",
+        "needs_evidence": "reviewed_needs_evidence",
+    }
+    proposal["status"] = status_by_verdict[verdict]
+
+    review = {
+        "id": f"V{len(state.get('proposal_reviews', [])) + 1:06d}",
+        "proposal_id": proposal["id"],
+        "target_dimension": proposal.get("target_dimension"),
+        "review_version": REVIEW_VERSION,
+        "created_at": utc_now(),
+        "reviewed_cycle": state.get("cycles", 0),
+        **classification,
+    }
+    state.setdefault("proposal_reviews", []).append(review)
+    return review, True
