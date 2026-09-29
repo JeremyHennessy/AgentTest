@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .core import AgentCore
+from .core import AgentCore, _calibrate_self_model
 from .semantic import retrieve_semantic_memory
 from .state import StateStore, utc_now
 from .world import current_world_claims
@@ -159,14 +159,7 @@ def interact(
         stimulus_episode["source"] = "human_interaction"
         stimulus_episode["interaction_id"] = interaction_id
 
-    self_model = _self_model_view(state)
     cognition_event = cycle_result.get("cognition_event")
-    response_text = _render_response(
-        cycle_result=cycle_result,
-        prior_memory=prior_memory,
-        self_model=self_model,
-        cognition_event=cognition_event,
-    )
 
     record = {
         "id": interaction_id,
@@ -174,7 +167,7 @@ def interact(
         "created_at": utc_now(),
         "input_episode_id": stimulus_episode.get("id") if stimulus_episode else None,
         "input": clean,
-        "response_text": response_text,
+        "response_text": None,
         "intention_id": (cycle_result.get("intention") or {}).get("id"),
         "question_id": (cycle_result.get("question") or {}).get("id"),
         "experiment_id": (cycle_result.get("experiment") or {}).get("id"),
@@ -196,6 +189,15 @@ def interact(
         ],
     }
     state.setdefault("interactions", []).append(record)
+    _calibrate_self_model(state)
+    self_model = _self_model_view(state)
+    response_text = _render_response(
+        cycle_result=cycle_result,
+        prior_memory=prior_memory,
+        self_model=self_model,
+        cognition_event=cognition_event,
+    )
+    record["response_text"] = response_text
     store.save(state)
     store.append_journal(
         {
