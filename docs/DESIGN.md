@@ -1,4 +1,4 @@
-# Design: Genesis Phases 0–13
+# Design: Genesis Phases 0–14
 
 ## Premise
 
@@ -68,6 +68,17 @@ Issue-comment interaction is owner-only. Human interaction and autonomous heartb
 - Model cognition, if available, remains a proposal and must pass its grounding boundary.
 - If model cognition is unavailable, the deterministic loop continues and the response says so.
 - A fluent reply does not imply subjective experience.
+
+## Evolution governor discipline
+
+Aggregate capability metrics are summaries, not vetoes over direct evidence.
+
+Two additional rules now govern self-proposal selection:
+
+1. **Direct stale evidence debt can override a saturated aggregate metric.** If an old proposed experiment remains unresolved for multiple cycles while later evaluated evidence exists, learning becomes the target even when the aggregate learning score is 1.0.
+2. **A truthful low metric is not automatically a defect.** Open-endedness is skipped as a corrective target when the persisted inquiry-family summary and reported metric agree within tolerance.
+
+This prevents two observed failure modes: unresolved work hidden behind a saturated score, and repeated corrective proposals against a measurement already verified as accurate.
 
 ## Evolution evidence loop
 
