@@ -227,7 +227,7 @@
         body: "/agent " + message
       });
       const url = ISSUE_BASE + "?" + params.toString();
-      els.pending.textContent = "GitHub opened in a new tab. Submit the pre-filled issue as the repository owner, then return here; this page will watch for the persisted response.";
+      els.pending.textContent = "GitHub opened in a new tab. Submit the pre-filled issue as the repository owner, then return here; this page will watch for the persisted response. The one-shot issue closes automatically after the response is recorded.";
       window.open(url, "_blank", "noopener");
     }
 
