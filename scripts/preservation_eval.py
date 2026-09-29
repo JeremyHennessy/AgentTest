@@ -438,12 +438,14 @@ def intervention_aware_prediction_scope() -> dict[str, Any]:
 
 
 def self_model_grounding_review() -> dict[str, Any]:
-    temp, store, core = fresh()
+    temp_gap, store_gap, core_gap = fresh()
+    temp_grounded, store_grounded, core_grounded = fresh()
     try:
-        core.cycle("self model diagnostic evidence")
-        state = store.load()
-        proposal = make_change_manifest(
-            state,
+        core_gap.cycle("self model diagnostic gap fixture")
+        gap_state = store_gap.load()
+        gap_state["self_model"]["capability_claims"] = {}
+        gap_proposal = make_change_manifest(
+            gap_state,
             title="Calibrate self-model claims against behavioral checks",
             target_dimension="self_model",
             files=["src/agenttest/core.py", "tests/test_core.py"],
@@ -454,50 +456,145 @@ def self_model_grounding_review() -> dict[str, Any]:
             rollback="Revert.",
             evidence_refs=["E000001"],
         )
-        proposal.update({"id": "M000001", "source": "preservation-eval", "created_cycle": 1})
-        state["change_proposals"].append(proposal)
-
-        first_review, _ = review_change_proposal(state, proposal)
-        diagnostic, diagnostic_created = run_proposal_diagnostic(
-            state,
-            proposal,
-            first_review,
+        gap_proposal.update(
+            {"id": "M000001", "source": "preservation-eval", "created_cycle": 1}
         )
-        second_review, second_created = review_change_proposal(state, proposal)
+        gap_state["change_proposals"].append(gap_proposal)
+
+        gap_first_review, _ = review_change_proposal(gap_state, gap_proposal)
+        gap_diagnostic, gap_diagnostic_created = run_proposal_diagnostic(
+            gap_state,
+            gap_proposal,
+            gap_first_review,
+        )
+        gap_second_review, gap_second_created = review_change_proposal(
+            gap_state,
+            gap_proposal,
+        )
+
+        core_grounded.cycle("self model grounded fixture")
+        grounded_state = store_grounded.load()
+        grounded_state["self_model"]["capability_claims"] = {
+            capability: {
+                "status": "unverified",
+                "evidence_refs": [],
+                "reason": "Controlled preservation fixture: explicit uncertainty is grounded.",
+            }
+            for capability in grounded_state["self_model"]["capabilities"]
+        }
+        grounded_proposal = make_change_manifest(
+            grounded_state,
+            title="Calibrate self-model claims against behavioral checks",
+            target_dimension="self_model",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Explicit claim calibration reduces unsupported self-description.",
+            expected_effect="Capabilities distinguish supported and unverified status.",
+            test_plan="Run the verified self-model grounding diagnostic.",
+            falsification="Every capability is already explicitly calibrated.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        grounded_proposal.update(
+            {"id": "M000001", "source": "preservation-eval", "created_cycle": 1}
+        )
+        grounded_state["change_proposals"].append(grounded_proposal)
+
+        grounded_first_review, _ = review_change_proposal(
+            grounded_state,
+            grounded_proposal,
+        )
+        grounded_diagnostic, grounded_diagnostic_created = run_proposal_diagnostic(
+            grounded_state,
+            grounded_proposal,
+            grounded_first_review,
+        )
+        grounded_second_review, grounded_second_created = review_change_proposal(
+            grounded_state,
+            grounded_proposal,
+        )
+
+        gap_path_passed = (
+            gap_first_review is not None
+            and gap_first_review["verdict"] == "measurement_gap"
+            and gap_first_review["patch_authority"] == "diagnostic_only"
+            and gap_diagnostic_created
+            and gap_diagnostic is not None
+            and gap_diagnostic["kind"] == "self_model_grounding"
+            and gap_diagnostic["outcome"] == "grounding_gap"
+            and not gap_diagnostic["source_state_mutated"]
+            and gap_second_created
+            and gap_second_review is not None
+            and gap_second_review["verdict"] == "supported_problem"
+            and gap_second_review["patch_authority"] == "candidate_allowed"
+        )
+
+        grounded_path_passed = (
+            grounded_first_review is not None
+            and grounded_first_review["verdict"] == "measurement_gap"
+            and grounded_first_review["patch_authority"] == "diagnostic_only"
+            and grounded_diagnostic_created
+            and grounded_diagnostic is not None
+            and grounded_diagnostic["kind"] == "self_model_grounding"
+            and grounded_diagnostic["outcome"] == "grounded"
+            and not grounded_diagnostic["source_state_mutated"]
+            and grounded_second_created
+            and grounded_second_review is not None
+            and grounded_second_review["verdict"] == "no_problem_observed"
+            and grounded_second_review["patch_authority"] == "none"
+        )
 
         return {
             "passed": (
-                first_review is not None
-                and first_review["verdict"] == "measurement_gap"
-                and first_review["patch_authority"] == "diagnostic_only"
-                and diagnostic_created
-                and diagnostic is not None
-                and diagnostic["kind"] == "self_model_grounding"
-                and diagnostic["outcome"] == "grounding_gap"
-                and not diagnostic["source_state_mutated"]
-                and second_created
-                and second_review is not None
-                and second_review["verdict"] == "supported_problem"
-                and second_review["patch_authority"] == "candidate_allowed"
+                gap_path_passed
+                and grounded_path_passed
                 and "src/agenttest/diagnostic_self_model.py" in PROTECTED_PATHS
             ),
-            "initial_verdict": first_review.get("verdict") if first_review else None,
-            "diagnostic_id": diagnostic.get("id") if diagnostic else None,
-            "diagnostic_outcome": diagnostic.get("outcome") if diagnostic else None,
-            "missing_claim_count": (
-                len(diagnostic["result"]["missing_claims"])
-                if diagnostic
-                else None
-            ),
-            "final_verdict": second_review.get("verdict") if second_review else None,
-            "patch_authority": (
-                second_review.get("patch_authority")
-                if second_review
-                else None
-            ),
+            "gap_path": {
+                "diagnostic_outcome": (
+                    gap_diagnostic.get("outcome") if gap_diagnostic else None
+                ),
+                "missing_claim_count": (
+                    len(gap_diagnostic["result"]["missing_claims"])
+                    if gap_diagnostic
+                    else None
+                ),
+                "final_verdict": (
+                    gap_second_review.get("verdict")
+                    if gap_second_review
+                    else None
+                ),
+                "patch_authority": (
+                    gap_second_review.get("patch_authority")
+                    if gap_second_review
+                    else None
+                ),
+            },
+            "grounded_path": {
+                "diagnostic_outcome": (
+                    grounded_diagnostic.get("outcome")
+                    if grounded_diagnostic
+                    else None
+                ),
+                "coverage": (
+                    grounded_diagnostic["result"].get("coverage")
+                    if grounded_diagnostic
+                    else None
+                ),
+                "final_verdict": (
+                    grounded_second_review.get("verdict")
+                    if grounded_second_review
+                    else None
+                ),
+                "patch_authority": (
+                    grounded_second_review.get("patch_authority")
+                    if grounded_second_review
+                    else None
+                ),
+            },
         }
     finally:
-        temp.cleanup()
+        temp_gap.cleanup()
+        temp_grounded.cleanup()
 
 
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
