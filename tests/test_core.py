@@ -1029,6 +1029,8 @@ class AgentCoreTests(unittest.TestCase):
         from agenttest.diagnostic_inquiry import evaluate_inquiry_families
 
         state = self.store.load()
+        state["cycles"] = 8
+        state["metrics"]["open_endedness"] = 1.0
         state["questions"] = [
             {
                 "id": f"Q{index:06d}",
@@ -1058,9 +1060,10 @@ class AgentCoreTests(unittest.TestCase):
 
         diagnostic = evaluate_inquiry_families(state)
 
-        self.assertEqual(diagnostic["outcome"], "paraphrase_churn")
+        self.assertEqual(diagnostic["outcome"], "metric_inflation")
         self.assertGreaterEqual(diagnostic["largest_family_size"], 6)
         self.assertGreaterEqual(diagnostic["duplicate_pressure"], 0.5)
+        self.assertGreater(diagnostic["metric_gap"], 0.05)
         self.assertFalse(diagnostic["source_state_mutated"])
         self.assertEqual(before, json.dumps(state, sort_keys=True))
 
@@ -1068,6 +1071,8 @@ class AgentCoreTests(unittest.TestCase):
         from agenttest.diagnostic_inquiry import evaluate_inquiry_families
 
         state = self.store.load()
+        state["cycles"] = 4
+        state["metrics"]["open_endedness"] = 1.0
         state["questions"] = [
             {
                 "id": "Q000001",
@@ -1103,6 +1108,8 @@ class AgentCoreTests(unittest.TestCase):
         from agenttest.proposal_review import review_change_proposal
 
         state = self.store.load()
+        state["cycles"] = 6
+        state["metrics"]["open_endedness"] = 1.0
         state["questions"] = [
             {
                 "id": f"Q{index:06d}",
@@ -1153,12 +1160,40 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(first_review["patch_authority"], "none")
         self.assertTrue(diagnostic_created)
         self.assertEqual(diagnostic["kind"], "inquiry_family")
-        self.assertEqual(diagnostic["outcome"], "paraphrase_churn")
+        self.assertEqual(diagnostic["outcome"], "metric_inflation")
         self.assertFalse(diagnostic["source_state_mutated"])
         self.assertTrue(second_created)
         self.assertEqual(second_review["verdict"], "supported_problem")
         self.assertEqual(second_review["patch_authority"], "candidate_allowed")
         self.assertEqual(second_review["direct_diagnostic_id"], diagnostic["id"])
+
+    def test_inquiry_family_diagnostic_can_recognize_aligned_metric_despite_history(self) -> None:
+        from agenttest.diagnostic_inquiry import evaluate_inquiry_families
+
+        state = self.store.load()
+        state["cycles"] = 6
+        state["questions"] = [
+            {
+                "id": f"Q{index:06d}",
+                "text": (
+                    f"What caused repository python_files to change from {index} "
+                    f"to {index + 1}, and did that change alter a verified capability?"
+                ),
+                "status": "open",
+            }
+            for index in range(1, 7)
+        ]
+        state["metrics"]["open_endedness"] = 1.0 / 6.0
+
+        diagnostic = evaluate_inquiry_families(state)
+
+        self.assertEqual(
+            diagnostic["outcome"],
+            "paraphrase_churn_metric_aligned",
+        )
+        self.assertAlmostEqual(diagnostic["metric_gap"], 0.0)
+        self.assertEqual(diagnostic["family_count"], 1)
+
 
     def test_inquiry_family_diagnostic_authority_is_protected(self) -> None:
         from agenttest.change_control import PROTECTED_PATHS
