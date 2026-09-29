@@ -14,6 +14,7 @@ from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
 from agenttest.evidence import known_evidence_ids
 from agenttest.diagnostic_attention import evaluate_blocked_attention
+from agenttest.diagnostic_experiments import evaluate_experiment_design
 from agenttest.interaction import interact
 from agenttest.intervention import record_verified_intervention
 from agenttest.diagnostics import run_proposal_diagnostic
@@ -23,7 +24,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v19"
+SUITE = "behavioral-preservation-v20"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1401,6 +1402,75 @@ def blocked_attention_diagnostic_governance() -> dict[str, Any]:
 
 
 
+def observed_cycle_experiment_admission() -> dict[str, Any]:
+    temp_observed, store_observed, core_observed = fresh()
+    temp_unobserved, _, core_unobserved = fresh()
+    try:
+        first = core_observed.cycle(observation=observation(100))
+        second = core_observed.cycle(observation=observation(100))
+        state = store_observed.load()
+        active = [
+            item
+            for item in state.get("experiments", [])
+            if item.get("status") == "proposed"
+        ]
+        completed_prediction = [
+            item
+            for item in state.get("experiments", [])
+            if item.get("source") == "repository_stability_prediction"
+            and item.get("status") == "completed"
+        ]
+        diagnostic = evaluate_experiment_design(state)
+
+        unobserved = core_unobserved.cycle()
+
+        return {
+            "passed": (
+                first.get("experiment") is None
+                and second.get("experiment") is None
+                and first.get("prediction_experiment") is not None
+                and second.get("prediction_experiment") is not None
+                and len(active) == 1
+                and active[0].get("source")
+                == "repository_stability_prediction"
+                and active[0].get("readiness") == "evidence_ready"
+                and len(completed_prediction) == 1
+                and completed_prediction[0].get("outcome") == "supported"
+                and diagnostic.get("executable_experiment_count") == 1
+                and diagnostic.get("specification_backlog_count") == 0
+                and diagnostic.get("outcome") == "evidence_ready"
+                and unobserved.get("experiment") is not None
+                and unobserved.get("prediction_experiment") is None
+            ),
+            "observed_primary_experiment": (
+                first.get("experiment", {}).get("id")
+                if first.get("experiment")
+                else None
+            ),
+            "active_experiment_ids": [
+                item.get("id") for item in active
+            ],
+            "completed_prediction_outcomes": [
+                item.get("outcome") for item in completed_prediction
+            ],
+            "diagnostic_outcome": diagnostic.get("outcome"),
+            "diagnostic_backlog": diagnostic.get(
+                "specification_backlog_count"
+            ),
+            "diagnostic_executable": diagnostic.get(
+                "executable_experiment_count"
+            ),
+            "unobserved_experiment": (
+                unobserved.get("experiment", {}).get("id")
+                if unobserved.get("experiment")
+                else None
+            ),
+        }
+    finally:
+        temp_observed.cleanup()
+        temp_unobserved.cleanup()
+
+
 def executable_prediction_experiment_lifecycle() -> dict[str, Any]:
     temp_support, store_support, core_support = fresh()
     temp_intervention, store_intervention, core_intervention = fresh()
@@ -1821,6 +1891,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("verified_intervention_reconciliation", verified_intervention_reconciliation),
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
+    ("observed_cycle_experiment_admission", observed_cycle_experiment_admission),
     ("executable_prediction_experiment_lifecycle", executable_prediction_experiment_lifecycle),
     ("system_diagnostic_baseline_authority", system_diagnostic_baseline_authority),
     ("post_intervention_attention_measurement_scope", post_intervention_attention_measurement_scope),
