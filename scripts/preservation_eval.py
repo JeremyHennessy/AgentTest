@@ -1054,7 +1054,8 @@ def evidence_debt_evolution_governor() -> dict[str, Any]:
 
 
 def verified_intervention_reconciliation() -> dict[str, Any]:
-    state = StateStore(Path(tempfile.mkdtemp()) / "organism.json").load()
+    temp = tempfile.TemporaryDirectory()
+    state = StateStore(Path(temp.name) / "organism.json").load()
     try:
         state["cycles"] = 8
         state["change_proposals"] = [
@@ -1074,6 +1075,7 @@ def verified_intervention_reconciliation() -> dict[str, Any]:
             changed_files=["src/agenttest/core.py", "tests/test_core.py"],
             verify_run_id=123,
             pr_number=10,
+            attribution_text="Verified implementation of M000001",
         )
         repeated, repeated_created = record_verified_intervention(
             state,
@@ -1082,6 +1084,7 @@ def verified_intervention_reconciliation() -> dict[str, Any]:
             changed_files=["src/agenttest/core.py", "tests/test_core.py"],
             verify_run_id=123,
             pr_number=10,
+            attribution_text="Verified implementation of M000001",
         )
 
         proposal = state["change_proposals"][0]
@@ -1112,7 +1115,7 @@ def verified_intervention_reconciliation() -> dict[str, Any]:
             "reused": not repeated_created,
         }
     finally:
-        pass
+        temp.cleanup()
 
 
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
