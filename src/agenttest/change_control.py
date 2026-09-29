@@ -11,6 +11,10 @@ PROTECTED_PATHS = {
     "scripts/preservation_eval.py",
     "scripts/compare_eval.py",
     "src/agenttest/change_control.py",
+    "src/agenttest/proposal_review.py",
+    "src/agenttest/self_proposal.py",
+    "src/agenttest/diagnostics.py",
+    "src/agenttest/diagnostic_replay.py",
 }
 
 
