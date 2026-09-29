@@ -2025,6 +2025,134 @@ class AgentCoreTests(unittest.TestCase):
             ["X000001"],
         )
 
+    def test_strict_actionable_questions_exclude_parked_and_parked_meta_inquiry(self) -> None:
+        from agenttest.semantic import actionable_open_questions
+
+        state = initial_state()
+        state["questions"] = [
+            {
+                "id": "Q000001",
+                "text": "Historical blocked question",
+                "status": "open",
+            },
+            {
+                "id": "Q000002",
+                "text": (
+                    "What obtainable evidence would resolve pending experiment "
+                    "X000002 with the least additional assumption?"
+                ),
+                "status": "open",
+            },
+            {
+                "id": "Q000003",
+                "text": "Current executable question",
+                "status": "open",
+            },
+            {
+                "id": "Q000004",
+                "text": "Latent question without an executable path",
+                "status": "open",
+            },
+        ]
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "question_id": "Q000001",
+                "status": "parked_blocked",
+                "readiness": "needs_specification",
+            },
+            {
+                "id": "X000002",
+                "question_id": "Q000099",
+                "status": "parked_blocked",
+                "readiness": "needs_specification",
+            },
+            {
+                "id": "X000003",
+                "question_id": "Q000003",
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            },
+        ]
+
+        actionable = actionable_open_questions(state)
+
+        self.assertEqual(
+            [item["id"] for item in actionable],
+            ["Q000003"],
+        )
+        self.assertTrue(all(item["status"] == "open" for item in state["questions"]))
+
+    def test_strict_question_attention_reduces_uncertainty_without_changing_default(self) -> None:
+        from agenttest.drives import compute_drives
+
+        state = initial_state()
+        state["cycles"] = 20
+        state["questions"] = [
+            {
+                "id": f"Q{index:06d}",
+                "text": f"Question {index}",
+                "status": "open",
+            }
+            for index in range(1, 7)
+        ]
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "question_id": f"Q{index:06d}",
+                "status": "parked_blocked",
+                "readiness": "needs_specification",
+            }
+            for index in range(1, 6)
+        ] + [
+            {
+                "id": "X000006",
+                "question_id": "Q000006",
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            }
+        ]
+
+        strict = compute_drives(
+            state,
+            strict_question_attention=True,
+        )
+        default = compute_drives(state)
+
+        self.assertAlmostEqual(strict["uncertainty"], 1.0 / 6.0)
+        self.assertEqual(default["uncertainty"], 0.8)
+        self.assertTrue(all(item["status"] == "open" for item in state["questions"]))
+
+    def test_strict_question_attention_reactivates_with_experiment_path(self) -> None:
+        from agenttest.semantic import actionable_open_questions
+
+        state = initial_state()
+        state["questions"] = [
+            {
+                "id": "Q000001",
+                "text": "Question with reversible parked history",
+                "status": "open",
+            }
+        ]
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "question_id": "Q000001",
+                "status": "parked_blocked",
+                "readiness": "needs_specification",
+            }
+        ]
+
+        self.assertEqual(actionable_open_questions(state), [])
+
+        state["experiments"][0]["status"] = "proposed"
+        state["experiments"][0]["readiness"] = "evidence_ready"
+
+        self.assertEqual(
+            [item["id"] for item in actionable_open_questions(state)],
+            ["Q000001"],
+        )
+
     def test_self_observation_creates_executable_prediction_experiment(self) -> None:
         from agenttest.diagnostic_experiments import evaluate_experiment_design
 
