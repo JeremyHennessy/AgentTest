@@ -9,7 +9,11 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable
 
-from agenttest.action_lab import ACTION_ORDER, step_action_lab
+from agenttest.action_lab import (
+    ACTION_ORDER,
+    step_action_lab,
+    validate_action_lab_history,
+)
 from agenttest.change_control import PROTECTED_PATHS, make_change_manifest, validate_change_manifest
 from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
@@ -30,7 +34,7 @@ from agenttest.state import StateStore, initial_state
 from agenttest.world import current_world_claims
 from agenttest.drives import compute_drives
 
-SUITE = "behavioral-preservation-v24"
+SUITE = "behavioral-preservation-v25"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1895,6 +1899,17 @@ def bounded_action_lab_causal_learning() -> dict[str, Any]:
     ninth = step_action_lab(state)
     lab = state["action_lab"]
 
+    replay_state = initial_state()
+    replay_actions = []
+    for cycle in range(1, 10):
+        replay_state["cycles"] = cycle
+        replay_actions.append(step_action_lab(replay_state)["action"])
+
+    tampered = json.loads(json.dumps(lab))
+    tampered["history"][0]["delta"] = [99, 99]
+    tampered_valid, tampered_reason = validate_action_lab_history(tampered)
+    valid_history, valid_reason = validate_action_lab_history(lab)
+
     return {
         "passed": (
             first_actions == list(ACTION_ORDER) * 2
@@ -1917,6 +1932,12 @@ def bounded_action_lab_causal_learning() -> dict[str, Any]:
             == [-1, 0]
             and ninth.get("after") == [-1, 0]
             and len(lab.get("history", [])) == 9
+            and replay_actions
+            == [*first_actions, ninth.get("action")]
+            and valid_history
+            and valid_reason is None
+            and not tampered_valid
+            and tampered_reason is not None
             and "src/agenttest/action_lab.py" in PROTECTED_PATHS
         ),
         "first_actions": first_actions,
@@ -1925,6 +1946,10 @@ def bounded_action_lab_causal_learning() -> dict[str, Any]:
         "ninth_decision": ninth.get("decision"),
         "ninth_after": ninth.get("after"),
         "history_count": len(lab.get("history", [])),
+        "replay_actions": replay_actions,
+        "history_integrity_valid": valid_history,
+        "tampered_history_valid": tampered_valid,
+        "tampered_history_reason": tampered_reason,
         "action_authority_protected": (
             "src/agenttest/action_lab.py" in PROTECTED_PATHS
         ),
