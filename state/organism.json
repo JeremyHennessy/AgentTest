@@ -1,5 +1,31 @@
 {
-  "accepted_changes": [],
+  "accepted_changes": [
+    {
+      "id": "A000001",
+      "proposal_id": "M000008",
+      "target_dimension": "learning",
+      "commit_sha": "cbc34fcf8cdddc06ce0086ecc1d1ef4dfb264e31",
+      "changed_files": [
+        "src/agenttest/core.py",
+        "src/agenttest/drives.py",
+        "tests/test_core.py"
+      ],
+      "pr_number": 28,
+      "accepted_at": "2026-09-29T15:50:07Z",
+      "accepted_cycle": 29,
+      "authority": "owner_verified_backfill",
+      "verification": {
+        "workflow": "verify",
+        "event": "push",
+        "conclusion": "success",
+        "run_id": 36591653415
+      },
+      "verification_scope": "applied_and_preserved",
+      "improvement_claim": "not_implied",
+      "prior_proposal_status": "reviewed_supported_problem",
+      "backfill_reason": "Phase 15 was verified before the Phase 16 reconciliation mechanism existed."
+    }
+  ],
   "change_proposals": [
     {
       "baseline_metric": 0.8,
@@ -294,7 +320,7 @@
       "title": "Track inquiry families across cycles"
     },
     {
-      "baseline_metric": 1.0,
+      "baseline_metric": 1,
       "created_at": "2026-09-29T14:54:39.225682+00:00",
       "created_cycle": 26,
       "evidence_refs": [
@@ -331,10 +357,15 @@
       "schema_version": 1,
       "selection_rationale": "Stale evidence debt was detected in experiment X000001 after 25 cycles despite later evaluated evidence; this overrides the saturated aggregate learning metric.",
       "source": "self-proposal-v1",
-      "status": "reviewed_supported_problem",
+      "status": "closed_verified_intervention",
       "target_dimension": "learning",
       "test_plan": "Construct evidence-ready and underspecified experiments, provide later evaluated prediction evidence, verify only a legitimate match closes, verify stale underspecified work remains preserved with an explicit non-ready status, and run the baseline-owned preservation gate.",
-      "title": "Resolve stale experiment evidence debt"
+      "title": "Resolve stale experiment evidence debt",
+      "accepted_change_id": "A000001",
+      "verified_commit_sha": "cbc34fcf8cdddc06ce0086ecc1d1ef4dfb264e31",
+      "verification_run_id": 36591653415,
+      "verification_scope": "applied_and_preserved",
+      "improvement_claim": "not_implied"
     }
   ],
   "cognition_candidates": [],
@@ -683,11 +714,11 @@
   "created_at": "2026-09-29T03:45:00+00:00",
   "cycles": 29,
   "drives": {
-    "calibration_gap": 0.0,
-    "continuity_repair": 0.0,
+    "calibration_gap": 0,
+    "continuity_repair": 0,
     "evidence_hunger": 0.5,
     "novelty_hunger": 0.1896551724137931,
-    "prediction_error": 0.0,
+    "prediction_error": 0,
     "uncertainty": 0.8
   },
   "environment_snapshots": [
@@ -2224,7 +2255,7 @@
       "id": "I000002",
       "kind": "explain_change",
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
-      "strength": 1.0,
+      "strength": 1,
       "target": "S000001"
     },
     {
@@ -2233,7 +2264,7 @@
       "id": "I000003",
       "kind": "explain_change",
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
-      "strength": 1.0,
+      "strength": 1,
       "target": "S000002"
     },
     {
@@ -2242,7 +2273,7 @@
       "id": "I000004",
       "kind": "explain_change",
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
-      "strength": 1.0,
+      "strength": 1,
       "target": "S000003"
     },
     {
@@ -2251,7 +2282,7 @@
       "id": "I000005",
       "kind": "explain_change",
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
-      "strength": 1.0,
+      "strength": 1,
       "target": "S000004"
     },
     {
@@ -2260,7 +2291,7 @@
       "id": "I000006",
       "kind": "explain_change",
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
-      "strength": 1.0,
+      "strength": 1,
       "target": "S000005"
     },
     {
@@ -2269,7 +2300,7 @@
       "id": "I000007",
       "kind": "explain_change",
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
-      "strength": 1.0,
+      "strength": 1,
       "target": "S000006"
     },
     {
@@ -2278,7 +2309,7 @@
       "id": "I000008",
       "kind": "explain_change",
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
-      "strength": 1.0,
+      "strength": 1,
       "target": "S000007"
     },
     {
@@ -2404,7 +2435,7 @@
       "id": "I000022",
       "kind": "explain_change",
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
-      "strength": 1.0,
+      "strength": 1,
       "target": "S000020"
     },
     {
@@ -2413,7 +2444,7 @@
       "id": "I000023",
       "kind": "explain_change",
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
-      "strength": 1.0,
+      "strength": 1,
       "target": "S000021"
     },
     {
@@ -2567,20 +2598,20 @@
     }
   ],
   "metrics": {
-    "adaptation": 0.0,
-    "agency": 1.0,
-    "cognition": 0.0,
-    "continuity": 1.0,
-    "curiosity": 1.0,
-    "learning": 1.0,
-    "memory": 1.0,
+    "adaptation": 0.3333333333333333,
+    "agency": 1,
+    "cognition": 0,
+    "continuity": 1,
+    "curiosity": 1,
+    "learning": 1,
+    "memory": 1,
     "open_endedness": 0.3103448275862069,
-    "perception": 1.0,
-    "reflection": 1.0,
-    "reproducibility": 1.0,
-    "self_model": 1.0,
-    "semantic_memory": 1.0,
-    "world_model": 1.0
+    "perception": 1,
+    "reflection": 1,
+    "reproducibility": 1,
+    "self_model": 1,
+    "semantic_memory": 1,
+    "world_model": 1
   },
   "predictions": [
     {
@@ -2597,7 +2628,7 @@
         }
       },
       "evaluated_at": "2026-09-29T03:57:01.799271+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "branch": "autonomous/growth",
         "python_files": 9,
@@ -2629,7 +2660,7 @@
         }
       },
       "evaluated_at": "2026-09-29T04:08:22.970791+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "branch": "autonomous/growth",
         "python_files": 9,
@@ -2661,7 +2692,7 @@
         }
       },
       "evaluated_at": "2026-09-29T04:14:28.159635+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "branch": "autonomous/growth",
         "python_files": 10,
@@ -2693,7 +2724,7 @@
         }
       },
       "evaluated_at": "2026-09-29T04:21:06.234667+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "branch": "autonomous/growth",
         "python_files": 12,
@@ -2725,7 +2756,7 @@
         }
       },
       "evaluated_at": "2026-09-29T04:29:07.310854+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "branch": "autonomous/growth",
         "python_files": 15,
@@ -2757,7 +2788,7 @@
         }
       },
       "evaluated_at": "2026-09-29T04:36:29.298797+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "branch": "autonomous/growth",
         "python_files": 16,
@@ -2789,7 +2820,7 @@
         }
       },
       "evaluated_at": "2026-09-29T10:51:23.570470+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "branch": "autonomous/growth",
         "python_files": 17,
@@ -2813,7 +2844,7 @@
         }
       },
       "evaluated_at": "2026-09-29T10:58:53.546975+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "branch": "autonomous/growth",
         "python_files": 19,
@@ -2837,7 +2868,7 @@
         }
       },
       "evaluated_at": "2026-09-29T12:17:36.670803+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "6eec66132d0f5bbb",
         "branch": "autonomous/growth",
@@ -2862,7 +2893,7 @@
         }
       },
       "evaluated_at": "2026-09-29T12:25:42.317159+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "2e870fb66db33bce",
         "branch": "autonomous/growth",
@@ -2887,7 +2918,7 @@
         }
       },
       "evaluated_at": "2026-09-29T12:27:38.022770+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "d2daa7a6419ce1a5",
         "branch": "autonomous/growth",
@@ -2912,7 +2943,7 @@
         }
       },
       "evaluated_at": "2026-09-29T12:31:17.415309+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "7f3e299dfcfb5075",
         "branch": "autonomous/growth",
@@ -2937,7 +2968,7 @@
         }
       },
       "evaluated_at": "2026-09-29T12:35:50.943039+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "8cb8344cb534ae45",
         "branch": "autonomous/growth",
@@ -2962,7 +2993,7 @@
         }
       },
       "evaluated_at": "2026-09-29T12:42:03.384403+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "0420e861cf49023d",
         "branch": "autonomous/growth",
@@ -2982,7 +3013,7 @@
       "cycle": 15,
       "errors": {},
       "evaluated_at": "2026-09-29T12:56:59.941702+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "b65fd6cc17116968",
         "branch": "autonomous/growth",
@@ -3007,7 +3038,7 @@
         }
       },
       "evaluated_at": "2026-09-29T14:19:54.987663+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "b65fd6cc17116968",
         "branch": "autonomous/growth",
@@ -3032,7 +3063,7 @@
         }
       },
       "evaluated_at": "2026-09-29T14:23:59.649892+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "1ba4e8197861805f",
         "branch": "autonomous/growth",
@@ -3057,7 +3088,7 @@
         }
       },
       "evaluated_at": "2026-09-29T14:32:47.966897+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "6e7841e38f4e73c5",
         "branch": "autonomous/growth",
@@ -3082,7 +3113,7 @@
         }
       },
       "evaluated_at": "2026-09-29T14:35:54.124047+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "1264adc291d0733a",
         "branch": "autonomous/growth",
@@ -3107,7 +3138,7 @@
         }
       },
       "evaluated_at": "2026-09-29T14:43:41.839826+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "bc47f5f7ed8b2c57",
         "branch": "autonomous/growth",
@@ -3136,7 +3167,7 @@
         }
       },
       "evaluated_at": "2026-09-29T14:43:52.617150+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "26ac45f1f844d1cf",
         "branch": "autonomous/growth",
@@ -3161,7 +3192,7 @@
         }
       },
       "evaluated_at": "2026-09-29T14:45:04.350451+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "26ac45f1f844d1cf",
         "branch": "autonomous/growth",
@@ -3186,7 +3217,7 @@
         }
       },
       "evaluated_at": "2026-09-29T14:47:21.838418+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "26ac45f1f844d1cf",
         "branch": "autonomous/growth",
@@ -3206,7 +3237,7 @@
       "cycle": 24,
       "errors": {},
       "evaluated_at": "2026-09-29T14:47:35.116626+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "b3b7b3aba04c253e",
         "branch": "autonomous/growth",
@@ -3231,7 +3262,7 @@
         }
       },
       "evaluated_at": "2026-09-29T14:54:38.996807+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "b3b7b3aba04c253e",
         "branch": "autonomous/growth",
@@ -3256,7 +3287,7 @@
         }
       },
       "evaluated_at": "2026-09-29T15:37:53.891303+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "48494fc1866ecd5b",
         "branch": "autonomous/growth",
@@ -3282,7 +3313,7 @@
         }
       },
       "evaluated_at": "2026-09-29T15:39:55.369818+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "c38691083460c925",
         "branch": "autonomous/growth",
@@ -3308,7 +3339,7 @@
         }
       },
       "evaluated_at": "2026-09-29T15:49:26.054788+00:00",
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "expected": {
         "baseline_fingerprint": "258e307d725f5590",
         "branch": "autonomous/growth",
@@ -3392,7 +3423,7 @@
       "request_context_hash": "7db2e46bc95908a23161d56d7ec1f72fa2c1f8284093f00417a5b5e09be63641",
       "result": {
         "capability_count": 12,
-        "coverage": 0.0,
+        "coverage": 0,
         "diagnostic_version": "self-model-grounding-v1",
         "grounded_count": 0,
         "invalid_claims": [],
@@ -3433,7 +3464,7 @@
       "request_context_hash": "772c3540caf60d90448b3361ddd2ec78689d1c1f210df90ade9740428065b7f6",
       "result": {
         "capability_count": 12,
-        "coverage": 1.0,
+        "coverage": 1,
         "diagnostic_version": "self-model-grounding-v1",
         "grounded_count": 12,
         "invalid_claims": [],
@@ -3474,7 +3505,7 @@
       "request_context_hash": "d136a20ad9da964508a6d5843bab13d9e105e74e428235fa4545ff4f8bbdb76d",
       "result": {
         "capability_count": 17,
-        "coverage": 1.0,
+        "coverage": 1,
         "diagnostic_version": "self-model-grounding-v1",
         "grounded_count": 17,
         "invalid_claims": [],
@@ -3524,7 +3555,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -3539,7 +3570,7 @@
           },
           {
             "family_id": "F002",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -3548,7 +3579,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -3557,7 +3588,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000010"
             ],
@@ -3566,7 +3597,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -3575,7 +3606,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -3616,7 +3647,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -3641,7 +3672,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -3650,7 +3681,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -3659,7 +3690,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -3668,7 +3699,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -3714,7 +3745,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -3739,7 +3770,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -3748,7 +3779,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -3757,7 +3788,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -3766,7 +3797,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -3779,7 +3810,7 @@
         "largest_family_ratio": 0.5384615384615384,
         "largest_family_size": 7,
         "metric_alignment_tolerance": 0.05,
-        "metric_gap": 0.0,
+        "metric_gap": 0,
         "metric_status": "aligned",
         "outcome": "paraphrase_churn",
         "question_count": 13,
@@ -3812,7 +3843,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -3837,7 +3868,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -3846,7 +3877,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -3855,7 +3886,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -3864,7 +3895,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -3877,7 +3908,7 @@
         "largest_family_ratio": 0.5384615384615384,
         "largest_family_size": 7,
         "metric_alignment_tolerance": 0.05,
-        "metric_gap": 0.0,
+        "metric_gap": 0,
         "metric_status": "aligned",
         "outcome": "paraphrase_churn",
         "question_count": 13,
@@ -3910,7 +3941,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -3935,7 +3966,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -3944,7 +3975,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -3953,7 +3984,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -3962,7 +3993,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -3975,7 +4006,7 @@
         "largest_family_ratio": 0.5384615384615384,
         "largest_family_size": 7,
         "metric_alignment_tolerance": 0.05,
-        "metric_gap": 0.0,
+        "metric_gap": 0,
         "metric_status": "aligned",
         "outcome": "paraphrase_churn",
         "question_count": 13,
@@ -4008,7 +4039,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -4034,7 +4065,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -4043,7 +4074,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -4052,7 +4083,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -4061,7 +4092,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -4070,7 +4101,7 @@
           },
           {
             "family_id": "F007",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000014"
             ],
@@ -4083,7 +4114,7 @@
         "largest_family_ratio": 0.5333333333333333,
         "largest_family_size": 8,
         "metric_alignment_tolerance": 0.05,
-        "metric_gap": 0.0,
+        "metric_gap": 0,
         "metric_status": "aligned",
         "outcome": "paraphrase_churn",
         "question_count": 15,
@@ -4116,7 +4147,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -4142,7 +4173,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -4151,7 +4182,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -4160,7 +4191,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -4169,7 +4200,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -4178,7 +4209,7 @@
           },
           {
             "family_id": "F007",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000014"
             ],
@@ -4187,7 +4218,7 @@
           },
           {
             "family_id": "F008",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000016"
             ],
@@ -4200,7 +4231,7 @@
         "largest_family_ratio": 0.5,
         "largest_family_size": 8,
         "metric_alignment_tolerance": 0.05,
-        "metric_gap": 0.0,
+        "metric_gap": 0,
         "metric_status": "aligned",
         "outcome": "paraphrase_churn",
         "question_count": 16,
@@ -4233,7 +4264,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -4259,7 +4290,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -4268,7 +4299,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -4277,7 +4308,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -4286,7 +4317,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -4295,7 +4326,7 @@
           },
           {
             "family_id": "F007",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000014"
             ],
@@ -4304,7 +4335,7 @@
           },
           {
             "family_id": "F008",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000016"
             ],
@@ -4313,7 +4344,7 @@
           },
           {
             "family_id": "F009",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000017"
             ],
@@ -4326,7 +4357,7 @@
         "largest_family_ratio": 0.47058823529411764,
         "largest_family_size": 8,
         "metric_alignment_tolerance": 0.05,
-        "metric_gap": 0.0,
+        "metric_gap": 0,
         "metric_status": "aligned",
         "outcome": "paraphrase_churn",
         "question_count": 17,
@@ -4359,7 +4390,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -4385,7 +4416,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -4394,7 +4425,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -4403,7 +4434,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -4412,7 +4443,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -4421,7 +4452,7 @@
           },
           {
             "family_id": "F007",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000014"
             ],
@@ -4430,7 +4461,7 @@
           },
           {
             "family_id": "F008",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000016"
             ],
@@ -4439,7 +4470,7 @@
           },
           {
             "family_id": "F009",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000017"
             ],
@@ -4452,7 +4483,7 @@
         "largest_family_ratio": 0.47058823529411764,
         "largest_family_size": 8,
         "metric_alignment_tolerance": 0.05,
-        "metric_gap": 0.0,
+        "metric_gap": 0,
         "metric_status": "aligned",
         "outcome": "paraphrase_churn",
         "question_count": 17,
@@ -4485,7 +4516,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -4511,7 +4542,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -4520,7 +4551,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -4529,7 +4560,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -4538,7 +4569,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -4547,7 +4578,7 @@
           },
           {
             "family_id": "F007",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000014"
             ],
@@ -4556,7 +4587,7 @@
           },
           {
             "family_id": "F008",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000016"
             ],
@@ -4565,7 +4596,7 @@
           },
           {
             "family_id": "F009",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000017"
             ],
@@ -4578,7 +4609,7 @@
         "largest_family_ratio": 0.47058823529411764,
         "largest_family_size": 8,
         "metric_alignment_tolerance": 0.05,
-        "metric_gap": 0.0,
+        "metric_gap": 0,
         "metric_status": "aligned",
         "outcome": "paraphrase_churn",
         "question_count": 17,
@@ -4611,7 +4642,7 @@
         "families": [
           {
             "family_id": "F001",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000002",
               "Q000003",
@@ -4637,7 +4668,7 @@
           },
           {
             "family_id": "F003",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000001"
             ],
@@ -4646,7 +4677,7 @@
           },
           {
             "family_id": "F004",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000009"
             ],
@@ -4655,7 +4686,7 @@
           },
           {
             "family_id": "F005",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000011"
             ],
@@ -4664,7 +4695,7 @@
           },
           {
             "family_id": "F006",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000012"
             ],
@@ -4673,7 +4704,7 @@
           },
           {
             "family_id": "F007",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000014"
             ],
@@ -4682,7 +4713,7 @@
           },
           {
             "family_id": "F008",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000016"
             ],
@@ -4691,7 +4722,7 @@
           },
           {
             "family_id": "F009",
-            "max_pair_similarity": 1.0,
+            "max_pair_similarity": 1,
             "question_refs": [
               "Q000017"
             ],
@@ -4704,7 +4735,7 @@
         "largest_family_ratio": 0.47058823529411764,
         "largest_family_size": 8,
         "metric_alignment_tolerance": 0.05,
-        "metric_gap": 0.0,
+        "metric_gap": 0,
         "metric_status": "aligned",
         "outcome": "paraphrase_churn",
         "question_count": 17,
@@ -5212,7 +5243,7 @@
   "reflections": [
     {
       "cycle": 2,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000001",
       "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
       "outcome": "violated",
@@ -5221,7 +5252,7 @@
     },
     {
       "cycle": 3,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000002",
       "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
       "outcome": "violated",
@@ -5230,7 +5261,7 @@
     },
     {
       "cycle": 4,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000003",
       "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
       "outcome": "violated",
@@ -5239,7 +5270,7 @@
     },
     {
       "cycle": 5,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000004",
       "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
       "outcome": "violated",
@@ -5248,7 +5279,7 @@
     },
     {
       "cycle": 6,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000005",
       "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
       "outcome": "violated",
@@ -5257,7 +5288,7 @@
     },
     {
       "cycle": 7,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000006",
       "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
       "outcome": "violated",
@@ -5266,7 +5297,7 @@
     },
     {
       "cycle": 8,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000007",
       "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
       "outcome": "violated",
@@ -5275,7 +5306,7 @@
     },
     {
       "cycle": 9,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000008",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5284,7 +5315,7 @@
     },
     {
       "cycle": 10,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000009",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5293,7 +5324,7 @@
     },
     {
       "cycle": 11,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000010",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5302,7 +5333,7 @@
     },
     {
       "cycle": 12,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000011",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5311,7 +5342,7 @@
     },
     {
       "cycle": 13,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000012",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5320,7 +5351,7 @@
     },
     {
       "cycle": 14,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000013",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5329,7 +5360,7 @@
     },
     {
       "cycle": 15,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000014",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5338,7 +5369,7 @@
     },
     {
       "cycle": 16,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000015",
       "lesson": "Measured repository stability prediction was confirmed; use the observed error fields rather than inventing a cause.",
       "outcome": "confirmed",
@@ -5347,7 +5378,7 @@
     },
     {
       "cycle": 17,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000016",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5356,7 +5387,7 @@
     },
     {
       "cycle": 18,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000017",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5365,7 +5396,7 @@
     },
     {
       "cycle": 19,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000018",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5374,7 +5405,7 @@
     },
     {
       "cycle": 20,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000019",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5383,7 +5414,7 @@
     },
     {
       "cycle": 21,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000020",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5392,7 +5423,7 @@
     },
     {
       "cycle": 22,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000021",
       "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
       "outcome": "violated",
@@ -5401,7 +5432,7 @@
     },
     {
       "cycle": 23,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000022",
       "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
       "outcome": "violated",
@@ -5410,7 +5441,7 @@
     },
     {
       "cycle": 24,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000023",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5419,7 +5450,7 @@
     },
     {
       "cycle": 25,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000024",
       "lesson": "Measured repository stability prediction was confirmed; use the observed error fields rather than inventing a cause.",
       "outcome": "confirmed",
@@ -5428,7 +5459,7 @@
     },
     {
       "cycle": 26,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000025",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5437,7 +5468,7 @@
     },
     {
       "cycle": 27,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000026",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5446,7 +5477,7 @@
     },
     {
       "cycle": 28,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000027",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5455,7 +5486,7 @@
     },
     {
       "cycle": 29,
-      "evidence_strength": 1.0,
+      "evidence_strength": 1,
       "id": "R000028",
       "lesson": "The prior repository-stability prediction was invalidated by a non-state repository intervention. Do not score the intervention as an environmental prediction error.",
       "outcome": "invalidated_by_intervention",
@@ -5467,7 +5498,7 @@
   "self_model": {
     "calibration": {
       "calibrated_cycle": 29,
-      "coverage": 1.0,
+      "coverage": 1,
       "grounded": 19,
       "observed": 11,
       "total": 19,
@@ -7672,11 +7703,11 @@
       "time": "2026-09-29T15:49:26.054788+00:00"
     }
   ],
-  "updated_at": "2026-09-29T15:49:26.423867+00:00",
+  "updated_at": "2026-09-29T15:50:07Z",
   "world_model": {
     "claims": [
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.159944+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7722,7 +7753,7 @@
         "value": "autonomous/growth"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.159956+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7740,7 +7771,7 @@
         "value": 16
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.159963+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7759,7 +7790,7 @@
         "value": 9
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.159968+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7778,7 +7809,7 @@
         "value": 1049
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.159973+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7822,7 +7853,7 @@
         "value": 1
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.159978+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7840,7 +7871,7 @@
         "value": false
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.159992+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7858,7 +7889,7 @@
         "value": 18
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160007+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7894,7 +7925,7 @@
         "value": true
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160018+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7912,7 +7943,7 @@
         "value": 20
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160024+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7930,7 +7961,7 @@
         "value": 10
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160029+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7948,7 +7979,7 @@
         "value": 1532
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160043+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7966,7 +7997,7 @@
         "value": 23
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160048+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -7984,7 +8015,7 @@
         "value": 12
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160053+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -8002,7 +8033,7 @@
         "value": 2028
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160069+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -8021,7 +8052,7 @@
         "value": "violated"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160078+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -8040,7 +8071,7 @@
         "value": "violated"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:14:28.160089+00:00",
         "created_cycle": 4,
         "evidence_refs": [
@@ -8059,7 +8090,7 @@
         "value": "violated"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:21:06.234866+00:00",
         "created_cycle": 5,
         "evidence_refs": [
@@ -8077,7 +8108,7 @@
         "value": 27
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:21:06.234873+00:00",
         "created_cycle": 5,
         "evidence_refs": [
@@ -8095,7 +8126,7 @@
         "value": 15
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:21:06.234878+00:00",
         "created_cycle": 5,
         "evidence_refs": [
@@ -8113,7 +8144,7 @@
         "value": 2521
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:21:06.234892+00:00",
         "created_cycle": 5,
         "evidence_refs": [
@@ -8132,7 +8163,7 @@
         "value": "violated"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:29:07.311059+00:00",
         "created_cycle": 6,
         "evidence_refs": [
@@ -8150,7 +8181,7 @@
         "value": 29
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:29:07.311068+00:00",
         "created_cycle": 6,
         "evidence_refs": [
@@ -8168,7 +8199,7 @@
         "value": 16
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:29:07.311075+00:00",
         "created_cycle": 6,
         "evidence_refs": [
@@ -8186,7 +8217,7 @@
         "value": 3136
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:29:07.311093+00:00",
         "created_cycle": 6,
         "evidence_refs": [
@@ -8205,7 +8236,7 @@
         "value": "violated"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:36:29.298985+00:00",
         "created_cycle": 7,
         "evidence_refs": [
@@ -8223,7 +8254,7 @@
         "value": 32
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:36:29.298993+00:00",
         "created_cycle": 7,
         "evidence_refs": [
@@ -8241,7 +8272,7 @@
         "value": 17
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:36:29.298998+00:00",
         "created_cycle": 7,
         "evidence_refs": [
@@ -8259,7 +8290,7 @@
         "value": 3711
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T04:36:29.299013+00:00",
         "created_cycle": 7,
         "evidence_refs": [
@@ -8278,7 +8309,7 @@
         "value": "violated"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T10:51:23.570752+00:00",
         "created_cycle": 8,
         "evidence_refs": [
@@ -8296,7 +8327,7 @@
         "value": 36
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T10:51:23.570767+00:00",
         "created_cycle": 8,
         "evidence_refs": [
@@ -8315,7 +8346,7 @@
         "value": 19
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T10:51:23.570777+00:00",
         "created_cycle": 8,
         "evidence_refs": [
@@ -8333,7 +8364,7 @@
         "value": 4283
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T10:51:23.570802+00:00",
         "created_cycle": 8,
         "evidence_refs": [
@@ -8352,7 +8383,7 @@
         "value": "violated"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T10:58:53.547327+00:00",
         "created_cycle": 9,
         "evidence_refs": [
@@ -8370,7 +8401,7 @@
         "value": "6eec66132d0f5bbb"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T10:58:53.547342+00:00",
         "created_cycle": 9,
         "evidence_refs": [
@@ -8388,7 +8419,7 @@
         "value": 38
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T10:58:53.547359+00:00",
         "created_cycle": 9,
         "evidence_refs": [
@@ -8406,7 +8437,7 @@
         "value": 4454
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T10:58:53.547386+00:00",
         "created_cycle": 9,
         "evidence_refs": [
@@ -8425,7 +8456,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:17:36.671018+00:00",
         "created_cycle": 10,
         "evidence_refs": [
@@ -8443,7 +8474,7 @@
         "value": "2e870fb66db33bce"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:17:36.671029+00:00",
         "created_cycle": 10,
         "evidence_refs": [
@@ -8465,7 +8496,7 @@
         "value": 39
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:17:36.671036+00:00",
         "created_cycle": 10,
         "evidence_refs": [
@@ -8487,7 +8518,7 @@
         "value": 20
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:17:36.671042+00:00",
         "created_cycle": 10,
         "evidence_refs": [
@@ -8505,7 +8536,7 @@
         "value": 4825
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:17:36.671061+00:00",
         "created_cycle": 10,
         "evidence_refs": [
@@ -8524,7 +8555,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:25:42.317483+00:00",
         "created_cycle": 11,
         "evidence_refs": [
@@ -8542,7 +8573,7 @@
         "value": "d2daa7a6419ce1a5"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:25:42.317509+00:00",
         "created_cycle": 11,
         "evidence_refs": [
@@ -8560,7 +8591,7 @@
         "value": 4922
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:25:42.317536+00:00",
         "created_cycle": 11,
         "evidence_refs": [
@@ -8579,7 +8610,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:27:38.023071+00:00",
         "created_cycle": 12,
         "evidence_refs": [
@@ -8597,7 +8628,7 @@
         "value": "7f3e299dfcfb5075"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:27:38.023098+00:00",
         "created_cycle": 12,
         "evidence_refs": [
@@ -8615,7 +8646,7 @@
         "value": 5240
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:27:38.023124+00:00",
         "created_cycle": 12,
         "evidence_refs": [
@@ -8634,7 +8665,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:31:17.415631+00:00",
         "created_cycle": 13,
         "evidence_refs": [
@@ -8652,7 +8683,7 @@
         "value": "8cb8344cb534ae45"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:31:17.415657+00:00",
         "created_cycle": 13,
         "evidence_refs": [
@@ -8670,7 +8701,7 @@
         "value": 5340
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:31:17.415684+00:00",
         "created_cycle": 13,
         "evidence_refs": [
@@ -8689,7 +8720,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:35:50.943376+00:00",
         "created_cycle": 14,
         "evidence_refs": [
@@ -8707,7 +8738,7 @@
         "value": "0420e861cf49023d"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:35:50.943415+00:00",
         "created_cycle": 14,
         "evidence_refs": [
@@ -8725,7 +8756,7 @@
         "value": 5389
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:35:50.943482+00:00",
         "created_cycle": 14,
         "evidence_refs": [
@@ -8744,7 +8775,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:42:03.384926+00:00",
         "created_cycle": 15,
         "evidence_refs": [
@@ -8763,7 +8794,7 @@
         "value": "b65fd6cc17116968"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:42:03.384955+00:00",
         "created_cycle": 15,
         "evidence_refs": [
@@ -8784,7 +8815,7 @@
         "value": 40
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:42:03.384982+00:00",
         "created_cycle": 15,
         "evidence_refs": [
@@ -8805,7 +8836,7 @@
         "value": 21
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:42:03.385002+00:00",
         "created_cycle": 15,
         "evidence_refs": [
@@ -8824,7 +8855,7 @@
         "value": 5902
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:42:03.385051+00:00",
         "created_cycle": 15,
         "evidence_refs": [
@@ -8843,7 +8874,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T12:56:59.942028+00:00",
         "created_cycle": 16,
         "evidence_refs": [
@@ -8862,7 +8893,7 @@
         "value": "confirmed"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:19:54.988025+00:00",
         "created_cycle": 17,
         "evidence_refs": [
@@ -8880,7 +8911,7 @@
         "value": "1ba4e8197861805f"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:19:54.988054+00:00",
         "created_cycle": 17,
         "evidence_refs": [
@@ -8898,7 +8929,7 @@
         "value": 6074
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:19:54.988083+00:00",
         "created_cycle": 17,
         "evidence_refs": [
@@ -8917,7 +8948,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:23:59.650105+00:00",
         "created_cycle": 18,
         "evidence_refs": [
@@ -8935,7 +8966,7 @@
         "value": "6e7841e38f4e73c5"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:23:59.650123+00:00",
         "created_cycle": 18,
         "evidence_refs": [
@@ -8953,7 +8984,7 @@
         "value": 6283
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:23:59.650143+00:00",
         "created_cycle": 18,
         "evidence_refs": [
@@ -8972,7 +9003,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:32:47.967184+00:00",
         "created_cycle": 19,
         "evidence_refs": [
@@ -8990,7 +9021,7 @@
         "value": "1264adc291d0733a"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:32:47.967203+00:00",
         "created_cycle": 19,
         "evidence_refs": [
@@ -9009,7 +9040,7 @@
         "value": 42
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:32:47.967215+00:00",
         "created_cycle": 19,
         "evidence_refs": [
@@ -9035,7 +9066,7 @@
         "value": 22
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:32:47.967225+00:00",
         "created_cycle": 19,
         "evidence_refs": [
@@ -9053,7 +9084,7 @@
         "value": 6704
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:32:47.967252+00:00",
         "created_cycle": 19,
         "evidence_refs": [
@@ -9072,7 +9103,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:35:54.124496+00:00",
         "created_cycle": 20,
         "evidence_refs": [
@@ -9090,7 +9121,7 @@
         "value": "bc47f5f7ed8b2c57"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:35:54.124537+00:00",
         "created_cycle": 20,
         "evidence_refs": [
@@ -9108,7 +9139,7 @@
         "value": 6767
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:35:54.124577+00:00",
         "created_cycle": 20,
         "evidence_refs": [
@@ -9127,7 +9158,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:43:41.840105+00:00",
         "created_cycle": 21,
         "evidence_refs": [
@@ -9147,7 +9178,7 @@
         "value": "26ac45f1f844d1cf"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:43:41.840120+00:00",
         "created_cycle": 21,
         "evidence_refs": [
@@ -9165,7 +9196,7 @@
         "value": 43
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:43:41.840140+00:00",
         "created_cycle": 21,
         "evidence_refs": [
@@ -9187,7 +9218,7 @@
         "value": 6790
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:43:41.840154+00:00",
         "created_cycle": 21,
         "evidence_refs": [
@@ -9205,7 +9236,7 @@
         "value": false
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:43:41.840174+00:00",
         "created_cycle": 21,
         "evidence_refs": [
@@ -9224,7 +9255,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:43:52.617464+00:00",
         "created_cycle": 22,
         "evidence_refs": [
@@ -9247,7 +9278,7 @@
         "value": 44
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:43:52.617498+00:00",
         "created_cycle": 22,
         "evidence_refs": [
@@ -9265,7 +9296,7 @@
         "value": true
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:43:52.617521+00:00",
         "created_cycle": 22,
         "evidence_refs": [
@@ -9284,7 +9315,7 @@
         "value": "violated"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:45:04.350873+00:00",
         "created_cycle": 23,
         "evidence_refs": [
@@ -9302,7 +9333,7 @@
         "value": false
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:45:04.350913+00:00",
         "created_cycle": 23,
         "evidence_refs": [
@@ -9321,7 +9352,7 @@
         "value": "violated"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:47:21.838666+00:00",
         "created_cycle": 24,
         "evidence_refs": [
@@ -9340,7 +9371,7 @@
         "value": "b3b7b3aba04c253e"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:47:21.838690+00:00",
         "created_cycle": 24,
         "evidence_refs": [
@@ -9363,7 +9394,7 @@
         "value": true
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:47:21.838706+00:00",
         "created_cycle": 24,
         "evidence_refs": [
@@ -9382,7 +9413,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:47:35.116854+00:00",
         "created_cycle": 25,
         "evidence_refs": [
@@ -9401,7 +9432,7 @@
         "value": "confirmed"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:54:38.997140+00:00",
         "created_cycle": 26,
         "evidence_refs": [
@@ -9419,7 +9450,7 @@
         "value": "48494fc1866ecd5b"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:54:38.997171+00:00",
         "created_cycle": 26,
         "evidence_refs": [
@@ -9437,7 +9468,7 @@
         "value": 7048
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T14:54:38.997207+00:00",
         "created_cycle": 26,
         "evidence_refs": [
@@ -9456,7 +9487,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:37:53.891599+00:00",
         "created_cycle": 27,
         "evidence_refs": [
@@ -9474,7 +9505,7 @@
         "value": "c38691083460c925"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:37:53.891623+00:00",
         "created_cycle": 27,
         "evidence_refs": [
@@ -9492,7 +9523,7 @@
         "value": 7312
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:37:53.891652+00:00",
         "created_cycle": 27,
         "evidence_refs": [
@@ -9511,7 +9542,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:39:55.370179+00:00",
         "created_cycle": 28,
         "evidence_refs": [
@@ -9529,7 +9560,7 @@
         "value": "258e307d725f5590"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:39:55.370195+00:00",
         "created_cycle": 28,
         "evidence_refs": [
@@ -9547,7 +9578,7 @@
         "value": 46
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:39:55.370207+00:00",
         "created_cycle": 28,
         "evidence_refs": [
@@ -9565,7 +9596,7 @@
         "value": 23
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:39:55.370218+00:00",
         "created_cycle": 28,
         "evidence_refs": [
@@ -9583,7 +9614,7 @@
         "value": 7343
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:39:55.370228+00:00",
         "created_cycle": 28,
         "evidence_refs": [
@@ -9601,7 +9632,7 @@
         "value": 2
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:39:55.370261+00:00",
         "created_cycle": 28,
         "evidence_refs": [
@@ -9620,7 +9651,7 @@
         "value": "invalidated_by_intervention"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:49:26.055087+00:00",
         "created_cycle": 29,
         "evidence_refs": [
@@ -9638,7 +9669,7 @@
         "value": "599463641f1371f5"
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:49:26.055101+00:00",
         "created_cycle": 29,
         "evidence_refs": [
@@ -9656,7 +9687,7 @@
         "value": 50
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:49:26.055113+00:00",
         "created_cycle": 29,
         "evidence_refs": [
@@ -9674,7 +9705,7 @@
         "value": 26
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:49:26.055122+00:00",
         "created_cycle": 29,
         "evidence_refs": [
@@ -9692,7 +9723,7 @@
         "value": 7828
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:49:26.055130+00:00",
         "created_cycle": 29,
         "evidence_refs": [
@@ -9710,7 +9741,7 @@
         "value": 3
       },
       {
-        "confidence": 1.0,
+        "confidence": 1,
         "created_at": "2026-09-29T15:49:26.055154+00:00",
         "created_cycle": 29,
         "evidence_refs": [
