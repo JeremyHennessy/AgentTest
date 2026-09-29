@@ -38,11 +38,20 @@ def _latest_diagnostic_review(
     return None
 
 
+def _current_baseline_fingerprint(state: dict[str, Any]) -> str | None:
+    for snapshot in reversed(state.get("environment_snapshots", [])):
+        fingerprint = snapshot.get("baseline_fingerprint")
+        if isinstance(fingerprint, str) and fingerprint:
+            return fingerprint
+    return None
+
+
 def _existing(
     state: dict[str, Any],
     proposal_id: str,
     kind: str,
     diagnostic_version: str,
+    baseline_fingerprint: str | None,
 ) -> dict[str, Any] | None:
     for diagnostic in reversed(state.get("proposal_diagnostics", [])):
         if (
@@ -50,6 +59,7 @@ def _existing(
             and diagnostic.get("kind") == kind
             and diagnostic.get("diagnostic_version") == diagnostic_version
             and diagnostic.get("status") == "completed"
+            and diagnostic.get("baseline_fingerprint") == baseline_fingerprint
         ):
             return diagnostic
     return None
@@ -83,11 +93,13 @@ def run_proposal_diagnostic(
     else:
         return None, False
 
+    baseline_fingerprint = _current_baseline_fingerprint(state)
     existing = _existing(
         state,
         str(proposal["id"]),
         kind,
         diagnostic_version,
+        baseline_fingerprint,
     )
     if existing is not None:
         return existing, False
@@ -98,6 +110,7 @@ def run_proposal_diagnostic(
         "target_dimension": target,
         "required_next_evidence": review.get("required_next_evidence"),
         "diagnostic_version": diagnostic_version,
+        "baseline_fingerprint": baseline_fingerprint,
     }
     context_hash = hashlib.sha256(
         json.dumps(
@@ -119,6 +132,7 @@ def run_proposal_diagnostic(
         "target_dimension": proposal.get("target_dimension"),
         "kind": kind,
         "diagnostic_version": diagnostic_version,
+        "baseline_fingerprint": baseline_fingerprint,
         "status": "completed",
         "outcome": result["outcome"],
         "created_at": utc_now(),
