@@ -1567,7 +1567,16 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(stale["readiness"], "needs_specification")
         self.assertTrue(stale["readiness_evidence_refs"])
         self.assertEqual(len(stale["readiness_history"]), 1)
-        self.assertEqual(state["drives"]["evidence_hunger"], 0.0)
+        resolvable_pending = [
+            item for item in state["experiments"]
+            if item.get("status") == "proposed"
+            and item.get("readiness") != "needs_specification"
+        ]
+        self.assertNotIn(stale["id"], [item["id"] for item in resolvable_pending])
+        self.assertEqual(
+            state["drives"]["evidence_hunger"],
+            min(0.8, len(resolvable_pending) / 4.0),
+        )
         self.assertNotEqual(
             state["intentions"][-1].get("target"),
             stale["id"],
