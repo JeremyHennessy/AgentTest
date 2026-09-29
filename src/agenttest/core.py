@@ -28,6 +28,235 @@ def _norm(text: str) -> str:
     return " ".join(text.lower().split())
 
 
+def _recent_ids(
+    items: list[dict[str, Any]],
+    *,
+    limit: int = 4,
+    predicate=None,
+) -> list[str]:
+    refs: list[str] = []
+    for item in reversed(items):
+        if predicate is not None and not predicate(item):
+            continue
+        identifier = item.get("id")
+        if identifier and str(identifier) not in refs:
+            refs.append(str(identifier))
+        if len(refs) >= limit:
+            break
+    refs.reverse()
+    return refs
+
+
+def _semantic_episode_refs(state: dict[str, Any], limit: int = 4) -> list[str]:
+    refs: list[str] = []
+    concepts = state.get("semantic_memory", {}).get("concepts", {})
+    if not isinstance(concepts, dict):
+        return refs
+    ranked = sorted(
+        concepts.values(),
+        key=lambda item: (
+            int(item.get("last_cycle", 0)),
+            int(item.get("count", 0)),
+            str(item.get("concept", "")),
+        ),
+        reverse=True,
+    )
+    for item in ranked:
+        for ref in reversed(item.get("episode_refs", [])):
+            if isinstance(ref, str) and ref not in refs:
+                refs.append(ref)
+            if len(refs) >= limit:
+                return list(reversed(refs))
+    return list(reversed(refs))
+
+
+def _calibrate_self_model(state: dict[str, Any]) -> dict[str, Any]:
+    self_model = state.setdefault("self_model", {})
+    capabilities = [
+        str(capability)
+        for capability in self_model.get("capabilities", [])
+        if str(capability).strip()
+    ]
+
+    episodes = state.get("episodes", [])
+    questions = state.get("questions", [])
+    experiments = state.get("experiments", [])
+    predictions = state.get("predictions", [])
+    intentions = state.get("intentions", [])
+    cognition_events = state.get("cognition_events", [])
+    cognition_candidates = state.get("cognition_candidates", [])
+    reviews = state.get("proposal_reviews", [])
+    world_claims = state.get("world_model", {}).get("claims", [])
+
+    environment_refs = _recent_ids(
+        episodes,
+        predicate=lambda item: item.get("kind") == "environment",
+    )
+    semantic_refs = _semantic_episode_refs(state)
+    current_world_refs = _recent_ids(
+        [
+            claim
+            for claim in world_claims
+            if claim.get("status") == "current"
+        ]
+    )
+
+    registry: dict[str, dict[str, Any]] = {}
+
+    def observed(refs: list[str], rationale: str) -> dict[str, Any]:
+        return {
+            "status": "observed",
+            "evidence_refs": refs,
+            "rationale": rationale,
+            "calibrated_cycle": state.get("cycles", 0),
+        }
+
+    def unverified(reason: str) -> dict[str, Any]:
+        return {
+            "status": "unverified",
+            "evidence_refs": [],
+            "reason": reason,
+            "calibrated_cycle": state.get("cycles", 0),
+        }
+
+    for capability in capabilities:
+        if capability == "persistent structured state":
+            refs = _recent_ids(episodes, limit=2)
+            registry[capability] = (
+                observed(
+                    refs,
+                    "Persistent episodes are present in the loaded state across the current history.",
+                )
+                if refs
+                else unverified("No persistent episode evidence is present yet.")
+            )
+        elif capability == "append-only event journal":
+            registry[capability] = unverified(
+                "The live state does not currently expose a citable journal-write evidence ID."
+            )
+        elif capability == "question generation from accumulated concepts":
+            refs = _recent_ids(questions)
+            registry[capability] = (
+                observed(refs, "Persisted generated questions are present.")
+                if refs
+                else unverified("No generated question has been persisted yet.")
+            )
+        elif capability == "selection of explicit falsifiable experiments":
+            refs = _recent_ids(experiments)
+            registry[capability] = (
+                observed(refs, "Persisted experiments with falsification criteria are present.")
+                if refs
+                else unverified("No experiment evidence is present yet.")
+            )
+        elif capability == "narrow repository self-perception through auditable sensors":
+            registry[capability] = (
+                observed(environment_refs, "Environment episodes record repository sensor observations.")
+                if environment_refs
+                else unverified("No environment-sensor episode is present yet.")
+            )
+        elif capability == "one-step prediction of measured repository state":
+            refs = _recent_ids(predictions)
+            registry[capability] = (
+                observed(refs, "Persisted repository predictions are present.")
+                if refs
+                else unverified("No prediction evidence is present yet.")
+            )
+        elif capability == "endogenous evidence-driven intention selection":
+            refs = _recent_ids(intentions)
+            registry[capability] = (
+                observed(refs, "Persisted intention selections are present.")
+                if refs
+                else unverified("No intention-selection evidence is present yet.")
+            )
+        elif capability == "validated boundary for optional model-generated candidate thoughts":
+            refs = _recent_ids(cognition_candidates)
+            if refs:
+                registry[capability] = observed(
+                    refs,
+                    "At least one model candidate passed the cognition grounding boundary.",
+                )
+            else:
+                accepted_events = _recent_ids(
+                    cognition_events,
+                    predicate=lambda item: item.get("status") == "accepted",
+                )
+                registry[capability] = (
+                    observed(
+                        accepted_events,
+                        "At least one cognition event passed the grounding boundary.",
+                    )
+                    if accepted_events
+                    else unverified(
+                        "No accepted live cognition candidate exists; provider-unavailable events do not verify grounding acceptance."
+                    )
+                )
+        elif capability == "deterministic semantic consolidation with source episode references":
+            registry[capability] = (
+                observed(
+                    semantic_refs,
+                    "Semantic memory entries retain source episode references.",
+                )
+                if semantic_refs
+                else unverified("Semantic memory has no citable source episodes yet.")
+            )
+        elif capability == "temporal world claims that preserve superseded observed values":
+            registry[capability] = (
+                observed(
+                    current_world_refs,
+                    "Current provenance-backed world claims are present.",
+                )
+                if current_world_refs
+                else unverified("No provenance-backed world claim is present yet.")
+            )
+        elif capability == "evidence-backed self-authored change manifests without code execution":
+            refs = _recent_ids(reviews)
+            registry[capability] = (
+                observed(
+                    refs,
+                    "Proposal review evidence demonstrates that a self-authored manifest reached governance review.",
+                )
+                if refs
+                else unverified(
+                    "No citable proposal-review evidence exists yet for a self-authored manifest."
+                )
+            )
+        elif capability == "proposal review that distinguishes direct problem evidence from measurement gaps":
+            refs = _recent_ids(reviews)
+            registry[capability] = (
+                observed(
+                    refs,
+                    "Persisted proposal reviews contain evidence-relevance verdicts.",
+                )
+                if refs
+                else unverified("No proposal review has been persisted yet.")
+            )
+        else:
+            registry[capability] = unverified(
+                "No explicit calibration rule has been defined for this capability claim."
+            )
+
+    counts = Counter(claim["status"] for claim in registry.values())
+    total = len(capabilities)
+    grounded = sum(
+        1
+        for claim in registry.values()
+        if claim["status"] in {"verified", "observed", "unverified"}
+    )
+    summary = {
+        "version": "self-model-calibration-v1",
+        "total": total,
+        "grounded": grounded,
+        "coverage": 1.0 if total == 0 else grounded / total,
+        "verified": counts.get("verified", 0),
+        "observed": counts.get("observed", 0),
+        "unverified": counts.get("unverified", 0),
+        "calibrated_cycle": state.get("cycles", 0),
+    }
+    self_model["capability_claims"] = registry
+    self_model["calibration"] = summary
+    return summary
+
+
 class AgentCore:
     """Persistent loop with memory, world model, prediction, drives and cognition."""
 
@@ -123,6 +352,7 @@ class AgentCore:
             prediction = self._make_prediction(state, observation, now)
             state["predictions"].append(prediction)
 
+        self_model_calibration = _calibrate_self_model(state)
         state["self_model"]["last_updated_cycle"] = cycle
         self._update_metrics(state)
         self.store.save(state)
@@ -139,6 +369,7 @@ class AgentCore:
             ),
             "semantic_update": semantic_update,
             "world_update": world_update,
+            "self_model_calibration": self_model_calibration,
             "intention_id": intention["id"],
             "cognition_event_id": cognition_event["id"] if cognition_event else None,
             "cognition_candidate_id": thought["id"] if thought else None,
@@ -155,6 +386,7 @@ class AgentCore:
             "prediction_result": prediction_result,
             "semantic_update": semantic_update,
             "world_update": world_update,
+            "self_model_calibration": self_model_calibration,
             "drives": drives,
             "intention": intention,
             "cognition_event": cognition_event,
@@ -203,6 +435,7 @@ class AgentCore:
         }
         state["reflections"].append(reflection)
         consolidate_world(state)
+        _calibrate_self_model(state)
         self._update_metrics(state)
         self.store.save(state)
         self.store.append_journal(
@@ -512,8 +745,12 @@ class AgentCore:
                 "world_model": min(1.0, current_claims / 8.0),
                 "cognition": min(1.0, len(accepted_cognition) / 3.0),
                 "self_model": (
-                    0.9 if evaluated_predictions else
-                    (0.85 if state["environment_snapshots"] else (0.75 if cycles else 0.0))
+                    float(state.get("self_model", {}).get("calibration", {}).get("coverage"))
+                    if state.get("self_model", {}).get("calibration", {}).get("coverage") is not None
+                    else (
+                        0.9 if evaluated_predictions else
+                        (0.85 if state["environment_snapshots"] else (0.75 if cycles else 0.0))
+                    )
                 ),
                 "curiosity": min(1.0, len(open_questions) / 5.0),
                 "agency": min(1.0, len(state.get("intentions", [])) / 5.0),
