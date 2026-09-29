@@ -1,18 +1,23 @@
-# Design: Genesis Phases 0–8
+# Design: Genesis Phases 0–9
 
 ## Premise
 
-AgentTest is an original experiment in persistent adaptive computation. It is not an imported agent framework and it does not use a scalar alive score.
+AgentTest is an original experiment in persistent adaptive computation. It does not use a scalar alive score and does not equate model fluency with evidence.
 
 ## Adaptive loop
 
     auditable perception
           ↓
-    episodic memory ───────────────→ semantic consolidation
-          ↓                              ↓
-    prediction evaluation          concept associations
-          ↓                              ↓
-    temporal world claims ←──── observed facts / outcomes
+    prediction scope check
+          ↓
+    ┌───────────────────────┬──────────────────────────┐
+    │same baseline          │baseline intervention     │
+    │evaluate prediction    │invalidate old prediction │
+    └───────────────────────┴──────────────────────────┘
+          ↓
+    episodic + semantic memory
+          ↓
+    temporal world claims
           ↓
     internal drives
           ↓
@@ -20,106 +25,72 @@ AgentTest is an original experiment in persistent adaptive computation. It is no
           ↓
     optional grounded cognition
           ↓
-    question → experiment → prediction
-          ↓
-       next heartbeat
+    question → experiment → next prediction
 
-## Evolution evidence loop
+## Why intervention awareness matters
 
-    evidence + capability metrics
-          ↓
-    self-authored change manifest
-          ↓
-    proposal evidence review
-          ↓
-    ┌──────────────────┬──────────────────┬─────────────────┐
-    │supported_problem │measurement_gap   │needs_evidence   │
-    │candidate possible│diagnostic only   │no authority     │
-    └──────────────────┴──────────────────┴─────────────────┘
-                              ↓
-                     VERIFIED diagnostic
-                              ↓
-                  ┌───────────┴───────────┐
-                  │                       │
-             divergence                stable
-                  │                       │
-          supported_problem       no_problem_observed
-                  │                       │
-       future candidate patch          close proposal
+A prediction is meaningful only inside the conditions under which it was made.
 
-## Diagnostics are part of the judge
+The repository-stability prediction says measured repository state should remain stable unless an intervening change occurs. Earlier versions recorded the caveat in prose but did not implement it: every verified code merge changed file counts/source lines and was scored as a prediction error.
 
-A self-authored candidate must never be able to write the diagnostic that proves its own problem exists.
+Phase 9 makes the scope explicit.
 
-The following are therefore governance-protected:
+## Baseline fingerprint
 
-- .github/workflows/verify.yml
-- .github/workflows/growth.yml
-- scripts/preservation_eval.py
-- scripts/compare_eval.py
-- src/agenttest/change_control.py
-- src/agenttest/proposal_review.py
-- src/agenttest/self_proposal.py
-- src/agenttest/diagnostics.py
-- src/agenttest/diagnostic_replay.py
+The repository sensor computes baseline_fingerprint from the ordered path and bytes of every tracked non-state file.
 
-Future changes to those files are governance changes and require separately reviewed development.
+Excluded:
 
-## Deterministic replay diagnostic
+- state/ and all descendants.
 
-The first verified diagnostic addresses M000001's reproducibility measurement gap.
+Included:
 
-It runs an identical controlled sequence twice against separate temporary StateStore instances. The sequence exercises:
+- runtime code;
+- tests;
+- workflows;
+- documentation;
+- configuration;
+- other tracked repository files.
 
-- repeated and changed repository observations;
-- prediction confirmation and violation;
-- intention selection;
-- episodic and semantic memory;
-- world-model updates;
-- experiment selection;
-- explicit experiment outcome recording;
-- journal persistence.
+This fingerprint answers a narrow question: did the non-persistent repository baseline change?
 
-Only volatile timestamp fields are replaced during normalization. Identifiers, ordering, evidence relationships, metrics, questions, experiments, world claims, semantic memory, and journal structure remain compared.
+It does not infer who changed it, why it changed, whether the change was good, or whether it was verified.
 
-The result contains two normalized digests and the first exact structural difference, if one exists.
+## Prediction outcomes
 
-## Review refresh
+### confirmed
+The baseline fingerprint is unchanged and all comparable measurements match.
 
-Proposal reviews are evidence-versioned.
+### violated
+The baseline fingerprint is unchanged but one or more comparable measurements differ.
 
-An existing review is reused while its set of completed diagnostics is unchanged. Once a new completed diagnostic exists, review_change_proposal performs a new classification and records which diagnostic IDs were considered.
+This creates prediction-error pressure.
 
-This prevents both review churn and stale conclusions.
+### invalidated_by_intervention
+The non-state baseline fingerprint changed.
 
-## New verdict: no_problem_observed
+The old stability prediction is no longer treated as a fair test of the new baseline. The intervention and reflection are preserved, but prediction_error is zero for that result.
 
-A clean diagnostic does not prove perfection. It says the requested controlled test found no evidence for the proposed defect.
+## Surprises versus errors
 
-That verdict:
+A repository intervention can still create a surprise record. Surprise means an observed state changed.
 
-- grants no patch authority;
-- closes the current proposal;
-- preserves the diagnostic as evidence;
-- can raise an evidence-derived capability metric when appropriate.
+Prediction error is narrower: an expectation failed inside an unchanged prediction scope.
 
-## Trust ordering
+The drive system no longer automatically treats an intervention surprise as prediction failure.
 
-1. Raw sensor observations and explicit outcomes.
-2. Verified diagnostic results.
-3. Derived world claims with provenance.
-4. Semantic summaries used for retrieval.
-5. Model-generated candidate thoughts.
-6. Self-authored change manifests.
-7. Candidate code.
+## Evidence and world model
 
-Lower-authority layers cannot rewrite the evidence or judges above them.
+invalidated_by_intervention is retained as a prediction-evaluation world claim, preserving the fact that the prediction became inapplicable rather than silently discarding it.
+
+## Governance
+
+Intervention awareness does not weaken the preservation gate. Candidate code must still pass every behavior that the previous verified base could demonstrate.
 
 ## Still missing
 
-- self-authored bounded patch generation;
-- target-specific evidence comparison for candidate patches;
-- broader external perception;
-- independent environmental action;
-- successful live model-backed cognition evidence;
+- isolated self-authored candidate patches;
+- target-specific candidate improvement evidence;
+- broader external perception and action;
+- live successful model cognition;
 - evidence of subjective experience.
