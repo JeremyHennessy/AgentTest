@@ -3,6 +3,8 @@ name: verify
 on:
   push:
   pull_request:
+    paths-ignore:
+      - "state/**"
 
 permissions:
   contents: read
