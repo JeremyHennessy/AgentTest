@@ -2,44 +2,37 @@
 
 AgentTest is an original experiment in persistent machine growth.
 
-The project investigates whether simple, inspectable mechanisms can accumulate into richer adaptive behavior without confusing model fluency, code churn, or anthropomorphic language with evidence.
+The project investigates whether persistent perception, memory, prediction, evidence review, diagnostics, and constrained evolution can accumulate into richer adaptive behavior without confusing code churn or human-like text with improvement.
 
 ## Current capabilities
 
-- persistent episodic history;
+- persistent episodic and semantic memory;
 - auditable repository perception;
-- predictions later confirmed or violated;
+- scoped predictions that can be confirmed, violated, or invalidated by intervention;
 - internal evidence-driven intention selection;
+- provenance-backed world claims;
 - optional grounded model cognition with no tools or write authority;
-- deterministic semantic memory with source episode references;
-- temporal world claims preserving superseded observations;
-- falsifiable experiments and reflections;
-- autonomous heartbeats on a separate growth branch;
+- self-authored change manifests without patch authority;
+- evidence relevance review;
+- verified non-mutating diagnostics;
 - a base-owned behavioral preservation gate;
-- evidence-backed self-authored change manifests;
-- evidence-relevance review that can deny patch authority;
-- verified non-mutating diagnostics that can resolve measurement gaps.
+- autonomous heartbeats on a separate growth branch.
+
+## Prediction discipline
+
+AgentTest distinguishes a failed expectation from a changed prediction context.
+
+A tracked non-state repository fingerprint defines the current code/configuration baseline. If that baseline changes, a prior stability prediction becomes invalidated_by_intervention rather than being counted as an unexpected failure.
+
+Persistent state files are excluded so memory/journal updates do not invalidate the code baseline.
 
 ## Evolution discipline
 
-AgentTest now separates:
+No version may call itself improved because code changed.
 
-1. whether evidence exists;
-2. whether the evidence is relevant;
-3. whether it demonstrates a defect or only a measurement gap;
-4. whether an independent verified diagnostic supports that defect;
-5. whether a later candidate preserves all verified behavior;
-6. whether the candidate adds positive evidence on its declared target.
+A proposed defect needs relevant evidence. Measurement gaps require verified diagnostics. Candidate patches, once enabled, must be evaluated by the previous verified baseline's preservation gate and must add positive target evidence.
 
-A self-authored candidate cannot alter the preservation evaluator, proposal authority, diagnostic authority, or autonomous-growth governance used to judge it.
-
-## First self-proposal
-
-M000001 proposed deterministic replay checks because reproducibility had only partial evidence.
-
-Phase 7 correctly classified that proposal as a measurement gap rather than a demonstrated defect.
-
-Phase 8 adds an independent verified replay diagnostic. If replay is stable, the proposal closes with no patch authority. Only actual normalized divergence could upgrade the proposal to a supported problem.
+Governance and diagnostic authority cannot be modified by self-authored changes.
 
 ## About consciousness
 
