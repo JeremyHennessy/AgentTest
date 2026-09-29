@@ -835,6 +835,12 @@ class AgentCore:
         intention: dict[str, Any],
         thought: dict[str, Any] | None,
     ) -> str:
+        if intention["kind"] == "specify_experiment" and intention.get("target"):
+            return (
+                f"What observable, evidence source, and resolution rule would make "
+                f"experiment {intention['target']} evidence-ready?"
+            )
+
         if intention["kind"] == "resolve_pending_evidence" and intention.get("target"):
             candidate = (
                 f"What obtainable evidence would resolve pending experiment "
@@ -911,6 +917,28 @@ class AgentCore:
         intention: dict[str, Any],
         thought: dict[str, Any] | None,
     ) -> dict[str, Any]:
+        if intention["kind"] == "specify_experiment" and intention.get("target"):
+            match = next(
+                (
+                    item for item in state["experiments"]
+                    if item["id"] == intention["target"]
+                    and (
+                        item.get("status") == "needs_specification"
+                        or (
+                            item.get("status") == "proposed"
+                            and item.get("readiness") == "needs_specification"
+                        )
+                    )
+                ),
+                None,
+            )
+            if match is not None:
+                match["last_selected_cycle"] = state["cycles"]
+                match["specification_attempts"] = (
+                    int(match.get("specification_attempts", 0)) + 1
+                )
+                return match
+
         if intention["kind"] == "resolve_pending_evidence" and intention.get("target"):
             match = next(
                 (

@@ -1858,5 +1858,103 @@ class AgentCoreTests(unittest.TestCase):
 
 
 
+    def test_specification_backlog_becomes_dominant_control_pressure(self) -> None:
+        from agenttest.drives import choose_intention, compute_drives
+
+        state = initial_state()
+        state["cycles"] = 8
+        state["metrics"]["continuity"] = 1.0
+        state["metrics"]["self_model"] = 1.0
+        state["questions"] = [
+            {"id": f"Q{index:06d}", "status": "open"}
+            for index in range(1, 7)
+        ]
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "proposed",
+                "readiness": "needs_specification",
+            }
+            for index in range(1, 5)
+        ]
+
+        drives = compute_drives(state)
+        intention = choose_intention(state, drives)
+
+        self.assertEqual(drives["specification_pressure"], 0.9)
+        self.assertEqual(drives["uncertainty"], 0.8)
+        self.assertEqual(intention["dominant_drive"], "specification_pressure")
+        self.assertEqual(intention["kind"], "specify_experiment")
+        self.assertEqual(intention["target"], "X000001")
+
+    def test_prediction_error_still_outranks_specification_pressure(self) -> None:
+        from agenttest.drives import choose_intention, compute_drives
+
+        state = initial_state()
+        state["cycles"] = 8
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "proposed",
+                "readiness": "needs_specification",
+            }
+            for index in range(1, 5)
+        ]
+        state["surprises"] = [{"id": "S000001"}]
+
+        drives = compute_drives(
+            state,
+            surprise={"id": "S000001"},
+            prediction_result={"status": "violated"},
+        )
+        intention = choose_intention(state, drives)
+
+        self.assertEqual(drives["prediction_error"], 1.0)
+        self.assertEqual(drives["specification_pressure"], 0.9)
+        self.assertEqual(intention["kind"], "explain_change")
+
+    def test_specification_intention_reuses_target_and_asks_for_contract_fields(self) -> None:
+        state = self.store.load()
+        state["cycles"] = 8
+        experiment = {
+            "id": "X000001",
+            "cycle": 1,
+            "question_id": "Q000001",
+            "status": "proposed",
+            "readiness": "needs_specification",
+            "method": "Seek a discriminating observation.",
+        }
+        state["experiments"] = [experiment]
+        intention = {
+            "id": "I000001",
+            "kind": "specify_experiment",
+            "target": "X000001",
+        }
+
+        text = self.core._generate_question(state, None, intention, None)
+        question = {
+            "id": "Q000002",
+            "text": text,
+            "status": "open",
+        }
+        selected = self.core._select_or_propose_experiment(
+            state,
+            question,
+            intention,
+            None,
+        )
+
+        self.assertIn("observable", text)
+        self.assertIn("evidence source", text)
+        self.assertIn("resolution rule", text)
+        self.assertEqual(selected["id"], "X000001")
+        self.assertEqual(len(state["experiments"]), 1)
+        self.assertEqual(selected["specification_attempts"], 1)
+        self.assertEqual(selected["last_selected_cycle"], 8)
+
+
+
 if __name__ == "__main__":
     unittest.main()
