@@ -6,8 +6,10 @@ from pathlib import Path
 
 from agenttest.action_lab import (
     ACTION_ORDER,
+    choose_action,
     ensure_action_lab_state,
     step_action_lab,
+    validate_action_lab_history,
 )
 from agenttest.change_control import PROTECTED_PATHS, make_change_manifest
 from agenttest.core import AgentCore
@@ -97,6 +99,72 @@ class BoundedActionLabTests(unittest.TestCase):
         self.assertEqual(result["decision"]["predicted_target"], [-1, 0])
         self.assertEqual(result["after"], [-1, 0])
         self.assertGreater(result["visited_location_count"], 4)
+
+    def test_corrupted_action_history_fails_closed(self) -> None:
+        state = initial_state()
+        state["cycles"] = 1
+        step_action_lab(state)
+        state["action_lab"]["history"][0]["delta"] = [99, 99]
+
+        valid, reason = validate_action_lab_history(state["action_lab"])
+
+        self.assertFalse(valid)
+        self.assertIn("delta mismatch", reason or "")
+        state["cycles"] = 2
+        with self.assertRaisesRegex(ValueError, "history integrity failure"):
+            step_action_lab(state)
+
+    def test_boundary_block_is_not_immediately_retried_from_same_state(self) -> None:
+        lab = {
+            "version": "bounded-action-lab-v1",
+            "bounds": 1,
+            "position": [1, 0],
+            "visit_counts": {"0,0": 1, "1,0": 1},
+            "history": [
+                {
+                    "id": "LA000001",
+                    "cycle": 1,
+                    "action": "north",
+                    "before": [0, 0],
+                    "after": [1, 0],
+                    "delta": [1, 0],
+                    "blocked": False,
+                    "decision": {},
+                },
+                {
+                    "id": "LA000002",
+                    "cycle": 2,
+                    "action": "north",
+                    "before": [1, 0],
+                    "after": [1, 0],
+                    "delta": [0, 0],
+                    "blocked": True,
+                    "decision": {},
+                },
+            ],
+            "learned_effects": {},
+            "last_action_cycle": 2,
+        }
+
+        action, decision = choose_action(lab)
+
+        self.assertNotEqual(action, "north")
+        self.assertIn("north", decision.get("known_blocked_here", []))
+
+    def test_action_lab_module_has_no_external_effect_imports(self) -> None:
+        import ast
+        import inspect
+        import agenttest.action_lab as action_lab
+
+        tree = ast.parse(inspect.getsource(action_lab))
+        imports = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imports.update(alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imports.add(node.module.split(".")[0])
+
+        self.assertTrue(imports.issubset({"__future__", "json", "collections", "typing"}))
 
     def test_action_history_persists_across_reload(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
