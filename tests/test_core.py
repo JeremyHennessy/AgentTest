@@ -1747,5 +1747,116 @@ class AgentCoreTests(unittest.TestCase):
         self.assertNotIn("outcome", unresolved)
 
 
+    def test_same_question_method_reuses_active_experiment(self) -> None:
+        state = self.store.load()
+        state["cycles"] = 1
+        question = {
+            "id": "Q000001",
+            "text": "Which assumption should be falsified?",
+            "status": "open",
+        }
+        state["questions"].append(question)
+        intention = {
+            "id": "I000001",
+            "kind": "reduce_uncertainty",
+            "target": None,
+        }
+
+        first = self.core._select_or_propose_experiment(
+            state,
+            question,
+            intention,
+            None,
+        )
+        state["cycles"] = 2
+        intention["id"] = "I000002"
+        second = self.core._select_or_propose_experiment(
+            state,
+            question,
+            intention,
+            None,
+        )
+
+        self.assertEqual(first["id"], second["id"])
+        self.assertEqual(len(state["experiments"]), 1)
+        self.assertEqual(second["times_selected"], 2)
+        self.assertEqual(second["last_selected_cycle"], 2)
+
+    def test_duplicate_reconciliation_preserves_history_and_supersedes_extra_active_copy(self) -> None:
+        from agenttest.core import _reconcile_duplicate_experiments
+
+        state = self.store.load()
+        state["cycles"] = 9
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "cycle": 3,
+                "question_id": "Q000001",
+                "status": "proposed",
+                "hypothesis": "H",
+                "method": "Seek one disconfirming observation.",
+            },
+            {
+                "id": "X000002",
+                "cycle": 5,
+                "question_id": "Q000001",
+                "status": "proposed",
+                "hypothesis": "H",
+                "method": "Seek one disconfirming observation.",
+                "readiness": "needs_specification",
+            },
+        ]
+
+        update = _reconcile_duplicate_experiments(state)
+
+        self.assertEqual(len(state["experiments"]), 2)
+        self.assertEqual(state["experiments"][0]["status"], "proposed")
+        duplicate = state["experiments"][1]
+        self.assertEqual(duplicate["status"], "superseded_duplicate")
+        self.assertEqual(duplicate["duplicate_of"], "X000001")
+        self.assertEqual(duplicate["hypothesis"], "H")
+        self.assertEqual(
+            duplicate["status_history"][-1]["reason"],
+            "exact_uncontracted_question_method_duplicate",
+        )
+        self.assertEqual(update["superseded_experiment_ids"], ["X000002"])
+
+    def test_contracted_experiment_is_not_collapsed_with_uncontracted_history(self) -> None:
+        from agenttest.core import _reconcile_duplicate_experiments
+
+        state = self.store.load()
+        state["cycles"] = 9
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "cycle": 3,
+                "question_id": "Q000001",
+                "status": "proposed",
+                "method": "Observe the next prediction.",
+                "evidence_contract": {
+                    "kind": "prediction_status",
+                    "prediction_id": "P000001",
+                    "expected_status": "confirmed",
+                },
+            },
+            {
+                "id": "X000002",
+                "cycle": 5,
+                "question_id": "Q000001",
+                "status": "proposed",
+                "method": "Observe the next prediction.",
+            },
+        ]
+
+        update = _reconcile_duplicate_experiments(state)
+
+        self.assertEqual(update["superseded_experiment_ids"], [])
+        self.assertEqual(
+            [item["status"] for item in state["experiments"]],
+            ["proposed", "proposed"],
+        )
+
+
+
 if __name__ == "__main__":
     unittest.main()
