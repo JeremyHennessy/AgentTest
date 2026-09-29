@@ -13,6 +13,7 @@ from agenttest.change_control import PROTECTED_PATHS, make_change_manifest, vali
 from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
 from agenttest.interaction import interact
+from agenttest.intervention import record_verified_intervention
 from agenttest.diagnostics import run_proposal_diagnostic
 from agenttest.proposal_review import review_change_proposal
 from agenttest.semantic import retrieve_semantic_memory
@@ -20,7 +21,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v10"
+SUITE = "behavioral-preservation-v11"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1050,6 +1051,73 @@ def evidence_debt_evolution_governor() -> dict[str, Any]:
         temp_aligned.cleanup()
 
 
+
+
+def verified_intervention_reconciliation() -> dict[str, Any]:
+    temp = tempfile.TemporaryDirectory()
+    state = StateStore(Path(temp.name) / "organism.json").load()
+    try:
+        state["cycles"] = 8
+        state["change_proposals"] = [
+            {
+                "id": "M000001",
+                "status": "reviewed_supported_problem",
+                "target_dimension": "learning",
+                "files": ["src/agenttest/core.py", "tests/test_core.py"],
+                "protected_paths": sorted(PROTECTED_PATHS),
+            }
+        ]
+
+        receipt, created = record_verified_intervention(
+            state,
+            proposal_id="M000001",
+            commit_sha="a" * 40,
+            changed_files=["src/agenttest/core.py", "tests/test_core.py"],
+            verify_run_id=123,
+            pr_number=10,
+            attribution_text="Verified implementation of M000001",
+        )
+        repeated, repeated_created = record_verified_intervention(
+            state,
+            proposal_id="M000001",
+            commit_sha="a" * 40,
+            changed_files=["src/agenttest/core.py", "tests/test_core.py"],
+            verify_run_id=123,
+            pr_number=10,
+            attribution_text="Verified implementation of M000001",
+        )
+
+        proposal = state["change_proposals"][0]
+        return {
+            "passed": (
+                created
+                and receipt is not None
+                and receipt.get("verification_scope") == "applied_and_preserved"
+                and receipt.get("improvement_claim") == "not_implied"
+                and receipt.get("verification", {}).get("workflow") == "verify"
+                and receipt.get("verification", {}).get("conclusion") == "success"
+                and proposal.get("status") == "closed_verified_intervention"
+                and proposal.get("accepted_change_id") == receipt.get("id")
+                and len(state.get("accepted_changes", [])) == 1
+                and state.get("metrics", {}).get("adaptation") == (1.0 / 3.0)
+                and not repeated_created
+                and repeated == receipt
+                and ".github/workflows/reconcile.yml" in PROTECTED_PATHS
+                and "scripts/reconcile_verified_change.py" in PROTECTED_PATHS
+                and "src/agenttest/intervention.py" in PROTECTED_PATHS
+            ),
+            "created": created,
+            "proposal_status": proposal.get("status"),
+            "accepted_change_id": receipt.get("id") if receipt else None,
+            "verification_scope": receipt.get("verification_scope") if receipt else None,
+            "improvement_claim": receipt.get("improvement_claim") if receipt else None,
+            "adaptation": state.get("metrics", {}).get("adaptation"),
+            "reused": not repeated_created,
+        }
+    finally:
+        temp.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -1068,6 +1136,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("inquiry_family_evidence_review", inquiry_family_evidence_review),
     ("human_interaction_roundtrip", human_interaction_roundtrip),
     ("evidence_debt_evolution_governor", evidence_debt_evolution_governor),
+    ("verified_intervention_reconciliation", verified_intervention_reconciliation),
 ]
 
 
