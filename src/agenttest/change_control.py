@@ -13,6 +13,7 @@ PROTECTED_PATHS = {
     "scripts/preservation_eval.py",
     "scripts/reconcile_verified_change.py",
     "scripts/experiment_design_eval.py",
+    "scripts/blocked_attention_eval.py",
     "src/agenttest/intervention.py",
     "src/agenttest/evidence.py",
     "scripts/compare_eval.py",
@@ -24,6 +25,7 @@ PROTECTED_PATHS = {
     "src/agenttest/diagnostic_self_model.py",
     "src/agenttest/diagnostic_inquiry.py",
     "src/agenttest/diagnostic_experiments.py",
+    "src/agenttest/diagnostic_attention.py",
 }
 
 
