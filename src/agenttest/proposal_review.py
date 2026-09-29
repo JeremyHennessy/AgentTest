@@ -278,7 +278,11 @@ def classify_proposal(
             str(proposal.get("id")),
             "inquiry_family",
         )
-        if inquiry is not None and inquiry.get("outcome") == "metric_inflation":
+        if (
+            inquiry is not None
+            and inquiry.get("outcome") == "paraphrase_churn"
+            and inquiry.get("result", {}).get("metric_status") == "inflated"
+        ):
             return {
                 "verdict": "supported_problem",
                 "patch_authority": "candidate_allowed",
@@ -293,10 +297,11 @@ def classify_proposal(
                 "direct_diagnostic_id": inquiry.get("id"),
             }
 
-        if inquiry is not None and inquiry.get("outcome") in {
-            "diverse",
-            "paraphrase_churn_metric_aligned",
-        }:
+        if (
+            inquiry is not None
+            and inquiry.get("result", {}).get("metric_status") == "aligned"
+            and inquiry.get("outcome") in {"diverse", "paraphrase_churn"}
+        ):
             return {
                 "verdict": "no_problem_observed",
                 "patch_authority": "none",
