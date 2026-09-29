@@ -3,11 +3,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
-DIAGNOSTIC_VERSION = "inquiry-family-v1"
+DIAGNOSTIC_VERSION = "inquiry-family-v2"
 SIMILARITY_THRESHOLD = 0.72
 MIN_QUESTIONS = 4
 CHURN_MIN_FAMILY = 3
 CHURN_MIN_DUPLICATE_PRESSURE = 0.25
+METRIC_ALIGNMENT_TOLERANCE = 0.05
 
 _STOPWORDS = {
     "a", "an", "and", "are", "be", "could", "did", "do", "does", "from",
@@ -101,13 +102,25 @@ def evaluate_inquiry_families(state: dict[str, Any]) -> dict[str, Any]:
         0.0 if question_count == 0 else largest_family_size / question_count
     )
 
-    if question_count < MIN_QUESTIONS:
-        outcome = "insufficient_data"
-    elif (
+    family_open_endedness = min(
+        1.0,
+        family_count / max(1, int(state.get("cycles", 0))),
+    )
+    reported_open_endedness = float(
+        state.get("metrics", {}).get("open_endedness", 0.0)
+    )
+    metric_gap = reported_open_endedness - family_open_endedness
+    churn_present = (
         largest_family_size >= CHURN_MIN_FAMILY
         and duplicate_pressure >= CHURN_MIN_DUPLICATE_PRESSURE
-    ):
-        outcome = "paraphrase_churn"
+    )
+
+    if question_count < MIN_QUESTIONS:
+        outcome = "insufficient_data"
+    elif churn_present and metric_gap > METRIC_ALIGNMENT_TOLERANCE:
+        outcome = "metric_inflation"
+    elif churn_present:
+        outcome = "paraphrase_churn_metric_aligned"
     else:
         outcome = "diverse"
 
@@ -143,6 +156,11 @@ def evaluate_inquiry_families(state: dict[str, Any]) -> dict[str, Any]:
         "duplicate_pressure": duplicate_pressure,
         "largest_family_size": largest_family_size,
         "largest_family_ratio": largest_family_ratio,
+        "family_open_endedness": family_open_endedness,
+        "reported_open_endedness": reported_open_endedness,
+        "metric_gap": metric_gap,
+        "metric_alignment_tolerance": METRIC_ALIGNMENT_TOLERANCE,
+        "churn_present": churn_present,
         "similarity_threshold": SIMILARITY_THRESHOLD,
         "families": family_records,
         "source_state_mutated": False,
