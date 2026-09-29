@@ -319,6 +319,69 @@ def _later_prediction_evidence_refs(
     return list(reversed(refs))
 
 
+def _reconcile_duplicate_experiments(state: dict[str, Any]) -> dict[str, Any]:
+    """Preserve duplicate history while leaving one active canonical experiment."""
+
+    cycle = int(state.get("cycles", 0))
+    groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for experiment in state.get("experiments", []):
+        if experiment.get("status") != "proposed":
+            continue
+        if _valid_prediction_contract(experiment):
+            continue
+        question_id = str(experiment.get("question_id") or "")
+        method = _norm(str(experiment.get("method") or ""))
+        if not question_id or not method:
+            continue
+        groups.setdefault((question_id, method), []).append(experiment)
+
+    superseded: list[str] = []
+    canonical_groups: list[dict[str, Any]] = []
+    for (question_id, method), experiments in sorted(groups.items()):
+        if len(experiments) < 2:
+            continue
+        ordered = sorted(
+            experiments,
+            key=lambda item: (
+                int(item.get("cycle", 0)),
+                str(item.get("id", "")),
+            ),
+        )
+        canonical = ordered[0]
+        duplicate_ids: list[str] = []
+        for duplicate in ordered[1:]:
+            duplicate_id = str(duplicate.get("id", ""))
+            duplicate["status"] = "superseded_duplicate"
+            duplicate["duplicate_of"] = str(canonical.get("id", ""))
+            duplicate["superseded_cycle"] = cycle
+            duplicate.setdefault("status_history", []).append(
+                {
+                    "cycle": cycle,
+                    "from": "proposed",
+                    "to": "superseded_duplicate",
+                    "reason": "exact_uncontracted_question_method_duplicate",
+                    "canonical_experiment_id": str(canonical.get("id", "")),
+                }
+            )
+            duplicate_ids.append(duplicate_id)
+            superseded.append(duplicate_id)
+
+        canonical_groups.append(
+            {
+                "question_id": question_id,
+                "normalized_method": method,
+                "canonical_experiment_id": str(canonical.get("id", "")),
+                "superseded_experiment_ids": duplicate_ids,
+            }
+        )
+
+    return {
+        "cycle": cycle,
+        "superseded_experiment_ids": superseded,
+        "canonical_groups": canonical_groups,
+    }
+
+
 def _review_experiment_readiness(state: dict[str, Any]) -> dict[str, Any]:
     cycle = int(state.get("cycles", 0))
     changed: list[str] = []
@@ -456,6 +519,7 @@ class AgentCore:
         now = utc_now()
         surprise = None
         prediction_result = None
+        experiment_dedup_update = _reconcile_duplicate_experiments(state)
         experiment_readiness_update = _review_experiment_readiness(state)
 
         if observation is not None:
@@ -548,6 +612,7 @@ class AgentCore:
             "prediction_result_id": (
                 prediction_result["id"] if prediction_result else None
             ),
+            "experiment_dedup_update": experiment_dedup_update,
             "experiment_readiness_update": experiment_readiness_update,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
@@ -567,6 +632,7 @@ class AgentCore:
             "cycle": cycle,
             "surprise": surprise,
             "prediction_result": prediction_result,
+            "experiment_dedup_update": experiment_dedup_update,
             "experiment_readiness_update": experiment_readiness_update,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
@@ -880,6 +946,21 @@ class AgentCore:
             predicted_observation = None
             cognition_candidate_id = None
 
+        existing = next(
+            (
+                item
+                for item in state["experiments"]
+                if item.get("status") == "proposed"
+                and item.get("question_id") == question["id"]
+                and _norm(str(item.get("method") or "")) == _norm(method)
+            ),
+            None,
+        )
+        if existing is not None:
+            existing["last_selected_cycle"] = state["cycles"]
+            existing["times_selected"] = int(existing.get("times_selected", 1)) + 1
+            return existing
+
         experiment = {
             "id": f"X{len(state['experiments']) + 1:06d}",
             "cycle": state["cycles"],
@@ -892,6 +973,8 @@ class AgentCore:
             "falsification": falsification,
             "predicted_observation": predicted_observation,
             "created_at": utc_now(),
+            "times_selected": 1,
+            "last_selected_cycle": state["cycles"],
         }
         state["experiments"].append(experiment)
         return experiment
