@@ -1,25 +1,26 @@
 {
-  "created": false,
+  "created": true,
   "proposal": {
-    "baseline_metric": 0.9,
-    "created_at": "2026-09-29T10:58:53.760365+00:00",
-    "created_cycle": 9,
+    "baseline_metric": 0.8571428571428571,
+    "created_at": "2026-09-29T12:35:51.144542+00:00",
+    "created_cycle": 14,
     "evidence_refs": [
-      "R000008",
-      "R000007",
-      "R000006",
-      "R000005",
-      "R000004",
-      "R000003"
+      "Q000012",
+      "Q000011",
+      "Q000010",
+      "Q000009",
+      "Q000008",
+      "Q000007"
     ],
-    "expected_effect": "Capability claims distinguish implemented, behaviorally verified, and unverified states.",
-    "falsification": "Reject if capability labels can advance without evidence or if prior evidence is lost.",
+    "expected_effect": "Open-endedness is supported by distinct evidence-grounded inquiry families rather than raw question count.",
+    "falsification": "Reject if paraphrases inflate open-endedness or distinct evidence-grounded questions collapse incorrectly.",
     "files": [
       "src/agenttest/core.py",
+      "src/agenttest/semantic.py",
       "tests/test_core.py"
     ],
-    "hypothesis": "Connecting self-model capability claims to explicit passing behavioral evidence can reduce unsupported self-description.",
-    "id": "M000002",
+    "hypothesis": "Explicit question-family tracking can distinguish genuine branching from paraphrase churn.",
+    "id": "M000003",
     "protected_paths": [
       ".github/workflows/growth.yml",
       ".github/workflows/verify.yml",
@@ -27,17 +28,18 @@
       "scripts/preservation_eval.py",
       "src/agenttest/change_control.py",
       "src/agenttest/diagnostic_replay.py",
+      "src/agenttest/diagnostic_self_model.py",
       "src/agenttest/diagnostics.py",
       "src/agenttest/proposal_review.py",
       "src/agenttest/self_proposal.py"
     ],
     "rollback": "Revert the candidate change and restore the previous verified baseline.",
     "schema_version": 1,
-    "selection_rationale": "self_model was the highest eligible evidence-backed deficit (0.100) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
+    "selection_rationale": "open_endedness was the highest eligible evidence-backed deficit (0.143) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
     "source": "self-proposal-v1",
-    "status": "reviewed_supported_problem",
-    "target_dimension": "self_model",
-    "test_plan": "Attach evidence status to selected capability claims and verify a failed behavior cannot remain labeled verified.",
-    "title": "Calibrate self-model claims against behavioral checks"
+    "status": "proposed",
+    "target_dimension": "open_endedness",
+    "test_plan": "Generate paraphrases and distinct evidence-driven questions, then verify family counts distinguish them.",
+    "title": "Track inquiry families across cycles"
   }
 }
