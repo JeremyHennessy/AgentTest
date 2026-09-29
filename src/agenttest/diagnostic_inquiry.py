@@ -117,12 +117,21 @@ def evaluate_inquiry_families(state: dict[str, Any]) -> dict[str, Any]:
 
     if question_count < MIN_QUESTIONS:
         outcome = "insufficient_data"
-    elif churn_present and metric_gap > METRIC_ALIGNMENT_TOLERANCE:
-        outcome = "metric_inflation"
+        metric_status = "unknown"
     elif churn_present:
-        outcome = "paraphrase_churn_metric_aligned"
+        outcome = "paraphrase_churn"
+        metric_status = (
+            "inflated"
+            if metric_gap > METRIC_ALIGNMENT_TOLERANCE
+            else "aligned"
+        )
     else:
         outcome = "diverse"
+        metric_status = (
+            "inflated"
+            if metric_gap > METRIC_ALIGNMENT_TOLERANCE
+            else "aligned"
+        )
 
     family_records = []
     for index, family in enumerate(families, start=1):
@@ -150,6 +159,7 @@ def evaluate_inquiry_families(state: dict[str, Any]) -> dict[str, Any]:
     return {
         "diagnostic_version": DIAGNOSTIC_VERSION,
         "outcome": outcome,
+        "metric_status": metric_status,
         "question_count": question_count,
         "family_count": family_count,
         "repeated_question_count": repeated_count,
