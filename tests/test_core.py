@@ -555,6 +555,11 @@ class AgentCoreTests(unittest.TestCase):
         first = self.core.cycle(observation=observation(100))
         self.core.cycle(observation=observation(120))
         state = self.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == first["experiment"]["id"]
+        )
+        experiment["readiness"] = "evidence_ready"
         proposal = make_change_manifest(
             state,
             title="Close measurable experiment loops",
@@ -1459,6 +1464,11 @@ class AgentCoreTests(unittest.TestCase):
         state["metrics"]["learning"] = 1.0
         state["metrics"]["open_endedness"] = 0.1
         state["drives"]["evidence_hunger"] = 0.8
+        stale = next(
+            item for item in state["experiments"]
+            if item["id"] == first["experiment"]["id"]
+        )
+        stale["readiness"] = "evidence_ready"
 
         selected = select_change_target(state)
 
@@ -1468,6 +1478,100 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(selected["experiment_id"], first["experiment"]["id"])
         self.assertIn(first["experiment"]["id"], selected["evidence_refs"])
         self.assertGreaterEqual(selected["age_cycles"], 3)
+
+    def test_self_proposal_does_not_treat_needs_specification_as_code_debt(self) -> None:
+        from agenttest.self_proposal import select_change_target
+
+        first = self.core.cycle(observation=observation(100))
+        for _ in range(4):
+            self.core.cycle(observation=observation(100))
+        state = self.store.load()
+        stale = next(
+            item for item in state["experiments"]
+            if item["id"] == first["experiment"]["id"]
+        )
+
+        self.assertEqual(stale["readiness"], "needs_specification")
+        selected = select_change_target(state)
+        self.assertTrue(
+            selected is None
+            or selected.get("dimension") != "learning"
+            or selected.get("experiment_id") != stale["id"]
+        )
+
+    def test_learning_review_closes_underspecified_work_as_non_code_problem(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.proposal_review import review_change_proposal
+
+        first = self.core.cycle(observation=observation(100))
+        for _ in range(4):
+            self.core.cycle(observation=observation(100))
+        state = self.store.load()
+        stale = next(
+            item for item in state["experiments"]
+            if item["id"] == first["experiment"]["id"]
+        )
+        self.assertEqual(stale["readiness"], "needs_specification")
+
+        proposal = make_change_manifest(
+            state,
+            title="Resolve stale experiment evidence debt",
+            target_dimension="learning",
+            files=["src/agenttest/core.py", "src/agenttest/drives.py", "tests/test_core.py"],
+            hypothesis="Readiness-aware closure should separate code debt from specification debt.",
+            expected_effect="Underspecified work does not authorize a corrective code patch.",
+            test_plan="Review explicit readiness state.",
+            falsification="An evidence-ready unresolved experiment still fails to authorize review.",
+            rollback="Revert.",
+            evidence_refs=[stale["id"]],
+        )
+        proposal.update({"id": "M999998", "source": "test", "created_cycle": state["cycles"]})
+        state["change_proposals"].append(proposal)
+
+        review, created = review_change_proposal(state, proposal)
+
+        self.assertTrue(created)
+        self.assertEqual(review["review_version"], "proposal-review-v3")
+        self.assertEqual(review["verdict"], "no_problem_observed")
+        self.assertEqual(review["patch_authority"], "none")
+        self.assertEqual(proposal["status"], "closed_no_problem_observed")
+
+    def test_review_cache_is_invalidated_when_review_semantics_change(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.proposal_review import review_change_proposal
+
+        self.core.cycle("review version evidence")
+        state = self.store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Versioned review fixture",
+            target_dimension="memory",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Review semantics may change across versions.",
+            expected_effect="Old reviews are not reused under new semantics.",
+            test_plan="Seed an old-version review and request review.",
+            falsification="The old review is reused.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M999999", "source": "test", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+        state["proposal_reviews"].append(
+            {
+                "id": "V999999",
+                "proposal_id": proposal["id"],
+                "review_version": "proposal-review-v2",
+                "considered_diagnostic_ids": [],
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+            }
+        )
+
+        review, created = review_change_proposal(state, proposal)
+
+        self.assertTrue(created)
+        self.assertNotEqual(review["id"], "V999999")
+        self.assertEqual(review["review_version"], "proposal-review-v3")
 
     def test_aligned_open_endedness_is_not_reproposed_as_defect(self) -> None:
         from agenttest.self_proposal import select_change_target

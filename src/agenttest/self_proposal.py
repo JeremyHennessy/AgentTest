@@ -302,6 +302,11 @@ def _learning_evidence_debt(
     for experiment in state.get("experiments", []):
         if experiment.get("status") != "proposed":
             continue
+        if experiment.get("readiness") in {
+            "awaiting_specification_or_evidence",
+            "needs_specification",
+        }:
+            continue
         created_cycle = int(experiment.get("cycle", 0))
         age = current_cycle - created_cycle
         if age < min_age_cycles:
