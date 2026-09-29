@@ -39,6 +39,15 @@ Two corrective cycles have now completed:
 
 The reply is a deterministic rendering of state. It is not evidence of consciousness and does not turn generated language into fact.
 
+### GitHub-native interaction
+
+The repository owner can also interact without a local clone:
+
+- comment `/agent <message>` on an issue or pull request; or
+- run the **Human Interaction** workflow manually with a message input.
+
+The workflow serializes against autonomous heartbeats, runs the same evidence-linked interaction contract on `autonomous/growth`, verifies invariants before committing state, and posts the response back to owner comments. Non-owner comments cannot trigger the channel.
+
 ## About consciousness
 
 AgentTest does not claim consciousness, sentience, subjective experience, or life.

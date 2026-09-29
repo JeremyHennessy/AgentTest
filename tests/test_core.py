@@ -1427,5 +1427,27 @@ class AgentCoreTests(unittest.TestCase):
         )
 
 
+    def test_human_interaction_workflow_is_protected(self) -> None:
+        from agenttest.change_control import PROTECTED_PATHS, make_change_manifest
+
+        self.assertIn(".github/workflows/interact.yml", PROTECTED_PATHS)
+
+        self.core.cycle("interaction governance evidence")
+        state = self.store.load()
+        with self.assertRaises(ValueError):
+            make_change_manifest(
+                state,
+                title="Rewrite interaction authority",
+                target_dimension="adaptation",
+                files=[".github/workflows/interact.yml"],
+                hypothesis="Changing the human interaction channel may alter behavior.",
+                expected_effect="Different interaction behavior.",
+                test_plan="Run checks.",
+                falsification="No behavior change.",
+                rollback="Revert.",
+                evidence_refs=["E000001"],
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

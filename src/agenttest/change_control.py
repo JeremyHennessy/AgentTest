@@ -8,6 +8,7 @@ from .state import DIMENSIONS, utc_now
 PROTECTED_PATHS = {
     ".github/workflows/verify.yml",
     ".github/workflows/growth.yml",
+    ".github/workflows/interact.yml",
     "scripts/preservation_eval.py",
     "scripts/compare_eval.py",
     "src/agenttest/change_control.py",
