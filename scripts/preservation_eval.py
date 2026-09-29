@@ -24,7 +24,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v20"
+SUITE = "behavioral-preservation-v21"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1874,6 +1874,69 @@ def specification_backlog_lifecycle_scope() -> dict[str, Any]:
         temp_stale.cleanup()
 
 
+def blocked_experiment_parking_lifecycle() -> dict[str, Any]:
+    temp_strict, store_strict, core_strict = fresh()
+    temp_default, store_default, core_default = fresh()
+    try:
+        first_strict = core_strict.cycle(observation=observation(100))
+        strict_generic_id = first_strict["experiment"]["id"]
+        strict_result = None
+        for _ in range(3):
+            strict_result = core_strict.cycle(
+                observation=observation(100),
+                strict_experiment_admission=True,
+            )
+        strict_state = store_strict.load()
+        strict_generic = next(
+            item for item in strict_state["experiments"]
+            if item["id"] == strict_generic_id
+        )
+        strict_design = evaluate_experiment_design(strict_state)
+
+        first_default = core_default.cycle(observation=observation(100))
+        default_generic_id = first_default["experiment"]["id"]
+        default_result = None
+        for _ in range(3):
+            default_result = core_default.cycle(observation=observation(100))
+        default_state = store_default.load()
+        default_generic = next(
+            item for item in default_state["experiments"]
+            if item["id"] == default_generic_id
+        )
+
+        return {
+            "passed": (
+                strict_result is not None
+                and default_result is not None
+                and strict_generic.get("status") == "parked_blocked"
+                and strict_generic.get("readiness") == "needs_specification"
+                and strict_generic.get("specification", {}).get("actionability")
+                == "blocked"
+                and strict_generic_id
+                in strict_result.get("experiment_parking_update", {}).get(
+                    "parked_experiment_ids", []
+                )
+                and strict_design.get("specification_backlog_count") == 0
+                and strict_design.get("active_experiment_count") == 1
+                and strict_design.get("contracted_count") == 1
+                and default_generic.get("status") == "proposed"
+                and default_result.get("experiment_parking_update", {}).get(
+                    "parked_experiment_ids"
+                ) == []
+            ),
+            "strict_status": strict_generic.get("status"),
+            "strict_active_experiments": strict_design.get(
+                "active_experiment_count"
+            ),
+            "strict_backlog": strict_design.get("specification_backlog_count"),
+            "strict_contracted": strict_design.get("contracted_count"),
+            "default_status": default_generic.get("status"),
+        }
+    finally:
+        temp_strict.cleanup()
+        temp_default.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -1896,6 +1959,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
     ("autonomous_grounded_experiment_admission", autonomous_grounded_experiment_admission),
+    ("blocked_experiment_parking_lifecycle", blocked_experiment_parking_lifecycle),
     ("executable_prediction_experiment_lifecycle", executable_prediction_experiment_lifecycle),
     ("system_diagnostic_baseline_authority", system_diagnostic_baseline_authority),
     ("post_intervention_attention_measurement_scope", post_intervention_attention_measurement_scope),
