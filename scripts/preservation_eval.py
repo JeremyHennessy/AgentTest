@@ -22,7 +22,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v15"
+SUITE = "behavioral-preservation-v16"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1398,6 +1398,85 @@ def blocked_attention_diagnostic_governance() -> dict[str, Any]:
         temp_clean.cleanup()
 
 
+
+
+def specification_backlog_lifecycle_scope() -> dict[str, Any]:
+    temp_transient, store_transient, _ = fresh()
+    temp_stale, store_stale, _ = fresh()
+    try:
+        transient = store_transient.load()
+        transient["cycles"] = 45
+        transient["metrics"].update(
+            {name: 1.0 for name in transient.get("metrics", {})}
+        )
+        transient["experiments"] = [
+            {
+                "id": "X000020",
+                "cycle": 45,
+                "status": "proposed",
+                "question_id": "Q000009",
+            }
+        ]
+        transient["system_diagnostics"] = [
+            {
+                "id": "SD000014",
+                "kind": "experiment_design",
+                "status": "completed",
+                "diagnostic_version": "experiment-design-v3",
+                "outcome": "specification_backlog",
+                "created_cycle": 45,
+                "source_state_mutated": False,
+                "result": {
+                    "untriaged_specification_ids": ["X000020"],
+                    "specification_backlog_count": 1,
+                },
+            }
+        ]
+        transient_selected = select_change_target(transient)
+
+        stale = store_stale.load()
+        stale["cycles"] = 45
+        stale["metrics"].update(
+            {name: 1.0 for name in stale.get("metrics", {})}
+        )
+        stale["experiments"] = [
+            {
+                "id": "X000020",
+                "cycle": 43,
+                "status": "proposed",
+                "question_id": "Q000009",
+            }
+        ]
+        stale["system_diagnostics"] = json.loads(
+            json.dumps(transient["system_diagnostics"])
+        )
+        stale_selected = select_change_target(stale)
+
+        return {
+            "passed": (
+                transient_selected is None
+                and stale_selected is not None
+                and stale_selected.get("selection_signal")
+                == "experiment_design_specification_backlog"
+                and stale_selected.get("source_diagnostic_id") == "SD000014"
+            ),
+            "transient_target": (
+                transient_selected.get("dimension")
+                if transient_selected else None
+            ),
+            "stale_target": (
+                stale_selected.get("dimension") if stale_selected else None
+            ),
+            "stale_signal": (
+                stale_selected.get("selection_signal")
+                if stale_selected else None
+            ),
+        }
+    finally:
+        temp_transient.cleanup()
+        temp_stale.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -1419,6 +1498,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("verified_intervention_reconciliation", verified_intervention_reconciliation),
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
+    ("specification_backlog_lifecycle_scope", specification_backlog_lifecycle_scope),
 ]
 
 
