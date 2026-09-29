@@ -53,6 +53,7 @@ def record_verified_intervention(
     verification_event: str = "push",
     verification_conclusion: str = "success",
     authority: str = "trusted_verification_workflow",
+    attribution_text: str = "",
 ) -> tuple[dict[str, Any] | None, bool]:
     """Record that an authorized intervention was applied and preserved.
 
@@ -98,6 +99,11 @@ def record_verified_intervention(
         return None, False
 
     proposal_id = str(proposal["id"])
+    if proposal_id not in attribution_text:
+        raise ValueError(
+            "verified commit attribution does not identify the matched proposal"
+        )
+
     existing = next(
         (
             item
