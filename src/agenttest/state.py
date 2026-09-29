@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 DIMENSIONS = (
     "continuity",
@@ -90,11 +90,15 @@ def initial_state() -> dict[str, Any]:
                 "validated boundary for optional model-generated candidate thoughts",
                 "evidence-backed self-authored change manifests without code execution",
                 "proposal review that distinguishes direct problem evidence from measurement gaps",
+        "verified non-mutating diagnostics that can resolve measurement gaps",
+                "verified non-mutating diagnostics that can resolve measurement gaps",
             ],
             "limitations": [
                 "Self-authored change manifests cannot apply or merge code.",
                 "Governance and preservation files are excluded from self-authored changes.",
                 "Proposal review can withhold patch authority when evidence does not identify the failing layer.",
+        "Diagnostic authority is limited to verified harnesses running on isolated temporary state.",
+                "Diagnostic authority is limited to verified harnesses running on isolated temporary state.",
                 "Semantic memory is lexical and co-occurrence based rather than embedding based.",
                 "The world model currently represents only directly derived repository and evaluation claims.",
                 "Perception is limited to explicitly implemented auditable sensors.",
