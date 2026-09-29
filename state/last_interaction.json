@@ -8,250 +8,313 @@
       "calibration_gap": 0.0,
       "continuity_repair": 0.0,
       "evidence_hunger": 0.0,
-      "novelty_hunger": 0.3,
+      "novelty_hunger": 0.3135593220338983,
       "prediction_error": 0.0,
       "specification_pressure": 0.0,
       "uncertainty": 0.8
     },
     "experiment": {
       "cognition_candidate_id": null,
-      "created_at": "2026-09-29T18:18:45.946087+00:00",
-      "cycle": 50,
+      "created_at": "2026-09-29T21:11:25.723106+00:00",
+      "cycle": 59,
       "falsification": "The experiment fails if it cannot name a possible observation that would count against the hypothesis.",
       "hypothesis": "A deliberately chosen disconfirming observation will reduce more uncertainty than collecting another confirming example.",
-      "id": "X000024",
-      "intention_id": "I000050",
-      "last_selected_cycle": 50,
+      "id": "X000035",
+      "intention_id": "I000059",
+      "last_selected_cycle": 59,
       "method": "Seek one observation that would make the current working idea less likely, and record the result before changing behavior.",
       "predicted_observation": null,
-      "question_id": "Q000020",
+      "question_id": "Q000019",
       "status": "proposed",
       "times_selected": 1
     },
     "intention": {
-      "cycle": 50,
+      "cycle": 59,
       "dominant_drive": "uncertainty",
-      "id": "I000050",
+      "id": "I000059",
       "kind": "reduce_uncertainty",
       "rationale": "uncertainty had the highest current pressure (0.800); ties use a fixed order so the choice is reproducible.",
       "strength": 0.8,
       "target": null
     },
     "prediction": {
-      "created_at": "2026-09-29T18:18:45.943129+00:00",
-      "cycle": 50,
+      "created_at": "2026-09-29T21:11:25.717150+00:00",
+      "cycle": 59,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 3,
+        "evidence_refs": [
+          "P000051",
+          "R000051",
+          "P000052",
+          "R000052",
+          "P000053",
+          "R000053",
+          "P000054",
+          "R000054",
+          "P000055",
+          "R000055",
+          "P000056",
+          "R000056",
+          "P000057",
+          "R000057",
+          "P000058",
+          "R000058"
+        ],
+        "inconclusive_trials": 5,
+        "stability_rate": 1.0,
+        "stable_observations": 3,
+        "version": "empirical-learning-v1"
+      },
       "expected": {
-        "baseline_fingerprint": "96574899659c57cc",
+        "baseline_fingerprint": "03c68117e146740f",
         "branch": "autonomous/growth",
-        "python_files": 34,
-        "python_source_lines": 11974,
+        "python_files": 35,
+        "python_source_lines": 13542,
         "test_files": 6,
-        "tracked_files": 60,
+        "tracked_files": 61,
         "working_tree_clean": true
       },
+      "expected_status": "confirmed",
       "falsification": "Any change in a measured comparable field violates this prediction.",
-      "id": "P000050",
-      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening change occurs.",
+      "id": "P000059",
+      "learning_family": "repository_stability_without_intervention",
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
       "status": "pending"
     },
     "question": {
-      "created_cycle": 50,
-      "id": "Q000020",
-      "last_selected_cycle": 50,
+      "created_cycle": 48,
+      "id": "Q000019",
+      "last_selected_cycle": 59,
       "status": "open",
-      "text": "What observation could distinguish whether current and currently are meaningfully related rather than merely co-occurring?",
-      "times_selected": 1
+      "text": "What obtainable evidence would resolve pending experiment X000020 with the least additional assumption?",
+      "times_selected": 4
     }
   },
   "interaction": {
     "cognition_candidate_id": null,
     "cognition_event_id": null,
-    "created_at": "2026-09-29T18:18:46.015727+00:00",
-    "cycle": 50,
-    "experiment_id": "X000024",
-    "id": "H000006",
-    "input": "What are investigating now and what would learn to change your mind",
-    "input_episode_id": "E000100",
-    "intention_id": "I000050",
+    "created_at": "2026-09-29T21:11:25.750582+00:00",
+    "cycle": 59,
+    "experiment_id": "X000035",
+    "id": "H000007",
+    "input": "how many heartbeats have you gone through and what were the results",
+    "input_episode_id": "E000118",
+    "intention_id": "I000059",
     "prior_memory_concepts": [
-      "change",
-      "investigating",
-      "your",
       "autonomous",
+      "baseline_fingerprint",
       "heartbeat",
-      "observation"
+      "python_files",
+      "python_source_lines",
+      "tracked_files"
     ],
     "prior_world_claim_refs": [
-      "W000171",
-      "W000168",
+      "W000200",
+      "W000199",
+      "W000198",
       "W000001",
-      "W000148",
-      "W000169",
+      "W000194",
+      "W000195",
       "W000150",
-      "W000153",
-      "W000086"
+      "W000193"
     ],
-    "question_id": "Q000020",
-    "response_text": "I recorded your message in cycle 50. My strongest current control pressure is uncertainty (0.800), selecting the intention reduce_uncertainty. Prior memory brought up: change, investigating, your, autonomous. The question this raised is: What observation could distinguish whether current and currently are meaningfully related rather than merely co-occurring?. The current proposed test is: Seek one observation that would make the current working idea less likely, and record the result before changing behavior.. 8 self-model capability claims remain explicitly unverified."
+    "question_id": "Q000019",
+    "response_text": "I recorded your message in cycle 59. My strongest current control pressure is uncertainty (0.800), selecting the intention reduce_uncertainty. Prior memory brought up: autonomous, baseline_fingerprint, heartbeat, python_files. The question this raised is: What obtainable evidence would resolve pending experiment X000020 with the least additional assumption?. The current proposed test is: Seek one observation that would make the current working idea less likely, and record the result before changing behavior.. 8 self-model capability claims remain explicitly unverified."
   },
   "memory": {
     "prior_semantic": [
       {
-        "concept": "change",
-        "count": 1,
-        "episode_refs": [
-          "E000050"
-        ],
-        "last_cycle": 25,
-        "related": [
-          {
-            "concept": "current",
-            "count": 1
-          },
-          {
-            "concept": "direction",
-            "count": 1
-          },
-          {
-            "concept": "evidence",
-            "count": 1
-          },
-          {
-            "concept": "investigating",
-            "count": 1
-          },
-          {
-            "concept": "your",
-            "count": 1
-          }
-        ],
-        "score": 5.5102
-      },
-      {
-        "concept": "investigating",
-        "count": 1,
-        "episode_refs": [
-          "E000050"
-        ],
-        "last_cycle": 25,
-        "related": [
-          {
-            "concept": "change",
-            "count": 1
-          },
-          {
-            "concept": "current",
-            "count": 1
-          },
-          {
-            "concept": "direction",
-            "count": 1
-          },
-          {
-            "concept": "evidence",
-            "count": 1
-          },
-          {
-            "concept": "your",
-            "count": 1
-          }
-        ],
-        "score": 5.5102
-      },
-      {
-        "concept": "your",
-        "count": 1,
-        "episode_refs": [
-          "E000050"
-        ],
-        "last_cycle": 25,
-        "related": [
-          {
-            "concept": "change",
-            "count": 1
-          },
-          {
-            "concept": "current",
-            "count": 1
-          },
-          {
-            "concept": "direction",
-            "count": 1
-          },
-          {
-            "concept": "evidence",
-            "count": 1
-          },
-          {
-            "concept": "investigating",
-            "count": 1
-          }
-        ],
-        "score": 5.5102
-      },
-      {
         "concept": "autonomous",
-        "count": 44,
+        "count": 52,
         "episode_refs": [
-          "E000084",
-          "E000086",
-          "E000088",
-          "E000090",
-          "E000092",
-          "E000094",
-          "E000096",
-          "E000098"
+          "E000102",
+          "E000104",
+          "E000106",
+          "E000108",
+          "E000110",
+          "E000112",
+          "E000114",
+          "E000116"
         ],
-        "last_cycle": 49,
+        "last_cycle": 58,
         "related": [
           {
             "concept": "heartbeat",
-            "count": 44
+            "count": 52
+          }
+        ],
+        "score": 4.0
+      },
+      {
+        "concept": "baseline_fingerprint",
+        "count": 40,
+        "episode_refs": [
+          "E000093",
+          "E000095",
+          "E000101",
+          "E000105",
+          "E000109",
+          "E000111",
+          "E000113",
+          "E000115"
+        ],
+        "last_cycle": 58,
+        "related": [
+          {
+            "concept": "python_source_lines",
+            "count": 38
+          },
+          {
+            "concept": "tracked_files",
+            "count": 13
+          },
+          {
+            "concept": "python_files",
+            "count": 9
+          },
+          {
+            "concept": "test_files",
+            "count": 5
+          },
+          {
+            "concept": "working_tree_clean",
+            "count": 2
           }
         ],
         "score": 4.0
       },
       {
         "concept": "heartbeat",
-        "count": 44,
+        "count": 52,
         "episode_refs": [
-          "E000084",
-          "E000086",
-          "E000088",
-          "E000090",
-          "E000092",
-          "E000094",
-          "E000096",
-          "E000098"
+          "E000102",
+          "E000104",
+          "E000106",
+          "E000108",
+          "E000110",
+          "E000112",
+          "E000114",
+          "E000116"
         ],
-        "last_cycle": 49,
+        "last_cycle": 58,
         "related": [
           {
             "concept": "autonomous",
-            "count": 44
+            "count": 52
           }
         ],
         "score": 4.0
       },
       {
-        "concept": "observation",
-        "count": 6,
+        "concept": "python_files",
+        "count": 15,
         "episode_refs": [
-          "E000001",
-          "E000031",
-          "E000049",
-          "E000059",
-          "E000065",
-          "E000097"
+          "E000029",
+          "E000037",
+          "E000055",
+          "E000057",
+          "E000069",
+          "E000077",
+          "E000083",
+          "E000113"
         ],
-        "last_cycle": 49,
+        "last_cycle": 57,
         "related": [
           {
-            "concept": "repository",
-            "count": 6
+            "concept": "python_source_lines",
+            "count": 15
+          },
+          {
+            "concept": "tracked_files",
+            "count": 15
+          },
+          {
+            "concept": "baseline_fingerprint",
+            "count": 9
+          },
+          {
+            "concept": "test_files",
+            "count": 5
           }
         ],
-        "score": 4.0
+        "score": 3.9828
+      },
+      {
+        "concept": "python_source_lines",
+        "count": 44,
+        "episode_refs": [
+          "E000091",
+          "E000093",
+          "E000095",
+          "E000101",
+          "E000105",
+          "E000109",
+          "E000111",
+          "E000113"
+        ],
+        "last_cycle": 57,
+        "related": [
+          {
+            "concept": "baseline_fingerprint",
+            "count": 38
+          },
+          {
+            "concept": "tracked_files",
+            "count": 19
+          },
+          {
+            "concept": "python_files",
+            "count": 15
+          },
+          {
+            "concept": "test_files",
+            "count": 5
+          },
+          {
+            "concept": "working_tree_clean",
+            "count": 1
+          }
+        ],
+        "score": 3.9828
+      },
+      {
+        "concept": "tracked_files",
+        "count": 21,
+        "episode_refs": [
+          "E000055",
+          "E000057",
+          "E000069",
+          "E000071",
+          "E000077",
+          "E000083",
+          "E000085",
+          "E000113"
+        ],
+        "last_cycle": 57,
+        "related": [
+          {
+            "concept": "python_source_lines",
+            "count": 19
+          },
+          {
+            "concept": "python_files",
+            "count": 15
+          },
+          {
+            "concept": "baseline_fingerprint",
+            "count": 13
+          },
+          {
+            "concept": "test_files",
+            "count": 5
+          },
+          {
+            "concept": "working_tree_clean",
+            "count": 3
+          }
+        ],
+        "score": 3.9828
       }
     ]
   },
@@ -263,7 +326,7 @@
     "curiosity": 1.0,
     "learning": 1.0,
     "memory": 1.0,
-    "open_endedness": 0.2,
+    "open_endedness": 0.1864406779661017,
     "perception": 1.0,
     "reflection": 1.0,
     "reproducibility": 1.0,
@@ -271,85 +334,85 @@
     "semantic_memory": 1.0,
     "world_model": 1.0
   },
-  "response_text": "I recorded your message in cycle 50. My strongest current control pressure is uncertainty (0.800), selecting the intention reduce_uncertainty. Prior memory brought up: change, investigating, your, autonomous. The question this raised is: What observation could distinguish whether current and currently are meaningfully related rather than merely co-occurring?. The current proposed test is: Seek one observation that would make the current working idea less likely, and record the result before changing behavior.. 8 self-model capability claims remain explicitly unverified.",
+  "response_text": "I recorded your message in cycle 59. My strongest current control pressure is uncertainty (0.800), selecting the intention reduce_uncertainty. Prior memory brought up: autonomous, baseline_fingerprint, heartbeat, python_files. The question this raised is: What obtainable evidence would resolve pending experiment X000020 with the least additional assumption?. The current proposed test is: Seek one observation that would make the current working idea less likely, and record the result before changing behavior.. 8 self-model capability claims remain explicitly unverified.",
   "self_model": {
     "coverage": 1.0,
     "observed": [
       {
         "capability": "persistent structured state",
         "evidence_refs": [
-          "E000099",
-          "E000100"
+          "E000117",
+          "E000118"
         ],
         "status": "observed"
       },
       {
         "capability": "question generation from accumulated concepts",
         "evidence_refs": [
-          "Q000017",
           "Q000018",
           "Q000019",
-          "Q000020"
+          "Q000020",
+          "Q000021"
         ],
         "status": "observed"
       },
       {
         "capability": "selection of explicit falsifiable experiments",
         "evidence_refs": [
-          "X000021",
-          "X000022",
-          "X000023",
-          "X000024"
+          "X000033",
+          "X000034",
+          "X000035",
+          "X000036"
         ],
         "status": "observed"
       },
       {
         "capability": "narrow repository self-perception through auditable sensors",
         "evidence_refs": [
-          "E000093",
-          "E000095",
-          "E000097",
-          "E000099"
+          "E000111",
+          "E000113",
+          "E000115",
+          "E000117"
         ],
         "status": "observed"
       },
       {
         "capability": "one-step prediction of measured repository state",
         "evidence_refs": [
-          "P000047",
-          "P000048",
-          "P000049",
-          "P000050"
+          "P000056",
+          "P000057",
+          "P000058",
+          "P000059"
         ],
         "status": "observed"
       },
       {
         "capability": "endogenous evidence-driven intention selection",
         "evidence_refs": [
-          "I000047",
-          "I000048",
-          "I000049",
-          "I000050"
+          "I000056",
+          "I000057",
+          "I000058",
+          "I000059"
         ],
         "status": "observed"
       },
       {
         "capability": "deterministic semantic consolidation with source episode references",
         "evidence_refs": [
-          "E000059",
-          "E000065",
-          "E000097",
-          "E000099"
+          "E000099",
+          "E000103",
+          "E000107",
+          "E000117"
         ],
         "status": "observed"
       },
       {
         "capability": "temporal world claims that preserve superseded observed values",
         "evidence_refs": [
-          "W000169",
-          "W000170",
-          "W000171",
-          "W000172"
+          "W000199",
+          "W000200",
+          "W000201",
+          "W000202"
         ],
         "status": "observed"
       },
@@ -376,10 +439,10 @@
       {
         "capability": "persistent human interaction surface with evidence-linked responses",
         "evidence_refs": [
-          "E000050",
           "E000060",
           "E000066",
-          "E000100"
+          "E000100",
+          "E000118"
         ],
         "status": "observed"
       }
@@ -440,56 +503,64 @@
     "prior_current_claims": [
       {
         "confidence": 1.0,
-        "created_at": "2026-09-29T18:17:12.293278+00:00",
-        "created_cycle": 49,
+        "created_at": "2026-09-29T19:51:48.425538+00:00",
+        "created_cycle": 58,
         "evidence_refs": [
-          "P000048",
-          "R000048"
+          "X000033"
         ],
-        "id": "W000171",
-        "last_seen_cycle": 49,
-        "observed_at": "2026-09-29T18:17:12.292509+00:00",
-        "predicate": "status",
-        "source_type": "prediction_evaluation",
+        "id": "W000200",
+        "last_seen_cycle": 58,
+        "observed_at": "2026-09-29T19:51:48.424782+00:00",
+        "predicate": "outcome",
+        "source_type": "experiment_outcome",
         "status": "current",
-        "subject": "prediction.P000048",
+        "subject": "experiment.X000033",
         "superseded_by": null,
         "supersedes": null,
-        "value": "confirmed"
+        "value": "inconclusive"
       },
       {
         "confidence": 1.0,
-        "created_at": "2026-09-29T18:15:13.820971+00:00",
-        "created_cycle": 48,
+        "created_at": "2026-09-29T19:51:48.425413+00:00",
+        "created_cycle": 58,
         "evidence_refs": [
-          "E000095",
-          "E000097"
+          "P000057",
+          "R000057"
         ],
-        "id": "W000168",
-        "last_seen_cycle": 49,
-        "observed_at": "2026-09-29T18:17:12.286156+00:00",
+        "id": "W000199",
+        "last_seen_cycle": 58,
+        "observed_at": "2026-09-29T19:51:48.424782+00:00",
+        "predicate": "status",
+        "source_type": "prediction_evaluation",
+        "status": "current",
+        "subject": "prediction.P000057",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "invalidated_by_intervention"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-09-29T19:51:48.425318+00:00",
+        "created_cycle": 58,
+        "evidence_refs": [
+          "E000115"
+        ],
+        "id": "W000198",
+        "last_seen_cycle": 58,
+        "observed_at": "2026-09-29T19:51:48.417322+00:00",
         "predicate": "baseline_fingerprint",
         "source_type": "observed_sensor",
         "status": "current",
         "subject": "repository",
         "superseded_by": null,
-        "supersedes": "W000165",
-        "value": "96574899659c57cc"
+        "supersedes": "W000192",
+        "value": "03c68117e146740f"
       },
       {
         "confidence": 1,
         "created_at": "2026-09-29T04:14:28.159944+00:00",
         "created_cycle": 4,
         "evidence_refs": [
-          "E000035",
-          "E000037",
-          "E000039",
-          "E000041",
-          "E000043",
-          "E000045",
-          "E000047",
-          "E000049",
-          "E000051",
           "E000053",
           "E000055",
           "E000057",
@@ -512,11 +583,20 @@
           "E000091",
           "E000093",
           "E000095",
-          "E000097"
+          "E000097",
+          "E000099",
+          "E000101",
+          "E000103",
+          "E000105",
+          "E000107",
+          "E000109",
+          "E000111",
+          "E000113",
+          "E000115"
         ],
         "id": "W000001",
-        "last_seen_cycle": 49,
-        "observed_at": "2026-09-29T18:17:12.286156+00:00",
+        "last_seen_cycle": 58,
+        "observed_at": "2026-09-29T19:51:48.417322+00:00",
         "predicate": "branch",
         "source_type": "observed_sensor",
         "status": "current",
@@ -527,47 +607,41 @@
       },
       {
         "confidence": 1.0,
-        "created_at": "2026-09-29T17:23:15.680580+00:00",
-        "created_cycle": 42,
+        "created_at": "2026-09-29T19:28:31.385025+00:00",
+        "created_cycle": 57,
         "evidence_refs": [
-          "E000083",
-          "E000085",
-          "E000087",
-          "E000089",
-          "E000091",
-          "E000093",
-          "E000095",
-          "E000097"
+          "E000113",
+          "E000115"
         ],
-        "id": "W000148",
-        "last_seen_cycle": 49,
-        "observed_at": "2026-09-29T18:17:12.286156+00:00",
+        "id": "W000194",
+        "last_seen_cycle": 58,
+        "observed_at": "2026-09-29T19:51:48.417322+00:00",
         "predicate": "python_files",
         "source_type": "observed_sensor",
         "status": "current",
         "subject": "repository",
         "superseded_by": null,
-        "supersedes": "W000136",
-        "value": 34
+        "supersedes": "W000148",
+        "value": 35
       },
       {
         "confidence": 1.0,
-        "created_at": "2026-09-29T18:15:13.820996+00:00",
-        "created_cycle": 48,
+        "created_at": "2026-09-29T19:28:31.385036+00:00",
+        "created_cycle": 57,
         "evidence_refs": [
-          "E000095",
-          "E000097"
+          "E000113",
+          "E000115"
         ],
-        "id": "W000169",
-        "last_seen_cycle": 49,
-        "observed_at": "2026-09-29T18:17:12.286156+00:00",
+        "id": "W000195",
+        "last_seen_cycle": 58,
+        "observed_at": "2026-09-29T19:51:48.417322+00:00",
         "predicate": "python_source_lines",
         "source_type": "observed_sensor",
         "status": "current",
         "subject": "repository",
         "superseded_by": null,
-        "supersedes": "W000166",
-        "value": 11974
+        "supersedes": "W000189",
+        "value": 13542
       },
       {
         "confidence": 1.0,
@@ -581,11 +655,20 @@
           "E000091",
           "E000093",
           "E000095",
-          "E000097"
+          "E000097",
+          "E000099",
+          "E000101",
+          "E000103",
+          "E000105",
+          "E000107",
+          "E000109",
+          "E000111",
+          "E000113",
+          "E000115"
         ],
         "id": "W000150",
-        "last_seen_cycle": 49,
-        "observed_at": "2026-09-29T18:17:12.286156+00:00",
+        "last_seen_cycle": 58,
+        "observed_at": "2026-09-29T19:51:48.417322+00:00",
         "predicate": "test_files",
         "source_type": "observed_sensor",
         "status": "current",
@@ -596,70 +679,22 @@
       },
       {
         "confidence": 1.0,
-        "created_at": "2026-09-29T17:26:26.316235+00:00",
-        "created_cycle": 43,
+        "created_at": "2026-09-29T19:28:31.385014+00:00",
+        "created_cycle": 57,
         "evidence_refs": [
-          "E000085",
-          "E000087",
-          "E000089",
-          "E000091",
-          "E000093",
-          "E000095",
-          "E000097"
+          "E000113",
+          "E000115"
         ],
-        "id": "W000153",
-        "last_seen_cycle": 49,
-        "observed_at": "2026-09-29T18:17:12.286156+00:00",
+        "id": "W000193",
+        "last_seen_cycle": 58,
+        "observed_at": "2026-09-29T19:51:48.417322+00:00",
         "predicate": "tracked_files",
         "source_type": "observed_sensor",
         "status": "current",
         "subject": "repository",
         "superseded_by": null,
-        "supersedes": "W000147",
-        "value": 60
-      },
-      {
-        "confidence": 1,
-        "created_at": "2026-09-29T14:47:21.838690+00:00",
-        "created_cycle": 24,
-        "evidence_refs": [
-          "E000047",
-          "E000049",
-          "E000051",
-          "E000053",
-          "E000055",
-          "E000057",
-          "E000059",
-          "E000061",
-          "E000063",
-          "E000065",
-          "E000067",
-          "E000069",
-          "E000071",
-          "E000073",
-          "E000075",
-          "E000077",
-          "E000079",
-          "E000081",
-          "E000083",
-          "E000085",
-          "E000087",
-          "E000089",
-          "E000091",
-          "E000093",
-          "E000095",
-          "E000097"
-        ],
-        "id": "W000086",
-        "last_seen_cycle": 49,
-        "observed_at": "2026-09-29T18:17:12.286156+00:00",
-        "predicate": "working_tree_clean",
-        "source_type": "observed_sensor",
-        "status": "current",
-        "subject": "repository",
-        "superseded_by": null,
-        "supersedes": "W000083",
-        "value": true
+        "supersedes": "W000153",
+        "value": 61
       }
     ]
   }
