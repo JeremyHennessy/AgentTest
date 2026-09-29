@@ -9,6 +9,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable
 
+from agenttest.action_lab import ACTION_ORDER, step_action_lab
 from agenttest.change_control import PROTECTED_PATHS, make_change_manifest, validate_change_manifest
 from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
@@ -29,7 +30,7 @@ from agenttest.state import StateStore, initial_state
 from agenttest.world import current_world_claims
 from agenttest.drives import compute_drives
 
-SUITE = "behavioral-preservation-v23"
+SUITE = "behavioral-preservation-v24"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1879,6 +1880,57 @@ def specification_backlog_lifecycle_scope() -> dict[str, Any]:
         temp_stale.cleanup()
 
 
+def bounded_action_lab_causal_learning() -> dict[str, Any]:
+    state = initial_state()
+    first_actions = []
+    for cycle in range(1, 9):
+        state["cycles"] = cycle
+        result = step_action_lab(state)
+        first_actions.append(result["action"])
+
+    learned_before = json.loads(
+        json.dumps(state["action_lab"]["learned_effects"])
+    )
+    state["cycles"] = 9
+    ninth = step_action_lab(state)
+    lab = state["action_lab"]
+
+    return {
+        "passed": (
+            first_actions == list(ACTION_ORDER) * 2
+            and learned_before["north"]["modal_delta"] == [1, 0]
+            and learned_before["east"]["modal_delta"] == [0, -1]
+            and learned_before["south"]["modal_delta"] == [-1, 0]
+            and learned_before["west"]["modal_delta"] == [0, 1]
+            and all(
+                learned_before[action]["unblocked_samples"] == 2
+                for action in ACTION_ORDER
+            )
+            and all(
+                learned_before[action]["confidence"] == 1.0
+                for action in ACTION_ORDER
+            )
+            and ninth.get("decision", {}).get("kind")
+            == "use_learned_transition"
+            and ninth.get("action") == "south"
+            and ninth.get("decision", {}).get("predicted_target")
+            == [-1, 0]
+            and ninth.get("after") == [-1, 0]
+            and len(lab.get("history", [])) == 9
+            and "src/agenttest/action_lab.py" in PROTECTED_PATHS
+        ),
+        "first_actions": first_actions,
+        "learned_effects": learned_before,
+        "ninth_action": ninth.get("action"),
+        "ninth_decision": ninth.get("decision"),
+        "ninth_after": ninth.get("after"),
+        "history_count": len(lab.get("history", [])),
+        "action_authority_protected": (
+            "src/agenttest/action_lab.py" in PROTECTED_PATHS
+        ),
+    }
+
+
 def empirical_learning_changes_future_prediction_stance() -> dict[str, Any]:
     temp, store, core = fresh()
     try:
@@ -2125,6 +2177,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
     ("autonomous_grounded_experiment_admission", autonomous_grounded_experiment_admission),
+    ("bounded_action_lab_causal_learning", bounded_action_lab_causal_learning),
     ("empirical_learning_changes_future_prediction_stance", empirical_learning_changes_future_prediction_stance),
     ("parked_question_attention_scope", parked_question_attention_scope),
     ("blocked_experiment_parking_lifecycle", blocked_experiment_parking_lifecycle),
