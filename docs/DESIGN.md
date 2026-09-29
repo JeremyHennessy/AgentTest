@@ -1,67 +1,65 @@
-# Design: Genesis Phases 0–3
+# Design: Genesis Phases 0–4
 
 ## Premise
 
-AgentTest is not an imported agent framework. It is an experiment in building measurable organism-like computational properties from simple, inspectable mechanisms.
-
-There is deliberately no scalar "alive score."
+AgentTest is an original experiment in persistent adaptive computation. It is not an imported agent framework and it does not use a scalar alive score.
 
 ## Current loop
 
-    repository perception
-           ↓
-    compare with prior prediction ─────→ prediction error
-           ↓                              ↓
-    persistent memory                  internal drives
-           ↓                              ↓
-    environmental surprise ─────────→ chosen intention
-                                          ↓
-                             optional cognition boundary
-                                          ↓
-                        validated candidate thought or reject
-                                          ↓
-                                  generated question
-                                          ↓
-                               falsifiable experiment
-                                          ↓
-                               next-state prediction
-                                          ↓
-                                  next heartbeat
+    auditable perception
+          ↓
+    episodic memory ───────────────→ semantic consolidation
+          ↓                              ↓
+    prediction evaluation          concept associations
+          ↓                              ↓
+    temporal world claims ←──── observed facts / outcomes
+          ↓
+    internal drives
+          ↓
+    chosen intention
+          ↓
+    optional grounded cognition
+          ↓
+    question → experiment → prediction
+          ↓
+       next heartbeat
 
-## Generative cognition is advisory
+## Episodic versus semantic memory
 
-The model is not the organism's source of truth. It receives a compact evidence catalog and may propose exactly one structured candidate containing a question, hypothesis, experiment, falsifier, predicted observation, evidence IDs, confidence, and a novelty note.
+Raw episodes remain immutable evidence. Semantic memory is a derived index over those episodes.
 
-The provider receives no tools. It cannot edit state, metrics, files, evidence, or code.
+Each concept records occurrence count, first/last cycle, and source episode IDs. Co-occurring concepts create deterministic association edges with their own source episode IDs.
 
-Every returned evidence ID is checked against IDs already present in persistent state. Unknown references reject the entire candidate. If no provider is configured or the provider fails, the deterministic evidence loop continues.
+Consolidation is incremental: each episode is processed once. A semantic summary can therefore be rebuilt or challenged against its source history.
 
-A validated candidate may influence the next question and proposed experiment, but it remains a proposal until later evidence resolves it.
+## Temporal world model
 
-## Provider boundary
+The world model is a claim ledger, not an oracle.
 
-The first optional provider uses OpenAI's Responses API with Structured Outputs and no tools. It is enabled only when OPENAI_API_KEY exists. The default model is gpt-6-luna; AGENTTEST_MODEL may override it.
+Direct repository observations create claims such as repository.python_source_lines = 1532. Each claim cites the environment episode that supports it.
 
-Provider absence is not an error and cannot halt the heartbeat.
+When an observed value changes, the prior claim is preserved as superseded and linked bidirectionally to the new current claim. This records change instead of silently rewriting history.
 
-## State migration
+Confirmed or violated predictions and completed experiment outcomes also create claims with references to their prediction/experiment and reflection evidence.
 
-The repository baseline state file is no longer rewritten merely to add schema fields. StateStore.load() migrates older state additively and save() persists the upgraded form. This prevents capability upgrades on main from overwriting accumulated experience on autonomous/growth.
+## Cognition grounding
 
-## Drives are not emotions
+Current world claims may be supplied to the cognition boundary and cited by ID, but the claim itself retains links to raw evidence. Semantic memory is used for retrieval and context, not as unquestionable evidence.
 
-Drive values are numerical control pressures, not claims of subjective feeling.
+## Trust ordering
 
-## Anti-busywork rule
+1. Raw sensor observations and explicitly recorded experiment outcomes.
+2. Derived world claims with source references.
+3. Semantic memory used for retrieval.
+4. Model-generated candidate thoughts.
 
-When evidence hunger is dominant, the loop selects an existing unresolved experiment instead of creating another one.
+Lower layers may guide attention but cannot overwrite higher-evidence layers.
 
 ## Still missing
 
-- semantic long-term memory;
-- a richer causal/world model;
-- broad environmental perception;
+- broader external perception;
+- causal models richer than temporal claim revision;
 - independent environmental action;
 - self-authored code proposals;
-- evidence that model-generated thoughts improve outcomes rather than merely add variety;
+- measured evidence that optional model cognition improves research outcomes;
 - any evidence of subjective experience.
