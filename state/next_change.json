@@ -1,0 +1,39 @@
+{
+  "created": true,
+  "proposal": {
+    "baseline_metric": 0.8,
+    "created_at": "2026-09-29T04:29:07.456289+00:00",
+    "created_cycle": 6,
+    "evidence_refs": [
+      "R000005",
+      "R000004",
+      "R000003",
+      "R000002",
+      "R000001",
+      "P000005"
+    ],
+    "expected_effect": "A recorded deterministic cycle can be replayed to an equivalent structured result after volatile timestamps and identifiers are normalized.",
+    "falsification": "Reject if identical controlled inputs produce materially different normalized behavior or if replay mutates the source state.",
+    "files": [
+      "src/agenttest/replay.py",
+      "tests/test_core.py"
+    ],
+    "hypothesis": "Replaying recorded deterministic inputs against an isolated state can reveal unintended behavioral drift.",
+    "id": "M000001",
+    "protected_paths": [
+      ".github/workflows/growth.yml",
+      ".github/workflows/verify.yml",
+      "scripts/compare_eval.py",
+      "scripts/preservation_eval.py",
+      "src/agenttest/change_control.py"
+    ],
+    "rollback": "Revert the candidate change and restore the previous verified baseline.",
+    "schema_version": 1,
+    "selection_rationale": "reproducibility was the highest eligible evidence-backed deficit (0.200) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
+    "source": "self-proposal-v1",
+    "status": "proposed",
+    "target_dimension": "reproducibility",
+    "test_plan": "Record a controlled cycle fixture, replay it twice, compare normalized outputs, and run the baseline-owned preservation gate.",
+    "title": "Add deterministic cycle replay checks"
+  }
+}
