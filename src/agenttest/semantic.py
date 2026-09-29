@@ -136,3 +136,120 @@ def retrieve_semantic_memory(
             }
         )
     return result
+
+
+INQUIRY_FAMILY_VERSION = "inquiry-family-state-v1"
+INQUIRY_SIMILARITY_THRESHOLD = 0.72
+
+_INQUIRY_STOPWORDS = {
+    "a", "an", "and", "are", "be", "could", "did", "do", "does", "from",
+    "has", "have", "how", "in", "into", "is", "it", "its", "my", "of",
+    "on", "or", "rather", "than", "that", "the", "this", "to", "was",
+    "were", "what", "when", "whether", "which", "with", "would",
+}
+
+
+def _inquiry_tokens(text: str) -> set[str]:
+    normalized = text.lower()
+    normalized = re.sub(r"\b[a-z]\d{4,}\b", " <id> ", normalized)
+    normalized = re.sub(r"\b\d+(?:\.\d+)?\b", " <num> ", normalized)
+    tokens = re.findall(r"<id>|<num>|[a-z][a-z0-9_]*", normalized)
+    return {
+        token
+        for token in tokens
+        if token not in _INQUIRY_STOPWORDS
+    }
+
+
+def _inquiry_similarity(left: str, right: str) -> float:
+    a = _inquiry_tokens(left)
+    b = _inquiry_tokens(right)
+    if not a and not b:
+        return 1.0
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def consolidate_inquiry_families(state: dict[str, Any]) -> dict[str, Any]:
+    memory = _memory(state)
+    questions = [
+        question
+        for question in state.get("questions", [])
+        if isinstance(question, dict)
+        and question.get("id")
+        and str(question.get("text", "")).strip()
+    ]
+    count = len(questions)
+    parent = list(range(count))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        root_left = find(left)
+        root_right = find(right)
+        if root_left != root_right:
+            parent[root_right] = root_left
+
+    for left in range(count):
+        for right in range(left + 1, count):
+            if (
+                _inquiry_similarity(
+                    str(questions[left].get("text", "")),
+                    str(questions[right].get("text", "")),
+                )
+                >= INQUIRY_SIMILARITY_THRESHOLD
+            ):
+                union(left, right)
+
+    grouped: dict[int, list[dict[str, Any]]] = {}
+    for index, question in enumerate(questions):
+        grouped.setdefault(find(index), []).append(question)
+
+    families = list(grouped.values())
+    families.sort(
+        key=lambda family: (
+            -len(family),
+            str(family[0].get("id", "")),
+        )
+    )
+
+    family_records = []
+    question_to_family: dict[str, str] = {}
+    for index, family in enumerate(families, start=1):
+        family_id = f"F{index:03d}"
+        refs = [str(item["id"]) for item in family]
+        for ref in refs:
+            question_to_family[ref] = family_id
+        family_records.append(
+            {
+                "family_id": family_id,
+                "size": len(family),
+                "question_refs": refs,
+                "representative": str(family[0].get("text", "")),
+            }
+        )
+
+    cycle_count = int(state.get("cycles", 0))
+    family_count = len(family_records)
+    open_endedness = (
+        min(1.0, family_count / cycle_count)
+        if cycle_count > 0
+        else 0.0
+    )
+    summary = {
+        "version": INQUIRY_FAMILY_VERSION,
+        "similarity_threshold": INQUIRY_SIMILARITY_THRESHOLD,
+        "question_count": count,
+        "family_count": family_count,
+        "open_endedness": open_endedness,
+        "families": family_records,
+        "question_to_family": question_to_family,
+        "updated_cycle": cycle_count,
+    }
+    memory["inquiry_families"] = summary
+    return summary
