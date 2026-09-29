@@ -31,32 +31,44 @@ Predictions are confirmed or violated only inside the baseline in which they wer
 
 ## Phase 10 — Evidence-grounded self-model calibration — verified
 
-M000002 was the first live supported corrective problem.
+M000002 exposed a real self-description grounding gap. The first candidate was rejected, which exposed an improvement-hostile preservation check. Governance was repaired, a narrower candidate passed, and a new live diagnostic closed the problem on the repaired baseline.
 
-The verified self-model diagnostic found 0/12 capability claims explicitly grounded. The first candidate was rejected, exposing an improvement-hostile preservation check. Governance was repaired, candidate v2 passed, and the live self-model now records observed or unverified status with provenance/rationale.
+## Phase 11 — Inquiry-family open-endedness — verified
 
-A post-intervention diagnostic re-ran on the repaired baseline and closed M000002 with no remaining problem observed.
+M000003 showed that exact-string question counting materially inflated open-endedness.
 
-The capability catalog is canonicalized and migrations preserve custom entries while adding newly implemented capabilities.
+The protected inquiry-family diagnostic found:
 
-## Phase 11 — Inquiry-family diagnostic — implementation under verification
+- 13 questions;
+- 6 distinct families;
+- reported open-endedness 0.7647;
+- family-based open-endedness 0.3529;
+- inflation gap 0.4118.
 
-Live proposal M000003 targets open-endedness.
+The corrective candidate preserved every raw question, stored deterministic family membership in semantic memory, and changed only the metric. Post-merge diagnostic D000007 reported metric_gap=0 and closed M000003.
 
-Current exact-string counting treats repeated variants such as repository-field-change questions as distinct inquiry. Before changing question generation or the metric, Phase 11 adds a protected read-only diagnostic that:
+## Phase 12 — Persistent human interaction membrane — implementation under verification
 
-- normalizes volatile numeric and identifier tokens;
-- groups questions by deterministic lexical overlap;
-- reports family count, repeated-question pressure, and largest family;
-- classifies the evidence as paraphrase_churn, diverse, or insufficient_data;
-- cannot mutate the live state.
+Add a direct human interaction surface over the same state and evidence hierarchy.
 
-If the live diagnostic finds paraphrase churn, M000003 may receive candidate authority. If it finds diversity, the proposal closes without a patch.
+A human turn must:
+
+- become a persistent stimulus episode;
+- link to a persistent interaction record;
+- retrieve semantic memory from before the new turn writes itself;
+- expose current drives, intention, question, and experiment;
+- expose world claims with provenance;
+- expose self-model observed/unverified status;
+- distinguish unavailable/rejected/accepted model cognition;
+- never convert generated response text into evidence.
+
+The first interface is CLI-based and intentionally structured before any web UI or persona layer.
 
 ## Next phases — evidence dependent
 
-- Bounded M000003 candidate only if direct churn evidence supports it.
-- Persistent human interaction surface grounded in the same state/evidence hierarchy.
+- Extend the baseline preservation suite to cover the interaction membrane after Phase 12 is verified.
+- Add a local/web interaction surface using the same interaction contract.
+- Enable live grounded model cognition only when an authorized provider key is configured.
 - Broader external perception/actions with explicit permissions and provenance.
 - Open-ended research frontier selected by information gain and evidence debt.
 - Identity-continuity studies only after substantial history exists.

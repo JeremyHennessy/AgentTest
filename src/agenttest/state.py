@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 
 DIMENSIONS = (
     "continuity",
@@ -44,6 +44,7 @@ CAPABILITY_CATALOG = (
     "evidence-grounded self-model calibration with explicit uncertainty",
     "baseline-scoped diagnostic re-evaluation after interventions",
     "verified read-only inquiry-family diagnostics",
+    "persistent human interaction surface with evidence-linked responses",
 )
 
 LIMITATION_CATALOG = (
@@ -54,6 +55,7 @@ LIMITATION_CATALOG = (
     "Repository intervention detection identifies changed content but does not infer why it changed.",
     "Self-model calibration records evidence status but does not prove unverified capabilities.",
     "Inquiry-family diagnostics use deterministic lexical similarity and do not establish semantic equivalence in every context.",
+    "Interaction replies are deterministic state renderings and do not imply subjective experience.",
     "Semantic memory is lexical and co-occurrence based rather than embedding based.",
     "The world model currently represents only directly derived repository and evaluation claims.",
     "Perception is limited to explicitly implemented auditable sensors.",
@@ -114,6 +116,7 @@ def initial_state() -> dict[str, Any]:
         "change_proposals": [],
         "proposal_reviews": [],
         "proposal_diagnostics": [],
+        "interactions": [],
         "reflections": [],
         "accepted_changes": [],
         "self_model": {
@@ -144,6 +147,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         ("change_proposals", []),
         ("proposal_reviews", []),
         ("proposal_diagnostics", []),
+        ("interactions", []),
         ("reflections", []),
         ("accepted_changes", []),
         ("concept_counts", {}),
