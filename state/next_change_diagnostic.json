@@ -1,20 +1,21 @@
 {
-  "created": false,
+  "created": true,
   "diagnostic": {
-    "baseline_fingerprint": "b65fd6cc17116968",
-    "completed_at": "2026-09-29T12:42:03.818739+00:00",
-    "created_at": "2026-09-29T12:42:03.818726+00:00",
-    "created_cycle": 15,
-    "diagnostic_version": "inquiry-family-v1",
-    "id": "D000005",
+    "baseline_fingerprint": "1ba4e8197861805f",
+    "completed_at": "2026-09-29T14:19:55.428269+00:00",
+    "created_at": "2026-09-29T14:19:55.428253+00:00",
+    "created_cycle": 17,
+    "diagnostic_version": "inquiry-family-v2",
+    "id": "D000006",
     "kind": "inquiry_family",
     "mutation_scope": "read_only_live_state",
     "outcome": "paraphrase_churn",
     "proposal_id": "M000003",
-    "request_context_hash": "d36b0a3deb6c0a473f47e7b36918eb626da1736a325e3ee72629186410d942cd",
+    "request_context_hash": "de9b38acb484554156aa262a6ee59ebd89bb99dbdbe4c35f0aefc45b2a3f3802",
     "result": {
-      "diagnostic_version": "inquiry-family-v1",
-      "duplicate_pressure": 0.5,
+      "churn_present": true,
+      "diagnostic_version": "inquiry-family-v2",
+      "duplicate_pressure": 0.5384615384615384,
       "families": [
         {
           "family_id": "F001",
@@ -33,6 +34,16 @@
         },
         {
           "family_id": "F002",
+          "max_pair_similarity": 0.7777777777777778,
+          "question_refs": [
+            "Q000010",
+            "Q000013"
+          ],
+          "representative": "What observation could distinguish whether observation and repository are meaningfully related rather than merely co-occurring?",
+          "size": 2
+        },
+        {
+          "family_id": "F003",
           "max_pair_similarity": 1.0,
           "question_refs": [
             "Q000001"
@@ -41,21 +52,12 @@
           "size": 1
         },
         {
-          "family_id": "F003",
+          "family_id": "F004",
           "max_pair_similarity": 1.0,
           "question_refs": [
             "Q000009"
           ],
           "representative": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
-          "size": 1
-        },
-        {
-          "family_id": "F004",
-          "max_pair_similarity": 1.0,
-          "question_refs": [
-            "Q000010"
-          ],
-          "representative": "What observation could distinguish whether observation and repository are meaningfully related rather than merely co-occurring?",
           "size": 1
         },
         {
@@ -78,11 +80,16 @@
         }
       ],
       "family_count": 6,
-      "largest_family_ratio": 0.5833333333333334,
+      "family_open_endedness": 0.35294117647058826,
+      "largest_family_ratio": 0.5384615384615384,
       "largest_family_size": 7,
+      "metric_alignment_tolerance": 0.05,
+      "metric_gap": 0.41176470588235287,
+      "metric_status": "inflated",
       "outcome": "paraphrase_churn",
-      "question_count": 12,
-      "repeated_question_count": 6,
+      "question_count": 13,
+      "repeated_question_count": 7,
+      "reported_open_endedness": 0.7647058823529411,
       "similarity_threshold": 0.72,
       "source_state_mutated": false
     },
