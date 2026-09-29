@@ -12,6 +12,7 @@ from typing import Any, Callable
 from agenttest.change_control import PROTECTED_PATHS, make_change_manifest, validate_change_manifest
 from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
+from agenttest.evidence import known_evidence_ids
 from agenttest.interaction import interact
 from agenttest.intervention import record_verified_intervention
 from agenttest.diagnostics import run_proposal_diagnostic
@@ -21,7 +22,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v12"
+SUITE = "behavioral-preservation-v13"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1129,6 +1130,118 @@ def verified_intervention_reconciliation() -> dict[str, Any]:
         temp.cleanup()
 
 
+
+
+def system_diagnostic_evidence_governance() -> dict[str, Any]:
+    temp_backlog, store_backlog, _ = fresh()
+    temp_ready, store_ready, _ = fresh()
+    try:
+        backlog = store_backlog.load()
+        backlog["cycles"] = 20
+        backlog["generation"] = 20
+        backlog["metrics"].update(
+            {name: 1.0 for name in backlog.get("metrics", {})}
+        )
+        backlog["drives"] = {
+            "prediction_error": 0.0,
+            "specification_pressure": 0.9,
+            "evidence_hunger": 0.0,
+            "uncertainty": 0.8,
+            "continuity_repair": 0.0,
+            "calibration_gap": 0.0,
+            "novelty_hunger": 0.0,
+        }
+        backlog["system_diagnostics"] = [
+            {
+                "id": "SD000001",
+                "kind": "experiment_design",
+                "status": "completed",
+                "diagnostic_version": "experiment-design-v2",
+                "outcome": "specification_backlog",
+                "created_cycle": 20,
+                "source_state_mutated": False,
+                "result": {
+                    "specification_backlog_count": 4,
+                    "executable_experiment_count": 0,
+                    "contracted_ratio": 0.0,
+                },
+            }
+        ]
+
+        proposal, proposal_created = propose_self_change(backlog)
+        review, review_created = review_change_proposal(backlog, proposal)
+        manifest_valid, validation_reason = (
+            validate_change_manifest(proposal, backlog)
+            if proposal is not None
+            else (False, "no proposal")
+        )
+
+        ready = store_ready.load()
+        ready["cycles"] = 20
+        ready["metrics"].update({name: 1.0 for name in ready.get("metrics", {})})
+        ready["system_diagnostics"] = [
+            {
+                "id": "SD000002",
+                "kind": "experiment_design",
+                "status": "completed",
+                "diagnostic_version": "experiment-design-v2",
+                "outcome": "evidence_ready",
+                "created_cycle": 20,
+                "source_state_mutated": False,
+                "result": {
+                    "specification_backlog_count": 0,
+                    "executable_experiment_count": 2,
+                    "contracted_ratio": 1.0,
+                },
+            }
+        ]
+        ready_selected = select_change_target(ready)
+
+        return {
+            "passed": (
+                "SD000001" in known_evidence_ids(backlog)
+                and proposal_created
+                and proposal is not None
+                and proposal.get("selection_signal")
+                == "experiment_design_specification_backlog"
+                and proposal.get("source_diagnostic_id") == "SD000001"
+                and proposal.get("evidence_refs") == ["SD000001"]
+                and manifest_valid
+                and review_created
+                and review is not None
+                and review.get("review_version") == "proposal-review-v4"
+                and review.get("verdict") == "supported_problem"
+                and review.get("patch_authority") == "candidate_allowed"
+                and review.get("direct_diagnostic_id") == "SD000001"
+                and review.get("considered_system_diagnostic_ids")
+                == ["SD000001"]
+                and ready_selected is None
+                and "src/agenttest/evidence.py" in PROTECTED_PATHS
+            ),
+            "proposal_id": proposal.get("id") if proposal else None,
+            "selection_signal": (
+                proposal.get("selection_signal") if proposal else None
+            ),
+            "source_diagnostic_id": (
+                proposal.get("source_diagnostic_id") if proposal else None
+            ),
+            "manifest_valid": manifest_valid,
+            "validation_reason": validation_reason,
+            "review_version": review.get("review_version") if review else None,
+            "verdict": review.get("verdict") if review else None,
+            "patch_authority": review.get("patch_authority") if review else None,
+            "ready_target": (
+                ready_selected.get("dimension") if ready_selected else None
+            ),
+            "evidence_authority_protected": (
+                "src/agenttest/evidence.py" in PROTECTED_PATHS
+            ),
+        }
+    finally:
+        temp_backlog.cleanup()
+        temp_ready.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -1148,6 +1261,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("human_interaction_roundtrip", human_interaction_roundtrip),
     ("evidence_debt_evolution_governor", evidence_debt_evolution_governor),
     ("verified_intervention_reconciliation", verified_intervention_reconciliation),
+    ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
 ]
 
 

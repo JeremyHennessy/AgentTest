@@ -6,7 +6,7 @@ from typing import Any
 from .change_control import validate_change_manifest
 from .state import utc_now
 
-REVIEW_VERSION = "proposal-review-v3"
+REVIEW_VERSION = "proposal-review-v4"
 
 
 def _evidence_index(state: dict[str, Any]) -> dict[str, tuple[str, dict[str, Any]]]:
@@ -34,6 +34,10 @@ def _evidence_index(state: dict[str, Any]) -> dict[str, tuple[str, dict[str, Any
         identifier = diagnostic.get("id")
         if identifier:
             index[str(identifier)] = ("proposal_diagnostics", diagnostic)
+    for diagnostic in state.get("system_diagnostics", []):
+        identifier = diagnostic.get("id")
+        if identifier and diagnostic.get("status") == "completed":
+            index[str(identifier)] = ("system_diagnostics", diagnostic)
     return index
 
 
@@ -88,6 +92,24 @@ def _latest_completed_diagnostic(
             return diagnostic
     return None
 
+
+
+def _cited_experiment_design_diagnostic(
+    cited: list[tuple[str, dict[str, Any]]],
+    proposal: dict[str, Any],
+) -> dict[str, Any] | None:
+    expected_id = proposal.get("source_diagnostic_id")
+    for kind, item in cited:
+        if kind != "system_diagnostics":
+            continue
+        if item.get("kind") != "experiment_design":
+            continue
+        if item.get("status") != "completed":
+            continue
+        if expected_id is not None and str(item.get("id")) != str(expected_id):
+            continue
+        return item
+    return None
 
 
 def _learning_loop_gap(state: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -389,6 +411,43 @@ def classify_proposal(
         }
 
     if target == "learning":
+        diagnostic_signals = {
+            "experiment_design_specification_churn": "specification_churn",
+            "experiment_design_specification_backlog": "specification_backlog",
+        }
+        selection_signal = proposal.get("selection_signal")
+        if selection_signal in diagnostic_signals:
+            diagnostic = _cited_experiment_design_diagnostic(cited, proposal)
+            expected_outcome = diagnostic_signals[selection_signal]
+            if diagnostic is None or diagnostic.get("outcome") != expected_outcome:
+                return {
+                    "verdict": "needs_evidence",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The diagnostic-backed learning proposal does not cite a completed "
+                        "experiment-design diagnostic with the expected outcome."
+                    ),
+                    "required_next_evidence": (
+                        f"Cite a completed experiment-design diagnostic reporting "
+                        f"{expected_outcome}."
+                    ),
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                }
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    f"Protected experiment-design diagnostic {diagnostic.get('id')} reports "
+                    f"{expected_outcome}, directly supporting the proposal's targeted "
+                    "experiment-design problem."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": diagnostic.get("id"),
+            }
+
         gap, direct_refs = _learning_loop_gap(state)
         if gap:
             return {
@@ -532,6 +591,11 @@ def review_change_proposal(
         "considered_diagnostic_ids": _completed_diagnostic_ids(
             state,
             str(proposal["id"]),
+        ),
+        "considered_system_diagnostic_ids": sorted(
+            str(ref)
+            for ref in proposal.get("evidence_refs", [])
+            if str(ref).startswith("SD")
         ),
         **classification,
     }
