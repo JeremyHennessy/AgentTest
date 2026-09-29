@@ -38,11 +38,10 @@ jobs:
             git checkout -b autonomous/growth origin/main
           fi
 
-      - name: Run one autonomous cycle
+      - name: Observe and run one autonomous cycle
         shell: bash
         run: |
-          TICK="scheduled tick $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          PYTHONPATH=src python -m agenttest cycle --stimulus "$TICK"
+          PYTHONPATH=src python -m agenttest cycle             --self-observe             --stimulus "scheduled heartbeat"
           PYTHONPATH=src python -m agenttest propose
 
       - name: Verify invariants
