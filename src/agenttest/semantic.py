@@ -138,6 +138,72 @@ def retrieve_semantic_memory(
     return result
 
 
+_EXPERIMENT_FOLLOWUP_PATTERNS = (
+    re.compile(
+        r"^What observable, evidence source, and resolution rule would make "
+        r"experiment (X\d{6}) evidence-ready\?$"
+    ),
+    re.compile(
+        r"^What obtainable evidence would resolve pending experiment "
+        r"(X\d{6}) with the least additional assumption\?$"
+    ),
+)
+
+
+def question_target_experiment_id(question: dict[str, Any]) -> str | None:
+    explicit = question.get("target_experiment_id")
+    if isinstance(explicit, str) and explicit:
+        return explicit
+    text = str(question.get("text", ""))
+    for pattern in _EXPERIMENT_FOLLOWUP_PATTERNS:
+        match = pattern.match(text)
+        if match:
+            return match.group(1)
+    return None
+
+
+def question_has_active_experiment_path(
+    state: dict[str, Any],
+    question: dict[str, Any],
+) -> bool:
+    """Whether an open question currently leads to executable/active experiment work."""
+
+    if question.get("status") != "open" or not question.get("id"):
+        return False
+
+    question_id = str(question["id"])
+    linked = [
+        experiment
+        for experiment in state.get("experiments", [])
+        if str(experiment.get("question_id") or "") == question_id
+    ]
+    if linked:
+        return any(
+            experiment.get("status") == "proposed"
+            for experiment in linked
+        )
+
+    target_experiment_id = question_target_experiment_id(question)
+    if target_experiment_id:
+        return any(
+            str(experiment.get("id") or "") == target_experiment_id
+            and experiment.get("status") == "proposed"
+            for experiment in state.get("experiments", [])
+        )
+
+    return False
+
+
+def actionable_open_questions(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Derived live inquiry surface; preserves historical question records unchanged."""
+
+    return [
+        question
+        for question in state.get("questions", [])
+        if question_has_active_experiment_path(state, question)
+    ]
+
+
 INQUIRY_FAMILY_VERSION = "inquiry-family-state-v1"
 INQUIRY_SIMILARITY_THRESHOLD = 0.72
 
