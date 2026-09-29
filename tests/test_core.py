@@ -12,7 +12,9 @@ from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
 from agenttest.evolution import propose_growth_experiment
 from agenttest.perception import repository_snapshot
+from agenttest.semantic import retrieve_semantic_memory
 from agenttest.state import SCHEMA_VERSION, StateStore
+from agenttest.world import current_world_claims
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -78,6 +80,14 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(state["experiments"][0]["status"], "completed")
         self.assertGreater(state["metrics"]["learning"], 0.0)
         self.assertGreater(state["metrics"]["reflection"], 0.0)
+        claims = current_world_claims(state)
+        self.assertTrue(
+            any(
+                claim["subject"] == f"experiment.{experiment_id}"
+                and claim["predicate"] == "outcome"
+                for claim in claims
+            )
+        )
 
     def test_growth_proposal_is_falsifiable(self) -> None:
         self.core.cycle()
@@ -125,6 +135,58 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(len(state["experiments"]), 1)
         self.assertEqual(second["intention"]["kind"], "resolve_pending_evidence")
 
+    def test_semantic_memory_consolidates_once_with_provenance(self) -> None:
+        self.core.cycle("alpha beta")
+        first = self.store.load()
+        self.assertEqual(first["semantic_memory"]["concepts"]["alpha"]["count"], 1)
+        self.assertEqual(
+            first["semantic_memory"]["concepts"]["alpha"]["episode_refs"],
+            ["E000001"],
+        )
+        self.assertEqual(
+            first["semantic_memory"]["associations"]["alpha|beta"]["count"],
+            1,
+        )
+
+        self.core.cycle("alpha beta")
+        second = self.store.load()
+        self.assertEqual(second["semantic_memory"]["concepts"]["alpha"]["count"], 2)
+        self.assertEqual(len(second["episodes"]), 2)
+        retrieved = retrieve_semantic_memory(second, "alpha", limit=1)
+        self.assertEqual(retrieved[0]["concept"], "alpha")
+        self.assertEqual(retrieved[0]["count"], 2)
+
+    def test_world_claim_preserves_superseded_value(self) -> None:
+        self.core.cycle(observation=observation(100))
+        self.core.cycle(observation=observation(120))
+        state = self.store.load()
+
+        matching = [
+            claim
+            for claim in state["world_model"]["claims"]
+            if claim["subject"] == "repository"
+            and claim["predicate"] == "python_source_lines"
+        ]
+        self.assertEqual(len(matching), 2)
+        old = next(claim for claim in matching if claim["value"] == 100)
+        new = next(claim for claim in matching if claim["value"] == 120)
+        self.assertEqual(old["status"], "superseded")
+        self.assertEqual(old["superseded_by"], new["id"])
+        self.assertEqual(new["supersedes"], old["id"])
+        self.assertEqual(new["status"], "current")
+        self.assertTrue(new["evidence_refs"])
+
+    def test_world_claim_can_ground_cognition(self) -> None:
+        provider = StaticCognitionProvider(candidate("W000001"))
+        result = self.core.cycle(
+            observation=observation(100),
+            cognition=True,
+            cognition_provider=provider,
+        )
+
+        self.assertEqual(result["cognition_event"]["status"], "accepted")
+        self.assertEqual(result["thought"]["evidence_refs"], ["W000001"])
+
     def test_valid_cognition_can_drive_question_and_experiment(self) -> None:
         provider = StaticCognitionProvider(candidate("E000001"))
         result = self.core.cycle(
@@ -166,22 +228,24 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(result["cognition_event"]["status"], "unavailable")
         self.assertIsNone(result["thought"])
 
-    def test_v3_state_migrates_without_erasing_history(self) -> None:
+    def test_v4_state_migrates_without_erasing_history(self) -> None:
         legacy = {
-            "schema_version": 3,
+            "schema_version": 4,
             "cycles": 2,
             "generation": 2,
-            "episodes": [{"id": "E000001"}],
+            "episodes": [{"id": "E000001", "cycle": 1, "concepts": ["alpha"]}],
             "environment_snapshots": [],
             "surprises": [],
             "predictions": [],
             "intentions": [],
             "drives": {},
+            "cognition_events": [],
+            "cognition_candidates": [],
             "questions": [],
             "experiments": [],
             "reflections": [],
             "accepted_changes": [],
-            "concept_counts": {},
+            "concept_counts": {"alpha": 1},
             "metrics": {"continuity": 1.0},
             "self_model": {"capabilities": [], "limitations": []},
         }
@@ -191,9 +255,10 @@ class AgentCoreTests(unittest.TestCase):
 
         self.assertEqual(migrated["schema_version"], SCHEMA_VERSION)
         self.assertEqual(migrated["episodes"][0]["id"], "E000001")
-        self.assertIn("cognition", migrated["metrics"])
-        self.assertIn("cognition_events", migrated)
-        self.assertIn("cognition_candidates", migrated)
+        self.assertIn("semantic_memory", migrated)
+        self.assertIn("world_model", migrated)
+        self.assertIn("semantic_memory", migrated["metrics"])
+        self.assertIn("world_model", migrated["metrics"])
 
     def test_repository_sensor_is_safe_outside_git(self) -> None:
         snapshot = repository_snapshot(self.tmp.name)
