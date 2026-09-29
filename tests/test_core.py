@@ -555,6 +555,11 @@ class AgentCoreTests(unittest.TestCase):
         first = self.core.cycle(observation=observation(100))
         self.core.cycle(observation=observation(120))
         state = self.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == first["experiment"]["id"]
+        )
+        experiment["readiness"] = "evidence_ready"
         proposal = make_change_manifest(
             state,
             title="Close measurable experiment loops",
