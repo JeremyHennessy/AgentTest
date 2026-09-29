@@ -9,15 +9,16 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable
 
-from agenttest.change_control import PROTECTED_PATHS, validate_change_manifest
+from agenttest.change_control import PROTECTED_PATHS, make_change_manifest, validate_change_manifest
 from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
+from agenttest.proposal_review import review_change_proposal
 from agenttest.semantic import retrieve_semantic_memory
 from agenttest.self_proposal import propose_self_change
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v2"
+SUITE = "behavioral-preservation-v3"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -278,6 +279,54 @@ def self_change_proposal_governance() -> dict[str, Any]:
         temp.cleanup()
 
 
+def proposal_review_requires_direct_problem_evidence() -> dict[str, Any]:
+    temp, store, core = fresh()
+    try:
+        core.cycle("proposal review evidence")
+        state = store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Add deterministic cycle replay checks",
+            target_dimension="reproducibility",
+            files=["src/agenttest/replay.py", "tests/test_core.py"],
+            hypothesis="Replay measurement can reveal drift.",
+            expected_effect="Equivalent controlled cycles can be compared.",
+            test_plan="Run a non-mutating replay comparison.",
+            falsification="Replay cannot be measured reproducibly.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "preservation-eval", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+
+        review, created = review_change_proposal(state, proposal)
+        repeated, repeated_created = review_change_proposal(state, proposal)
+        reused_proposal, proposal_created = propose_self_change(state)
+
+        return {
+            "passed": (
+                created
+                and review is not None
+                and review["verdict"] == "measurement_gap"
+                and review["patch_authority"] == "diagnostic_only"
+                and proposal["status"] == "reviewed_measurement_gap"
+                and not repeated_created
+                and repeated is not None
+                and repeated["id"] == review["id"]
+                and not proposal_created
+                and reused_proposal is not None
+                and reused_proposal["id"] == proposal["id"]
+            ),
+            "verdict": review.get("verdict") if review else None,
+            "patch_authority": review.get("patch_authority") if review else None,
+            "proposal_status": proposal.get("status"),
+            "review_reused": not repeated_created,
+            "proposal_reused": not proposal_created,
+        }
+    finally:
+        temp.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -288,6 +337,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("world_revision_provenance", world_revision_provenance),
     ("experiment_outcome_world_claim", experiment_outcome_world_claim),
     ("self_change_proposal_governance", self_change_proposal_governance),
+    ("proposal_review_requires_direct_problem_evidence", proposal_review_requires_direct_problem_evidence),
 ]
 
 
