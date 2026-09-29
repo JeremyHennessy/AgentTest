@@ -47,7 +47,7 @@ The protected inquiry-family diagnostic found:
 
 The corrective candidate preserved every raw question, stored deterministic family membership in semantic memory, and changed only the metric. Post-merge diagnostic D000007 reported metric_gap=0 and closed M000003.
 
-## Phase 12 — Persistent human interaction membrane — implementation under verification
+## Phase 12 — Persistent human interaction membrane — verified
 
 Add a direct human interaction surface over the same state and evidence hierarchy.
 
@@ -64,10 +64,25 @@ A human turn must:
 
 The first interface is CLI-based and intentionally structured before any web UI or persona layer.
 
+## Phase 13 — Owner-authorized GitHub interaction channel — implementation under verification
+
+Expose the Phase 12 interaction contract through GitHub without requiring a local clone.
+
+The channel:
+
+- accepts manual workflow-dispatch messages;
+- accepts `/agent <message>` issue/PR comments only from the repository owner;
+- serializes against autonomous growth cycles;
+- runs on the persistent `autonomous/growth` branch;
+- verifies unit and preservation suites before committing interaction state;
+- posts the evidence-linked response back to authorized issue comments;
+- protects the interaction workflow from self-authored change manifests;
+- creates one bootstrap interaction only if no prior human interaction exists.
+
 ## Next phases — evidence dependent
 
-- Extend the baseline preservation suite to cover the interaction membrane after Phase 12 is verified.
-- Add a local/web interaction surface using the same interaction contract.
+- Add a richer local/web interaction surface using the same interaction contract.
+- Preserve the GitHub interaction transport in future governance checks.
 - Enable live grounded model cognition only when an authorized provider key is configured.
 - Broader external perception/actions with explicit permissions and provenance.
 - Open-ended research frontier selected by information gain and evidence debt.

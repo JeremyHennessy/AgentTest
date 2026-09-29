@@ -1,4 +1,4 @@
-# Design: Genesis Phases 0–12
+# Design: Genesis Phases 0–13
 
 ## Premise
 
@@ -50,6 +50,14 @@ A human message is recorded as the same kind of persistent stimulus evidence use
     deterministic response rendering
 
 The response text is not inserted into the world model as evidence. It is stored as an interaction artifact linked to the evidence that produced it.
+
+## Interaction transport authority
+
+The GitHub transport is deliberately separate from the interaction semantics.
+
+`.github/workflows/interact.yml` may carry an authorized human message into the existing interaction membrane, but it cannot redefine memory, world claims, cognition grounding, or response evidence levels. The workflow is a protected change-control path.
+
+Issue-comment interaction is owner-only. Human interaction and autonomous heartbeats use the same concurrency group to prevent concurrent state writers.
 
 ## Interaction trust boundary
 
