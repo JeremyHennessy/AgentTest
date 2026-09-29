@@ -14,6 +14,8 @@ on:
         type: boolean
   issue_comment:
     types: [created]
+  issues:
+    types: [opened]
   push:
     branches:
       - main
@@ -32,9 +34,12 @@ concurrency:
 jobs:
   interact:
     if: >-
-      github.event_name != 'issue_comment' ||
+      (github.event_name != 'issue_comment' && github.event_name != 'issues') ||
       (github.actor == github.repository_owner &&
-       startsWith(github.event.comment.body, '/agent '))
+       ((github.event_name == 'issue_comment' &&
+         startsWith(github.event.comment.body, '/agent ')) ||
+        (github.event_name == 'issues' &&
+         startsWith(github.event.issue.body, '/agent '))))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +69,7 @@ jobs:
           DISPATCH_MESSAGE: ${{ inputs.message }}
           DISPATCH_COGNITION: ${{ inputs.cognition }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
         shell: bash
         run: |
           python - <<'PY'
@@ -80,6 +86,9 @@ jobs:
               cognition = os.environ.get("DISPATCH_COGNITION", "false").lower()
           elif event == "issue_comment":
               body = os.environ.get("COMMENT_BODY", "")
+              message = body[len("/agent "):].strip() if body.startswith("/agent ") else ""
+          elif event == "issues":
+              body = os.environ.get("ISSUE_BODY", "")
               message = body[len("/agent "):].strip() if body.startswith("/agent ") else ""
           else:
               state_path = Path("state/organism.json")
@@ -150,7 +159,7 @@ jobs:
           git push origin autonomous/growth
 
       - name: Render response for GitHub comment
-        if: env.SKIP_INTERACTION != 'true' && github.event_name == 'issue_comment'
+        if: env.SKIP_INTERACTION != 'true' && (github.event_name == 'issue_comment' || github.event_name == 'issues')
         shell: bash
         run: |
           python - <<'PY'
@@ -173,7 +182,7 @@ jobs:
           PY
 
       - name: Reply to owner comment
-        if: env.SKIP_INTERACTION != 'true' && github.event_name == 'issue_comment'
+        if: env.SKIP_INTERACTION != 'true' && (github.event_name == 'issue_comment' || github.event_name == 'issues')
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
