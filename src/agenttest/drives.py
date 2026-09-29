@@ -54,7 +54,7 @@ def choose_intention(
     latest_surprise = state.get("surprises", [])[-1] if state.get("surprises") else None
 
     mapping = {
-        "prediction_error": "explain_change",
+        "prediction_error": "reduce_uncertainty",
         "evidence_hunger": "resolve_pending_evidence",
         "uncertainty": "reduce_uncertainty",
         "continuity_repair": "preserve_continuity",
