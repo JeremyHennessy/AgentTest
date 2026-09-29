@@ -4,8 +4,12 @@ import json
 from collections import Counter, defaultdict
 from typing import Any
 
-DIAGNOSTIC_VERSION = "experiment-design-v1"
+DIAGNOSTIC_VERSION = "experiment-design-v2"
 PREDICTION_CONTRACT_KIND = "prediction_status"
+SPECIFICATION_READINESS = {
+    "awaiting_specification_or_evidence",
+    "needs_specification",
+}
 
 
 def _normalized(text: object) -> str:
@@ -24,14 +28,36 @@ def _valid_prediction_contract(experiment: dict[str, Any]) -> bool:
     )
 
 
+def _is_specification_backlog(experiment: dict[str, Any]) -> bool:
+    if experiment.get("status") == "needs_specification":
+        return True
+    return (
+        experiment.get("status") == "proposed"
+        and not _valid_prediction_contract(experiment)
+        and str(experiment.get("readiness") or "unspecified")
+        in {*SPECIFICATION_READINESS, "unspecified"}
+    )
+
+
 def evaluate_experiment_design(state: dict[str, Any]) -> dict[str, Any]:
-    """Read-only diagnostic for active experiment specification quality."""
+    """Read-only diagnostic separating executable work from specification backlog."""
 
     before = json.dumps(state, sort_keys=True)
+    experiments = state.get("experiments", [])
     active = [
         experiment
-        for experiment in state.get("experiments", [])
+        for experiment in experiments
         if experiment.get("status") == "proposed"
+    ]
+    backlog = [
+        experiment
+        for experiment in experiments
+        if _is_specification_backlog(experiment)
+    ]
+    unresolved = [
+        experiment
+        for experiment in experiments
+        if experiment.get("status") in {"proposed", "needs_specification"}
     ]
     questions = {
         str(question.get("id")): question
@@ -40,12 +66,13 @@ def evaluate_experiment_design(state: dict[str, Any]) -> dict[str, Any]:
     }
 
     question_groups: dict[str, list[str]] = defaultdict(list)
+    active_question_groups: dict[str, list[str]] = defaultdict(list)
     method_groups: dict[tuple[str, str], list[str]] = defaultdict(list)
     readiness = Counter()
     contracted: list[str] = []
     uncontracted: list[str] = []
 
-    for experiment in active:
+    for experiment in unresolved:
         experiment_id = str(experiment.get("id", ""))
         question_id = str(experiment.get("question_id") or "unlinked")
         question_groups[question_id].append(experiment_id)
@@ -59,6 +86,10 @@ def evaluate_experiment_design(state: dict[str, Any]) -> dict[str, Any]:
             contracted.append(experiment_id)
         else:
             uncontracted.append(experiment_id)
+
+    for experiment in active:
+        question_id = str(experiment.get("question_id") or "unlinked")
+        active_question_groups[question_id].append(str(experiment.get("id", "")))
 
     duplicate_clusters = []
     for (question_id, method), experiment_ids in sorted(method_groups.items()):
@@ -91,17 +122,19 @@ def evaluate_experiment_design(state: dict[str, Any]) -> dict[str, Any]:
         default=0,
     )
     active_count = len(active)
+    unresolved_count = len(unresolved)
     contracted_count = len(contracted)
+    backlog_ids = [str(item.get("id", "")) for item in backlog]
 
-    if active_count == 0:
-        outcome = "no_active_experiments"
-    elif any(
+    if any(
         cluster["size"] >= 2 and not cluster["contracted_ids"]
         for cluster in duplicate_clusters
     ):
         outcome = "specification_churn"
-    elif uncontracted:
+    elif backlog_ids:
         outcome = "specification_backlog"
+    elif active_count == 0:
+        outcome = "no_active_experiments"
     else:
         outcome = "evidence_ready"
 
@@ -109,11 +142,17 @@ def evaluate_experiment_design(state: dict[str, Any]) -> dict[str, Any]:
         "diagnostic_version": DIAGNOSTIC_VERSION,
         "outcome": outcome,
         "active_experiment_count": active_count,
-        "active_question_count": len(question_groups),
+        "executable_experiment_count": sum(
+            1 for item in active if _valid_prediction_contract(item)
+        ),
+        "specification_backlog_count": len(backlog_ids),
+        "unresolved_experiment_count": unresolved_count,
+        "active_question_count": len(active_question_groups),
+        "unresolved_question_count": len(question_groups),
         "contracted_count": contracted_count,
         "uncontracted_count": len(uncontracted),
         "contracted_ratio": (
-            1.0 if active_count == 0 else contracted_count / active_count
+            1.0 if unresolved_count == 0 else contracted_count / unresolved_count
         ),
         "readiness_counts": dict(sorted(readiness.items())),
         "largest_question_group": largest_question_group,
@@ -122,10 +161,15 @@ def evaluate_experiment_design(state: dict[str, Any]) -> dict[str, Any]:
         "duplicate_clusters": duplicate_clusters,
         "active_question_groups": {
             question_id: experiment_ids
+            for question_id, experiment_ids in sorted(active_question_groups.items())
+        },
+        "unresolved_question_groups": {
+            question_id: experiment_ids
             for question_id, experiment_ids in sorted(question_groups.items())
         },
         "contracted_experiment_ids": contracted,
         "uncontracted_experiment_ids": uncontracted,
+        "specification_backlog_ids": backlog_ids,
         "source_state_mutated": False,
     }
 

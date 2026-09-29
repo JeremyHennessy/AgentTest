@@ -45,6 +45,7 @@ class ExperimentDesignDiagnosticTests(unittest.TestCase):
         self.assertEqual(result["outcome"], "specification_churn")
         self.assertEqual(result["active_experiment_count"], 2)
         self.assertEqual(result["active_question_count"], 1)
+        self.assertEqual(result["specification_backlog_count"], 2)
         self.assertEqual(result["largest_duplicate_cluster"], 2)
         self.assertEqual(result["contracted_ratio"], 0.0)
         self.assertFalse(result["source_state_mutated"])
@@ -73,6 +74,7 @@ class ExperimentDesignDiagnosticTests(unittest.TestCase):
 
         self.assertEqual(result["outcome"], "evidence_ready")
         self.assertEqual(result["contracted_count"], 1)
+        self.assertEqual(result["specification_backlog_count"], 0)
         self.assertEqual(result["contracted_ratio"], 1.0)
         self.assertEqual(result["duplicate_cluster_count"], 0)
 
@@ -93,7 +95,30 @@ class ExperimentDesignDiagnosticTests(unittest.TestCase):
 
         self.assertEqual(result["outcome"], "specification_backlog")
         self.assertEqual(result["uncontracted_count"], 1)
+        self.assertEqual(result["specification_backlog_count"], 1)
         self.assertEqual(result["largest_duplicate_cluster"], 0)
+
+    def test_explicit_needs_specification_status_is_backlog_not_active_work(self) -> None:
+        state = {
+            "questions": [{"id": "Q000001", "text": "What should be specified?"}],
+            "experiments": [
+                {
+                    "id": "X000001",
+                    "question_id": "Q000001",
+                    "status": "needs_specification",
+                    "readiness": "needs_specification",
+                    "method": "Name a discriminating observation.",
+                }
+            ],
+        }
+
+        result = evaluate_experiment_design(state)
+
+        self.assertEqual(result["outcome"], "specification_backlog")
+        self.assertEqual(result["active_experiment_count"], 0)
+        self.assertEqual(result["specification_backlog_count"], 1)
+        self.assertEqual(result["unresolved_experiment_count"], 1)
+        self.assertEqual(result["contracted_ratio"], 0.0)
 
     def test_completed_experiments_are_not_active_design_debt(self) -> None:
         state = {
