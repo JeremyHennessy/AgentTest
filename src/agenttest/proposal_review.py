@@ -6,7 +6,7 @@ from typing import Any
 from .change_control import validate_change_manifest
 from .state import utc_now
 
-REVIEW_VERSION = "proposal-review-v5"
+REVIEW_VERSION = "proposal-review-v4"
 
 
 def _evidence_index(state: dict[str, Any]) -> dict[str, tuple[str, dict[str, Any]]]:
@@ -64,8 +64,11 @@ def _existing_review(
             continue
         if review.get("review_version") != REVIEW_VERSION:
             continue
-        if review.get("considered_diagnostic_ids", []) == current_diagnostics:
-            return review
+        if review.get("considered_diagnostic_ids", []) != current_diagnostics:
+            continue
+        if _cached_review_requires_lifecycle_recheck(state, proposal_id, review):
+            continue
+        return review
     return None
 
 
@@ -141,6 +144,46 @@ def _same_cycle_untriaged_specification_backlog(
         int(item.get("cycle", 0) or 0) >= diagnostic_cycle
         for item in matched
         if item is not None
+    )
+
+
+
+def _cached_review_requires_lifecycle_recheck(
+    state: dict[str, Any],
+    proposal_id: str,
+    review: dict[str, Any],
+) -> bool:
+    if review.get("verdict") != "supported_problem":
+        return False
+    proposal = next(
+        (
+            item
+            for item in state.get("change_proposals", [])
+            if str(item.get("id")) == proposal_id
+        ),
+        None,
+    )
+    if (
+        proposal is None
+        or proposal.get("selection_signal")
+        != "experiment_design_specification_backlog"
+    ):
+        return False
+    source_diagnostic_id = str(proposal.get("source_diagnostic_id") or "")
+    if not source_diagnostic_id:
+        return False
+    diagnostic = next(
+        (
+            item
+            for item in state.get("system_diagnostics", [])
+            if str(item.get("id")) == source_diagnostic_id
+            and item.get("status") == "completed"
+        ),
+        None,
+    )
+    return (
+        diagnostic is not None
+        and _same_cycle_untriaged_specification_backlog(state, diagnostic)
     )
 
 
