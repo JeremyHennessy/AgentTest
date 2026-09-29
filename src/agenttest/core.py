@@ -716,6 +716,7 @@ class AgentCore:
         observation: dict[str, Any] | None = None,
         cognition: bool = False,
         cognition_provider: CognitionProvider | None = None,
+        strict_experiment_admission: bool = False,
     ) -> dict[str, Any]:
         state = self.store.load()
         state["cycles"] += 1
@@ -797,6 +798,9 @@ class AgentCore:
             question,
             intention,
             thought,
+            require_grounded=(
+                strict_experiment_admission and observation is not None
+            ),
         )
 
         prediction = None
@@ -835,7 +839,7 @@ class AgentCore:
             "cognition_event_id": cognition_event["id"] if cognition_event else None,
             "cognition_candidate_id": thought["id"] if thought else None,
             "selected_question_id": question["id"],
-            "experiment_id": experiment["id"],
+            "experiment_id": experiment["id"] if experiment else None,
             "new_prediction_id": prediction["id"] if prediction else None,
             "prediction_experiment_id": (
                 prediction_experiment["id"] if prediction_experiment else None
@@ -1247,7 +1251,9 @@ class AgentCore:
         question: dict[str, Any],
         intention: dict[str, Any],
         thought: dict[str, Any] | None,
-    ) -> dict[str, Any]:
+        *,
+        require_grounded: bool = False,
+    ) -> dict[str, Any] | None:
         if intention["kind"] == "specify_experiment" and intention.get("target"):
             match = next(
                 (
@@ -1290,6 +1296,8 @@ class AgentCore:
             predicted_observation = thought["predicted_observation"]
             cognition_candidate_id = thought["id"]
         else:
+            if require_grounded:
+                return None
             hypothesis = (
                 "A deliberately chosen disconfirming observation will reduce more "
                 "uncertainty than collecting another confirming example."
