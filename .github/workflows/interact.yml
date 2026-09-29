@@ -117,11 +117,18 @@ jobs:
         run: |
           mkdir -p state
           MESSAGE="$(cat /tmp/agenttest-message.txt)"
+          OUTPUT=/tmp/agenttest-last-interaction.json
           if [ "$INTERACTION_COGNITION" = "true" ]; then
-            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src               python -m agenttest interact --self-observe --cognition "$MESSAGE"               | tee state/last_interaction.json
+            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+              python -m agenttest interact --self-observe --cognition "$MESSAGE" \
+              > "$OUTPUT"
           else
-            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src               python -m agenttest interact --self-observe "$MESSAGE"               | tee state/last_interaction.json
+            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+              python -m agenttest interact --self-observe "$MESSAGE" \
+              > "$OUTPUT"
           fi
+          cat "$OUTPUT"
+          cp "$OUTPUT" state/last_interaction.json
 
       - name: Verify invariant and preservation suites
         if: env.SKIP_INTERACTION != 'true'
