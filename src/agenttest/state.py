@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 
 DIMENSIONS = (
     "continuity",
@@ -89,6 +89,14 @@ def _empty_world_model() -> dict[str, Any]:
     }
 
 
+def _empty_empirical_learning() -> dict[str, Any]:
+    return {
+        "version": "empirical-learning-v1",
+        "updated_cycle": 0,
+        "families": {},
+    }
+
+
 def initial_state() -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -109,6 +117,7 @@ def initial_state() -> dict[str, Any]:
         "intentions": [],
         "drives": {},
         "world_model": _empty_world_model(),
+        "empirical_learning": _empty_empirical_learning(),
         "cognition_events": [],
         "cognition_candidates": [],
         "questions": [],
@@ -139,6 +148,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         ("intentions", []),
         ("drives", {}),
         ("world_model", _empty_world_model()),
+        ("empirical_learning", _empty_empirical_learning()),
         ("cognition_events", []),
         ("cognition_candidates", []),
         ("episodes", []),
@@ -165,6 +175,11 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     world.setdefault("last_snapshot_index", 0)
     world.setdefault("seen_prediction_status", {})
     world.setdefault("seen_experiment_status", {})
+
+    empirical = state["empirical_learning"]
+    empirical.setdefault("version", "empirical-learning-v1")
+    empirical.setdefault("updated_cycle", 0)
+    empirical.setdefault("families", {})
 
     metrics = state.setdefault("metrics", {})
     for dimension in DIMENSIONS:
