@@ -853,8 +853,9 @@ def inquiry_family_evidence_review() -> dict[str, Any]:
                 and inflated_first["verdict"] == "needs_evidence"
                 and inflated_created
                 and inflated_diag is not None
-                and inflated_diag["outcome"] == "metric_inflation"
+                and inflated_diag["outcome"] == "paraphrase_churn"
                 and inflated_diag["result"]["metric_gap"] > 0.05
+                and inflated_diag["result"]["metric_status"] == "inflated"
                 and inflated_final_created
                 and inflated_final is not None
                 and inflated_final["verdict"] == "supported_problem"
@@ -863,7 +864,8 @@ def inquiry_family_evidence_review() -> dict[str, Any]:
                 and aligned_first["verdict"] == "needs_evidence"
                 and aligned_created
                 and aligned_diag is not None
-                and aligned_diag["outcome"] == "paraphrase_churn_metric_aligned"
+                and aligned_diag["outcome"] == "paraphrase_churn"
+                and aligned_diag["result"]["metric_status"] == "aligned"
                 and abs(aligned_diag["result"]["metric_gap"]) <= 0.05
                 and aligned_final_created
                 and aligned_final is not None
