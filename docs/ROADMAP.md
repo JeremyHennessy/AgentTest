@@ -2,68 +2,71 @@
 
 This roadmap is hypothesis-driven. A phase advances only when its predecessor produces reproducible evidence.
 
-## Phase 0 — Persistence — verified baseline
+## Phase 0 — Persistence — verified
 
 Persistent state, episodic memory, questions, experiments, reflection, and immutable history.
 
-## Phase 1 — Perception — verified baseline
+## Phase 1 — Perception — verified
 
 Auditable repository sensing and explicit surprise detection.
 
-## Phase 2 — Predictive drives — verified behavior
+## Phase 2 — Predictive drives — verified
 
-Predictions are evaluated against later observations, and prediction error changes attention.
+Predictions are tested against later observations and prediction error changes attention.
 
 ## Phase 3 — Grounded generative cognition — verified boundary
 
-The optional cognition provider is structurally gated, has no tools, cannot alter evidence directly, rejects unknown evidence references, and fails closed when no provider is configured.
+Optional model cognition is structurally gated, tool-less, provenance-recorded, and fail-closed. No API key is currently configured, so live cognition remains unavailable rather than simulated.
 
-No API key is currently configured, so live cognition attempts are recorded as unavailable rather than simulated.
+## Phase 4 — Semantic memory and temporal world model — verified
 
-## Phase 4 — Semantic memory and temporal world model — verified baseline
-
-Semantic memory consolidates repeated concepts and associations while preserving source episode IDs. The temporal claim ledger preserves superseded facts and links derived claims to raw evidence.
-
-The live autonomous branch migrated to schema v5 without losing prior history.
+Semantic memory preserves source episode references. Temporal world claims preserve superseded facts and link derived claims to raw evidence.
 
 ## Phase 5 — Evolution preservation gate — verified
 
-The behavioral gate uses the previous verified BASE commit's evaluator against both baseline and candidate code.
+The previous verified base supplies the evaluator used against both baseline and candidate code.
 
-A deliberate negative-control PR introduced a known prediction-error regression. Both the candidate suite and the base-owned comparison rejected it; the base comparator explicitly reported prediction_error_focus as the regression. The bad PR was closed without merge.
+A deliberate negative-control regression was correctly rejected by the base-owned gate.
 
-## Phase 6 — Self-authored change manifests — implementation under verification
+## Phase 6 — Self-authored change manifests — verified
 
-AgentTest may select an evidence-backed capability deficit and author one change manifest. It still cannot edit code.
+The live organism generated its first change manifest, M000001, from its own accumulated state.
 
-Constraints:
+M000001 targeted reproducibility and proposed deterministic replay checks. It was structurally valid and cited real evidence.
 
-- valid existing evidence IDs are required;
-- externally blocked cognition is not misdiagnosed as a code defect;
-- adaptation is not inflated by proposal creation;
-- one unresolved proposal is reused instead of generating proposal spam;
-- governance/evaluator files cannot be targeted;
-- every manifest includes baseline metric, expected effect, test, falsifier, and rollback.
+## Phase 7 — Proposal evidence review — implementation under verification
 
-The autonomous heartbeat will persist state/next_change.json after this phase is verified.
+A structurally valid proposal is no longer enough. Reviews classify evidence relevance as:
 
-## Phase 7 — Proposal evaluation
+- supported_problem;
+- measurement_gap;
+- needs_evidence.
 
-Measure proposal quality before allowing patches: evidence relevance, target correctness, testability, duplication, and whether proposed interventions actually address the first incorrect layer.
+M000001 is expected to be classified measurement_gap because its cited prediction reflections do not demonstrate replay divergence.
 
-## Phase 8 — Isolated self-authored patches
+A direct replay diagnostic reporting divergence would change that classification to supported_problem.
 
-Only after proposal quality is demonstrated, permit bounded patch generation on candidate branches. No automatic promotion. Every patch must pass the base-owned preservation gate and demonstrate positive evidence on its declared target.
+Reviewed unresolved proposals remain active, preventing proposal proliferation.
 
-## Phase 9 — Broader world interaction
+## Phase 8 — Evidence diagnostics
+
+For measurement-gap and needs-evidence reviews, generate the smallest non-mutating diagnostic needed to resolve the uncertainty. Diagnostics must produce explicit evidence records and cannot modify production behavior.
+
+## Phase 9 — Isolated self-authored patches
+
+Only proposals classified supported_problem, or diagnostic-only proposals whose scope is strictly instrumentation, may become candidate patches.
+
+No automatic promotion. Every candidate must pass the base-owned preservation gate and show positive target evidence.
+
+## Phase 10 — Broader world interaction
 
 Add narrowly scoped external sensors and actions with explicit permissions, provenance, rate limits, and outcome verification.
 
-## Phase 10 — Open-ended research
+## Phase 11 — Open-ended research
 
 Maintain a frontier of unresolved questions and select among them using expected information gain and evidence debt.
 
-## Phase 11 — Emergent identity study
+## Phase 12 — Emergent identity study
 
 Only after substantial persistent history exists, test whether identity-like continuity emerges from memory, prediction, self-modeling, and internally selected goals.
 

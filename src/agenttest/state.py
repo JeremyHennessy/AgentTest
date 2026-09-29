@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 DIMENSIONS = (
     "continuity",
@@ -72,6 +72,8 @@ def initial_state() -> dict[str, Any]:
         "questions": [],
         "experiments": [],
         "change_proposals": [],
+        "proposal_reviews": [],
+        "proposal_diagnostics": [],
         "reflections": [],
         "accepted_changes": [],
         "self_model": {
@@ -87,10 +89,12 @@ def initial_state() -> dict[str, Any]:
                 "endogenous evidence-driven intention selection",
                 "validated boundary for optional model-generated candidate thoughts",
                 "evidence-backed self-authored change manifests without code execution",
+                "proposal review that distinguishes direct problem evidence from measurement gaps",
             ],
             "limitations": [
                 "Self-authored change manifests cannot apply or merge code.",
                 "Governance and preservation files are excluded from self-authored changes.",
+                "Proposal review can withhold patch authority when evidence does not identify the failing layer.",
                 "Semantic memory is lexical and co-occurrence based rather than embedding based.",
                 "The world model currently represents only directly derived repository and evaluation claims.",
                 "Perception is limited to explicitly implemented auditable sensors.",
@@ -123,6 +127,8 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         ("questions", []),
         ("experiments", []),
         ("change_proposals", []),
+        ("proposal_reviews", []),
+        ("proposal_diagnostics", []),
         ("reflections", []),
         ("accepted_changes", []),
         ("concept_counts", {}),
@@ -155,6 +161,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         "endogenous evidence-driven intention selection",
         "validated boundary for optional model-generated candidate thoughts",
         "evidence-backed self-authored change manifests without code execution",
+        "proposal review that distinguishes direct problem evidence from measurement gaps",
     ):
         if capability not in capabilities:
             capabilities.append(capability)
@@ -163,6 +170,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     for limitation in (
         "Self-authored change manifests cannot apply or merge code.",
         "Governance and preservation files are excluded from self-authored changes.",
+        "Proposal review can withhold patch authority when evidence does not identify the failing layer.",
         "Semantic memory is lexical and co-occurrence based rather than embedding based.",
         "The world model currently represents only directly derived repository and evaluation claims.",
         "Perception is limited to explicitly implemented auditable sensors.",

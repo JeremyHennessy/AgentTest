@@ -1,4 +1,4 @@
-# Design: Genesis Phases 0–6
+# Design: Genesis Phases 0–7
 
 ## Premise
 
@@ -26,17 +26,18 @@ AgentTest is an original experiment in persistent adaptive computation. It is no
 
 ## Evolution loop
 
-    persistent evidence + capability metrics
+    evidence + capability metrics
           ↓
-    select highest eligible deficit
+    self-authored change manifest
           ↓
-    self-authored CHANGE MANIFEST only
+    proposal evidence review
           ↓
-    human / later bounded patch mechanism
+    ┌───────────────┬────────────────────┬─────────────────┐
+    │supported      │measurement gap     │needs evidence   │
+    │problem        │diagnostic only     │no patch         │
+    └───────────────┴────────────────────┴─────────────────┘
           ↓
-    isolated candidate branch
-          ↓
-    candidate tests
+    future isolated candidate work
           ↓
     BASELINE-OWNED preservation evaluator
           ↓
@@ -44,26 +45,62 @@ AgentTest is an original experiment in persistent adaptive computation. It is no
           ↓
     verified promotion or rejection
 
-Phase 6 stops at the manifest step. AgentTest still cannot write or merge code.
+Phase 7 still stops before code generation.
 
-## Self-authored proposal selection
+## Why valid evidence is not enough
 
-The proposal engine selects among evidence dimensions with observable deficits. It excludes:
+A change manifest can cite real evidence while still targeting the wrong layer.
 
-- saturated dimensions;
-- adaptation itself, because an unaccepted change is a process outcome rather than a code defect;
-- cognition when no cognition provider has produced successful evidence;
-- any target for which the organism cannot cite existing evidence.
+For example, the first live self-authored manifest M000001 proposed deterministic replay checks because reproducibility was 0.8. Its evidence references were genuine prediction evaluations, but those observations did not demonstrate replay divergence.
 
-The chosen manifest records the current target metric, evidence IDs, files, hypothesis, expected effect, test plan, falsification criterion, and rollback.
+Phase 7 therefore separates:
 
-Only one unresolved self-change proposal may exist at a time. Repeated heartbeats reuse it rather than manufacturing proposal volume.
+- evidence existence;
+- evidence relevance;
+- evidence that identifies a behavioral defect;
+- evidence that only identifies a measurement gap.
 
-Creating a proposal does not raise the adaptation metric.
+## Proposal review verdicts
 
-## Governance boundary
+### supported_problem
 
-A self-authored manifest may not target:
+Direct evidence connects the observed problem to the proposed capability layer.
+
+This may eventually permit an isolated candidate patch, but still does not prove the proposed implementation is correct.
+
+### measurement_gap
+
+The proposal would add measurement, diagnostics, or traceability, but current evidence does not establish that underlying behavior is wrong.
+
+Future authority is limited to diagnostic work.
+
+### needs_evidence
+
+The evidence is real, but it does not identify the proposed code surface as the first incorrect layer.
+
+No patch authority is granted.
+
+## Current direct-evidence rules
+
+The initial conservative rules intentionally cover only cases that can be justified from current evidence:
+
+- reproducibility requires a completed deterministic-replay diagnostic reporting divergence before it becomes a supported defect;
+- learning can be supported when a pending experiment remains unresolved despite later prediction-evaluation evidence;
+- reflection can be supported when the same evidence-backed lesson repeats;
+- cognition cannot be diagnosed as a code problem without a successful provider attempt;
+- selected measurement-oriented capabilities remain diagnostic-only without direct failure evidence.
+
+Unknown cases default to needs_evidence.
+
+## Anti-proliferation
+
+A proposal remains active after review while unresolved. Heartbeats cannot evade an inconvenient review by generating another proposal.
+
+Reviews are idempotent: re-reviewing an unchanged proposal reuses the existing review.
+
+## Governance and preservation
+
+Self-authored manifests still cannot target:
 
 - .github/workflows/verify.yml
 - .github/workflows/growth.yml
@@ -71,31 +108,13 @@ A self-authored manifest may not target:
 - scripts/compare_eval.py
 - src/agenttest/change_control.py
 
-Changes to the rules governing evolution therefore remain outside self-directed mutation.
-
-## Evolution gate
-
-On pull requests, the previous verified BASE commit supplies the behavioral evaluator and comparator used against both baseline and candidate code. A candidate cannot pass by weakening its own judge.
-
-The gate has been tested with a deliberate negative control: a one-line regression changed prediction-error handling from explain_change to reduce_uncertainty. The baseline-owned evaluator detected prediction_error_focus as a regression and rejected that PR.
-
-## Trust ordering
-
-1. Raw sensor observations and explicit outcomes.
-2. Derived world claims with source references.
-3. Semantic memory used for retrieval.
-4. Model-generated candidate thoughts.
-5. Self-authored change manifests.
-6. Candidate code, once that capability exists.
-
-No lower layer may overwrite the evidence or governance that evaluates it.
+The base-owned preservation gate remains authoritative for candidate code.
 
 ## Still missing
 
+- non-mutating diagnostics generated from measurement-gap reviews;
 - self-authored patch generation;
-- target-specific improvement measurement for generated patches;
+- target-specific improvement evaluation for generated patches;
 - broader external perception;
-- causal models richer than temporal claim revision;
 - independent environmental action;
-- measured evidence that optional model cognition improves research outcomes;
-- any evidence of subjective experience.
+- evidence of subjective experience.
