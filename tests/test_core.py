@@ -1828,6 +1828,139 @@ class AgentCoreTests(unittest.TestCase):
         self.assertNotIn("outcome", unresolved)
 
 
+    def test_reduce_uncertainty_skips_fallback_question_when_its_experiment_is_blocked(self) -> None:
+        state = self.store.load()
+        state["cycles"] = 20
+        blocked_question = {
+            "id": "Q000001",
+            "text": (
+                "Which assumption in my current decision process has gone longest "
+                "without an attempt to falsify it?"
+            ),
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 12,
+            "last_selected_cycle": 19,
+        }
+        eligible_question = {
+            "id": "Q000002",
+            "text": "Which measured repository claim should be checked next?",
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 1,
+            "last_selected_cycle": 4,
+        }
+        state["questions"] = [blocked_question, eligible_question]
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "question_id": "Q000001",
+                "status": "proposed",
+                "specification": {
+                    "actionability": "blocked",
+                    "evaluated_cycle": 20,
+                },
+            }
+        ]
+        state["concept_counts"] = {}
+        state["metrics"] = {name: 1.0 for name in state["metrics"]}
+        intention = {
+            "id": "I000020",
+            "kind": "reduce_uncertainty",
+            "target": None,
+        }
+
+        selected = self.core._generate_question(
+            state,
+            surprise=None,
+            intention=intention,
+            thought=None,
+        )
+
+        self.assertEqual(selected, eligible_question["text"])
+        self.assertEqual(blocked_question["status"], "open")
+        self.assertEqual(state["experiments"][0]["status"], "proposed")
+
+    def test_blocked_question_becomes_eligible_again_when_actionability_changes(self) -> None:
+        fallback = (
+            "Which assumption in my current decision process has gone longest "
+            "without an attempt to falsify it?"
+        )
+        state = self.store.load()
+        state["cycles"] = 20
+        state["questions"] = [
+            {
+                "id": "Q000001",
+                "text": fallback,
+                "status": "open",
+                "created_cycle": 1,
+                "times_selected": 8,
+                "last_selected_cycle": 19,
+            }
+        ]
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "question_id": "Q000001",
+                "status": "proposed",
+                "specification": {
+                    "actionability": "actionable",
+                    "evaluated_cycle": 20,
+                },
+            }
+        ]
+        state["concept_counts"] = {}
+        state["metrics"] = {name: 1.0 for name in state["metrics"]}
+        intention = {
+            "id": "I000020",
+            "kind": "reduce_uncertainty",
+            "target": None,
+        }
+
+        selected = self.core._generate_question(
+            state,
+            surprise=None,
+            intention=intention,
+            thought=None,
+        )
+
+        self.assertEqual(selected, fallback)
+
+    def test_unblocked_fallback_behavior_is_preserved(self) -> None:
+        fallback = (
+            "Which assumption in my current decision process has gone longest "
+            "without an attempt to falsify it?"
+        )
+        state = self.store.load()
+        state["cycles"] = 20
+        state["questions"] = [
+            {
+                "id": "Q000001",
+                "text": fallback,
+                "status": "open",
+                "created_cycle": 1,
+                "times_selected": 3,
+                "last_selected_cycle": 19,
+            }
+        ]
+        state["experiments"] = []
+        state["concept_counts"] = {}
+        state["metrics"] = {name: 1.0 for name in state["metrics"]}
+        intention = {
+            "id": "I000020",
+            "kind": "reduce_uncertainty",
+            "target": None,
+        }
+
+        selected = self.core._generate_question(
+            state,
+            surprise=None,
+            intention=intention,
+            thought=None,
+        )
+
+        self.assertEqual(selected, fallback)
+
     def test_same_question_method_reuses_active_experiment(self) -> None:
         state = self.store.load()
         state["cycles"] = 1
