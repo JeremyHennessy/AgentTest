@@ -12,13 +12,14 @@ from typing import Any, Callable
 from agenttest.change_control import PROTECTED_PATHS, make_change_manifest, validate_change_manifest
 from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
+from agenttest.diagnostics import run_proposal_diagnostic
 from agenttest.proposal_review import review_change_proposal
 from agenttest.semantic import retrieve_semantic_memory
 from agenttest.self_proposal import propose_self_change
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v3"
+SUITE = "behavioral-preservation-v4"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -327,6 +328,72 @@ def proposal_review_requires_direct_problem_evidence() -> dict[str, Any]:
         temp.cleanup()
 
 
+def verified_diagnostic_resolution() -> dict[str, Any]:
+    temp, store, core = fresh()
+    try:
+        core.cycle("diagnostic evidence")
+        state = store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Add deterministic cycle replay checks",
+            target_dimension="reproducibility",
+            files=["src/agenttest/replay.py", "tests/test_core.py"],
+            hypothesis="Replay measurement can reveal drift.",
+            expected_effect="Equivalent controlled cycles can be compared.",
+            test_plan="Run a non-mutating replay comparison.",
+            falsification="Replay cannot be measured reproducibly.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "preservation-eval", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+
+        first_review, _ = review_change_proposal(state, proposal)
+        diagnostic, diagnostic_created = run_proposal_diagnostic(
+            state,
+            proposal,
+            first_review,
+        )
+        second_review, second_created = review_change_proposal(state, proposal)
+
+        store.save(state)
+        post = core.cycle("post diagnostic evidence")
+
+        required_protected = {
+            "src/agenttest/proposal_review.py",
+            "src/agenttest/self_proposal.py",
+            "src/agenttest/diagnostics.py",
+            "src/agenttest/diagnostic_replay.py",
+        }
+
+        return {
+            "passed": (
+                first_review is not None
+                and first_review["verdict"] == "measurement_gap"
+                and diagnostic_created
+                and diagnostic is not None
+                and diagnostic["outcome"] == "stable"
+                and not diagnostic["source_state_mutated"]
+                and second_created
+                and second_review is not None
+                and second_review["verdict"] == "no_problem_observed"
+                and second_review["patch_authority"] == "none"
+                and proposal["status"] == "closed_no_problem_observed"
+                and post["metrics"]["reproducibility"] == 1.0
+                and required_protected.issubset(PROTECTED_PATHS)
+            ),
+            "initial_verdict": first_review.get("verdict") if first_review else None,
+            "diagnostic_id": diagnostic.get("id") if diagnostic else None,
+            "diagnostic_outcome": diagnostic.get("outcome") if diagnostic else None,
+            "final_verdict": second_review.get("verdict") if second_review else None,
+            "proposal_status": proposal.get("status"),
+            "reproducibility": post["metrics"]["reproducibility"],
+            "protected": sorted(required_protected.intersection(PROTECTED_PATHS)),
+        }
+    finally:
+        temp.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -338,6 +405,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("experiment_outcome_world_claim", experiment_outcome_world_claim),
     ("self_change_proposal_governance", self_change_proposal_governance),
     ("proposal_review_requires_direct_problem_evidence", proposal_review_requires_direct_problem_evidence),
+    ("verified_diagnostic_resolution", verified_diagnostic_resolution),
 ]
 
 
