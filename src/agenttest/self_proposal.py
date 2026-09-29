@@ -262,6 +262,29 @@ TARGETS: dict[str, dict[str, Any]] = {
 }
 
 SYSTEM_DIAGNOSTIC_TARGETS: dict[str, dict[str, Any]] = {
+    "attention_control_blocked_attention_loop": {
+        "dimension": "agency",
+        "files": ["src/agenttest/core.py", "tests/test_core.py"],
+        "title": "Redirect inquiry away from blocked experiments",
+        "hypothesis": (
+            "If uncertainty-driven inquiry stops reselecting questions whose active experiment "
+            "is explicitly blocked, attention can move to other unresolved evidence without "
+            "deleting blocked history."
+        ),
+        "expected_effect": (
+            "A blocked experiment and its question remain preserved, but uncertainty-driven "
+            "selection does not return to them until grounded evidence changes their actionability."
+        ),
+        "test_plan": (
+            "Construct blocked and non-blocked inquiry states, verify blocked questions are skipped "
+            "while eligible questions remain selectable, verify blocked history is preserved, and "
+            "run the baseline-owned preservation gate."
+        ),
+        "falsification": (
+            "Reject if blocked work is deleted, attention still loops on the blocked question, "
+            "eligible inquiry is suppressed, or preserved behavior regresses."
+        ),
+    },
     "experiment_design_specification_churn": {
         "dimension": "learning",
         "files": ["src/agenttest/core.py", "tests/test_core.py"],
@@ -366,6 +389,40 @@ def _latest_experiment_design_signal(
         "selection_signal": signal,
         "source_diagnostic_id": str(identifier),
         "diagnostic_outcome": outcome,
+    }
+
+
+def _latest_attention_control_signal(
+    state: dict[str, Any],
+) -> dict[str, Any] | None:
+    latest = next(
+        (
+            diagnostic
+            for diagnostic in reversed(state.get("system_diagnostics", []))
+            if diagnostic.get("kind") == "attention_control"
+            and diagnostic.get("status") == "completed"
+        ),
+        None,
+    )
+    if latest is None or latest.get("outcome") != "blocked_attention_loop":
+        return None
+
+    identifier = latest.get("id")
+    if not identifier:
+        return None
+    signal = "attention_control_blocked_attention_loop"
+    spec = SYSTEM_DIAGNOSTIC_TARGETS[signal]
+    return {
+        "dimension": spec["dimension"],
+        "baseline_metric": float(
+            state.get("metrics", {}).get(spec["dimension"], 0.0)
+        ),
+        "deficit": float(state.get("drives", {}).get("uncertainty", 0.0)),
+        "priority": -3,
+        "evidence_refs": [str(identifier)],
+        "selection_signal": signal,
+        "source_diagnostic_id": str(identifier),
+        "diagnostic_outcome": "blocked_attention_loop",
     }
 
 
@@ -501,6 +558,10 @@ def _recent_evidence_refs(
 def select_change_target(state: dict[str, Any]) -> dict[str, Any] | None:
     metrics = state.get("metrics", {})
     ranked: list[tuple[float, int, str, list[str]]] = []
+
+    attention_signal = _latest_attention_control_signal(state)
+    if attention_signal is not None:
+        return attention_signal
 
     diagnostic_signal = _latest_experiment_design_signal(state)
     if diagnostic_signal is not None:
