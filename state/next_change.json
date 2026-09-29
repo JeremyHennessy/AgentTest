@@ -1,4 +1,51 @@
 {
-  "created": false,
-  "proposal": null
+  "created": true,
+  "proposal": {
+    "baseline_metric": 1.0,
+    "created_at": "2026-09-29T17:26:26.579943+00:00",
+    "created_cycle": 43,
+    "evidence_refs": [
+      "SD000009"
+    ],
+    "expected_effect": "A blocked experiment and its question remain preserved, but uncertainty-driven selection does not return to them until grounded evidence changes their actionability.",
+    "falsification": "Reject if blocked work is deleted, attention still loops on the blocked question, eligible inquiry is suppressed, or preserved behavior regresses.",
+    "files": [
+      "src/agenttest/core.py",
+      "tests/test_core.py"
+    ],
+    "hypothesis": "If uncertainty-driven inquiry stops reselecting questions whose active experiment is explicitly blocked, attention can move to other unresolved evidence without deleting blocked history.",
+    "id": "M000011",
+    "protected_paths": [
+      ".github/workflows/growth.yml",
+      ".github/workflows/interact.yml",
+      ".github/workflows/reconcile.yml",
+      ".github/workflows/verify.yml",
+      "scripts/blocked_attention_eval.py",
+      "scripts/compare_eval.py",
+      "scripts/experiment_design_eval.py",
+      "scripts/preservation_eval.py",
+      "scripts/reconcile_verified_change.py",
+      "src/agenttest/change_control.py",
+      "src/agenttest/diagnostic_attention.py",
+      "src/agenttest/diagnostic_experiments.py",
+      "src/agenttest/diagnostic_inquiry.py",
+      "src/agenttest/diagnostic_replay.py",
+      "src/agenttest/diagnostic_self_model.py",
+      "src/agenttest/diagnostics.py",
+      "src/agenttest/evidence.py",
+      "src/agenttest/intervention.py",
+      "src/agenttest/proposal_review.py",
+      "src/agenttest/self_proposal.py"
+    ],
+    "rollback": "Revert the candidate change and restore the previous verified baseline.",
+    "schema_version": 1,
+    "selection_rationale": "Protected system diagnostic SD000009 reported blocked_attention_loop; this direct diagnostic signal takes priority over aggregate metric saturation.",
+    "selection_signal": "attention_control_blocked_attention_loop",
+    "source": "self-proposal-v1",
+    "source_diagnostic_id": "SD000009",
+    "status": "proposed",
+    "target_dimension": "agency",
+    "test_plan": "Construct blocked and non-blocked inquiry states, verify blocked questions are skipped while eligible questions remain selectable, verify blocked history is preserved, and run the baseline-owned preservation gate.",
+    "title": "Redirect inquiry away from blocked experiments"
+  }
 }
