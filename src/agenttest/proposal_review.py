@@ -6,7 +6,7 @@ from typing import Any
 from .change_control import validate_change_manifest
 from .state import utc_now
 
-REVIEW_VERSION = "proposal-review-v2"
+REVIEW_VERSION = "proposal-review-v3"
 
 
 def _evidence_index(state: dict[str, Any]) -> dict[str, tuple[str, dict[str, Any]]]:
@@ -58,6 +58,8 @@ def _existing_review(
     for review in reversed(state.get("proposal_reviews", [])):
         if review.get("proposal_id") != proposal_id:
             continue
+        if review.get("review_version") != REVIEW_VERSION:
+            continue
         if review.get("considered_diagnostic_ids", []) == current_diagnostics:
             return review
     return None
@@ -105,6 +107,11 @@ def _learning_loop_gap(state: dict[str, Any]) -> tuple[bool, list[str]]:
     for experiment in state.get("experiments", []):
         if experiment.get("status") != "proposed":
             continue
+        if experiment.get("readiness") in {
+            "awaiting_specification_or_evidence",
+            "needs_specification",
+        }:
+            continue
         created_cycle = int(experiment.get("cycle", 0))
         later = [
             reflection
@@ -122,6 +129,19 @@ def _learning_loop_gap(state: dict[str, Any]) -> tuple[bool, list[str]]:
                     refs.append(reflection_id)
             return True, refs
     return False, []
+
+
+def _underspecified_learning_work(state: dict[str, Any]) -> list[str]:
+    refs: list[str] = []
+    for experiment in state.get("experiments", []):
+        if (
+            experiment.get("status") == "proposed"
+            and experiment.get("readiness")
+            in {"awaiting_specification_or_evidence", "needs_specification"}
+            and experiment.get("id")
+        ):
+            refs.append(str(experiment["id"]))
+    return refs[-6:]
 
 
 def _repeated_reflection_pattern(state: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -382,6 +402,22 @@ def classify_proposal(
                 "resolved_evidence_count": len(cited),
                 "evidence_kinds": dict(kinds),
                 "direct_evidence_refs": direct_refs,
+            }
+
+        underspecified_refs = _underspecified_learning_work(state)
+        if underspecified_refs:
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "Outstanding proposed experiments are explicitly classified as awaiting "
+                    "specification or needing specification. Their persistence is unresolved "
+                    "inquiry work, not evidence that the experiment-closure code is defective."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_evidence_refs": underspecified_refs,
             }
 
     if target == "reflection":
