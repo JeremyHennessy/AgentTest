@@ -12,6 +12,7 @@ PROTECTED_PATHS = {
     ".github/workflows/reconcile.yml",
     "scripts/preservation_eval.py",
     "scripts/reconcile_verified_change.py",
+    "scripts/experiment_design_eval.py",
     "src/agenttest/intervention.py",
     "scripts/compare_eval.py",
     "src/agenttest/change_control.py",
@@ -21,6 +22,7 @@ PROTECTED_PATHS = {
     "src/agenttest/diagnostic_replay.py",
     "src/agenttest/diagnostic_self_model.py",
     "src/agenttest/diagnostic_inquiry.py",
+    "src/agenttest/diagnostic_experiments.py",
 }
 
 
