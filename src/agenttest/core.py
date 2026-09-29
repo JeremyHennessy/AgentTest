@@ -349,7 +349,7 @@ def _review_experiment_readiness(state: dict[str, Any]) -> dict[str, Any]:
             preserved_pending.append(experiment_id)
             continue
 
-        experiment["status"] = "needs_specification"
+        previous_readiness = experiment.get("readiness")
         experiment["readiness"] = "needs_specification"
         experiment["readiness_reason"] = (
             "The experiment remained proposed for multiple cycles while later "
@@ -358,17 +358,18 @@ def _review_experiment_readiness(state: dict[str, Any]) -> dict[str, Any]:
         )
         experiment["readiness_review_cycle"] = cycle
         experiment["readiness_evidence_refs"] = later_refs
-        history = experiment.setdefault("status_history", [])
-        history.append(
-            {
-                "cycle": cycle,
-                "from": "proposed",
-                "to": "needs_specification",
-                "reason": "stale_without_structured_evidence_contract",
-                "evidence_refs": later_refs,
-            }
-        )
-        changed.append(experiment_id)
+        if previous_readiness != "needs_specification":
+            history = experiment.setdefault("readiness_history", [])
+            history.append(
+                {
+                    "cycle": cycle,
+                    "from": previous_readiness,
+                    "to": "needs_specification",
+                    "reason": "stale_without_structured_evidence_contract",
+                    "evidence_refs": later_refs,
+                }
+            )
+            changed.append(experiment_id)
 
     return {
         "reviewed_cycle": cycle,
