@@ -6,7 +6,7 @@ from typing import Any
 from .change_control import validate_change_manifest
 from .state import utc_now
 
-REVIEW_VERSION = "proposal-review-v4"
+REVIEW_VERSION = "proposal-review-v5"
 
 
 def _evidence_index(state: dict[str, Any]) -> dict[str, tuple[str, dict[str, Any]]]:
@@ -110,6 +110,38 @@ def _cited_experiment_design_diagnostic(
             continue
         return item
     return None
+
+
+def _same_cycle_untriaged_specification_backlog(
+    state: dict[str, Any],
+    diagnostic: dict[str, Any],
+) -> bool:
+    if diagnostic.get("outcome") != "specification_backlog":
+        return False
+    diagnostic_cycle = int(diagnostic.get("created_cycle", 0) or 0)
+    ids = [
+        str(item)
+        for item in diagnostic.get("result", {}).get(
+            "untriaged_specification_ids",
+            [],
+        )
+        if item
+    ]
+    if not ids:
+        return False
+    experiments = {
+        str(item.get("id")): item
+        for item in state.get("experiments", [])
+        if item.get("id")
+    }
+    matched = [experiments.get(identifier) for identifier in ids]
+    if any(item is None for item in matched):
+        return False
+    return all(
+        int(item.get("cycle", 0) or 0) >= diagnostic_cycle
+        for item in matched
+        if item is not None
+    )
 
 
 def _cited_attention_control_diagnostic(
@@ -451,6 +483,25 @@ def classify_proposal(
                     ),
                     "resolved_evidence_count": len(cited),
                     "evidence_kinds": dict(kinds),
+                }
+            if (
+                selection_signal == "experiment_design_specification_backlog"
+                and _same_cycle_untriaged_specification_backlog(state, diagnostic)
+            ):
+                return {
+                    "verdict": "no_problem_observed",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The cited specification backlog contains only experiments "
+                        "created in the diagnostic's own cycle. They could not have "
+                        "been triaged before the cycle's experiment-creation step, so "
+                        "this is expected one-cycle lifecycle latency rather than a "
+                        "supported triage-code defect."
+                    ),
+                    "required_next_evidence": None,
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                    "direct_diagnostic_id": diagnostic.get("id"),
                 }
             return {
                 "verdict": "supported_problem",
