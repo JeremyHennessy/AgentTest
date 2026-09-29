@@ -6,7 +6,7 @@ from typing import Any
 from .change_control import validate_change_manifest
 from .state import utc_now
 
-REVIEW_VERSION = "proposal-review-v1"
+REVIEW_VERSION = "proposal-review-v2"
 
 
 def _evidence_index(state: dict[str, Any]) -> dict[str, tuple[str, dict[str, Any]]]:
@@ -97,6 +97,23 @@ def _direct_replay_stable(
             and diagnostic.get("kind") == "deterministic_replay"
             and diagnostic.get("status") == "completed"
             and diagnostic.get("outcome") == "stable"
+        ):
+            return diagnostic
+    return None
+
+
+
+def _self_model_grounding_diagnostic(
+    state: dict[str, Any],
+    proposal_id: str,
+    outcome: str,
+) -> dict[str, Any] | None:
+    for diagnostic in reversed(state.get("proposal_diagnostics", [])):
+        if (
+            diagnostic.get("proposal_id") == proposal_id
+            and diagnostic.get("kind") == "self_model_grounding"
+            and diagnostic.get("status") == "completed"
+            and diagnostic.get("outcome") == outcome
         ):
             return diagnostic
     return None
@@ -228,6 +245,64 @@ def classify_proposal(
             "evidence_kinds": dict(kinds),
         }
 
+
+    if target == "self_model":
+        gap = _self_model_grounding_diagnostic(
+            state,
+            str(proposal.get("id")),
+            "grounding_gap",
+        )
+        if gap is not None:
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "A verified read-only self-model diagnostic found capability claims "
+                    "without explicit calibration records. This supports a traceability "
+                    "problem, not a claim that the capabilities themselves are false."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": gap.get("id"),
+            }
+
+        grounded = _self_model_grounding_diagnostic(
+            state,
+            str(proposal.get("id")),
+            "grounded",
+        )
+        if grounded is not None:
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "The verified self-model diagnostic found every capability claim "
+                    "explicitly calibrated as verified, observed, or unverified with "
+                    "valid provenance or uncertainty rationale."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": grounded.get("id"),
+            }
+
+        return {
+            "verdict": "measurement_gap",
+            "patch_authority": "diagnostic_only",
+            "reason": (
+                "The self-model proposal concerns calibration and traceability, but no "
+                "verified grounding diagnostic has measured claim-by-claim coverage yet."
+            ),
+            "required_next_evidence": (
+                "Run the verified read-only self-model grounding diagnostic and record "
+                "whether each capability has an explicit status plus evidence or an "
+                "unverified rationale."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
     if target == "learning":
         gap, direct_refs = _learning_loop_gap(state)
         if gap:
@@ -276,7 +351,7 @@ def classify_proposal(
             "evidence_kinds": dict(kinds),
         }
 
-    measurement_targets = {"memory", "perception", "semantic_memory", "self_model"}
+    measurement_targets = {"memory", "perception", "semantic_memory"}
     if target in measurement_targets:
         return {
             "verdict": "measurement_gap",

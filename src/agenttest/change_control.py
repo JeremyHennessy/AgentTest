@@ -15,6 +15,7 @@ PROTECTED_PATHS = {
     "src/agenttest/self_proposal.py",
     "src/agenttest/diagnostics.py",
     "src/agenttest/diagnostic_replay.py",
+    "src/agenttest/diagnostic_self_model.py",
 }
 
 

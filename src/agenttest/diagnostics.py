@@ -4,7 +4,8 @@ import hashlib
 import json
 from typing import Any
 
-from .diagnostic_replay import DIAGNOSTIC_VERSION, compare_replays
+from .diagnostic_replay import DIAGNOSTIC_VERSION as REPLAY_VERSION, compare_replays
+from .diagnostic_self_model import DIAGNOSTIC_VERSION as SELF_MODEL_VERSION, evaluate_self_model_grounding
 from .state import utc_now
 
 
@@ -41,12 +42,13 @@ def _existing(
     state: dict[str, Any],
     proposal_id: str,
     kind: str,
+    diagnostic_version: str,
 ) -> dict[str, Any] | None:
     for diagnostic in reversed(state.get("proposal_diagnostics", [])):
         if (
             diagnostic.get("proposal_id") == proposal_id
             and diagnostic.get("kind") == kind
-            and diagnostic.get("diagnostic_version") == DIAGNOSTIC_VERSION
+            and diagnostic.get("diagnostic_version") == diagnostic_version
             and diagnostic.get("status") == "completed"
         ):
             return diagnostic
@@ -71,20 +73,31 @@ def run_proposal_diagnostic(
     if proposal is None:
         return None, False
 
-    if proposal.get("target_dimension") != "reproducibility":
+    target = proposal.get("target_dimension")
+    if target == "reproducibility":
+        kind = "deterministic_replay"
+        diagnostic_version = REPLAY_VERSION
+    elif target == "self_model":
+        kind = "self_model_grounding"
+        diagnostic_version = SELF_MODEL_VERSION
+    else:
         return None, False
 
-    kind = "deterministic_replay"
-    existing = _existing(state, str(proposal["id"]), kind)
+    existing = _existing(
+        state,
+        str(proposal["id"]),
+        kind,
+        diagnostic_version,
+    )
     if existing is not None:
         return existing, False
 
     request_context = {
         "proposal_id": proposal["id"],
         "review_id": review["id"],
-        "target_dimension": proposal.get("target_dimension"),
+        "target_dimension": target,
         "required_next_evidence": review.get("required_next_evidence"),
-        "diagnostic_version": DIAGNOSTIC_VERSION,
+        "diagnostic_version": diagnostic_version,
     }
     context_hash = hashlib.sha256(
         json.dumps(
@@ -94,21 +107,29 @@ def run_proposal_diagnostic(
         ).encode("utf-8")
     ).hexdigest()
 
-    result = compare_replays()
+    result = (
+        compare_replays()
+        if target == "reproducibility"
+        else evaluate_self_model_grounding(state)
+    )
     diagnostic = {
         "id": f"D{len(state.get('proposal_diagnostics', [])) + 1:06d}",
         "proposal_id": proposal["id"],
         "review_id": review["id"],
         "target_dimension": proposal.get("target_dimension"),
         "kind": kind,
-        "diagnostic_version": DIAGNOSTIC_VERSION,
+        "diagnostic_version": diagnostic_version,
         "status": "completed",
         "outcome": result["outcome"],
         "created_at": utc_now(),
         "completed_at": utc_now(),
         "created_cycle": state.get("cycles", 0),
         "request_context_hash": context_hash,
-        "mutation_scope": "isolated_temp_state",
+        "mutation_scope": (
+            "isolated_temp_state"
+            if target == "reproducibility"
+            else "read_only_live_state"
+        ),
         "source_state_mutated": False,
         "result": result,
     }
