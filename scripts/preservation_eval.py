@@ -19,12 +19,13 @@ from agenttest.interaction import interact
 from agenttest.intervention import record_verified_intervention
 from agenttest.diagnostics import run_proposal_diagnostic
 from agenttest.proposal_review import review_change_proposal
-from agenttest.semantic import retrieve_semantic_memory
+from agenttest.semantic import actionable_open_questions, retrieve_semantic_memory
 from agenttest.self_proposal import propose_self_change, select_change_target
-from agenttest.state import StateStore
+from agenttest.state import StateStore, initial_state
 from agenttest.world import current_world_claims
+from agenttest.drives import compute_drives
 
-SUITE = "behavioral-preservation-v21"
+SUITE = "behavioral-preservation-v22"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1874,6 +1875,82 @@ def specification_backlog_lifecycle_scope() -> dict[str, Any]:
         temp_stale.cleanup()
 
 
+def parked_question_attention_scope() -> dict[str, Any]:
+    state = initial_state()
+    state["cycles"] = 55
+    state["questions"] = [
+        {
+            "id": "Q000001",
+            "text": "Historical blocked inquiry",
+            "status": "open",
+        },
+        {
+            "id": "Q000002",
+            "text": (
+                "What observable, evidence source, and resolution rule would make "
+                "experiment X000002 evidence-ready?"
+            ),
+            "status": "open",
+        },
+        {
+            "id": "Q000003",
+            "text": "Current executable inquiry",
+            "status": "open",
+        },
+    ]
+    state["experiments"] = [
+        {
+            "id": "X000001",
+            "question_id": "Q000001",
+            "status": "parked_blocked",
+            "readiness": "needs_specification",
+        },
+        {
+            "id": "X000002",
+            "question_id": "Q999999",
+            "status": "parked_blocked",
+            "readiness": "needs_specification",
+        },
+        {
+            "id": "X000003",
+            "question_id": "Q000003",
+            "status": "proposed",
+            "readiness": "evidence_ready",
+        },
+    ]
+
+    before = json.loads(json.dumps(state["questions"]))
+    strict_drives = compute_drives(
+        state,
+        strict_question_attention=True,
+    )
+    default_drives = compute_drives(state)
+    actionable_before = [
+        item.get("id") for item in actionable_open_questions(state)
+    ]
+
+    state["experiments"][0]["status"] = "proposed"
+    state["experiments"][0]["readiness"] = "evidence_ready"
+    actionable_after = [
+        item.get("id") for item in actionable_open_questions(state)
+    ]
+
+    return {
+        "passed": (
+            actionable_before == ["Q000003"]
+            and strict_drives.get("uncertainty") == (1.0 / 6.0)
+            and default_drives.get("uncertainty") == 0.5
+            and state["questions"] == before
+            and actionable_after == ["Q000001", "Q000003"]
+        ),
+        "actionable_before": actionable_before,
+        "strict_uncertainty": strict_drives.get("uncertainty"),
+        "default_uncertainty": default_drives.get("uncertainty"),
+        "questions_preserved": state["questions"] == before,
+        "actionable_after": actionable_after,
+    }
+
+
 def blocked_experiment_parking_lifecycle() -> dict[str, Any]:
     temp_strict, store_strict, core_strict = fresh()
     temp_default, store_default, core_default = fresh()
@@ -1959,6 +2036,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
     ("autonomous_grounded_experiment_admission", autonomous_grounded_experiment_admission),
+    ("parked_question_attention_scope", parked_question_attention_scope),
     ("blocked_experiment_parking_lifecycle", blocked_experiment_parking_lifecycle),
     ("executable_prediction_experiment_lifecycle", executable_prediction_experiment_lifecycle),
     ("system_diagnostic_baseline_authority", system_diagnostic_baseline_authority),
