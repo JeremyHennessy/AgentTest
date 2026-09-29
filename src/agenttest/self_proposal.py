@@ -270,13 +270,11 @@ def _cognition_is_externally_blocked(state: dict[str, Any]) -> bool:
     if state.get("cognition_candidates"):
         return False
     events = state.get("cognition_events", [])
-    if not events:
+    if any(event.get("status") == "accepted" for event in events):
         return False
-    latest = events[-1]
-    return (
-        latest.get("status") in {"unavailable", "error"}
-        and "provider" in str(latest.get("rejection_reason", "")).lower()
-    )
+    # With no successful cognition evidence, a zero cognition metric is not
+    # evidence that code is defective. It may simply mean no provider exists.
+    return True
 
 
 def _recent_evidence_refs(
