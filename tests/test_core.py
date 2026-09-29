@@ -1863,6 +1863,8 @@ class AgentCoreTests(unittest.TestCase):
 
         state = initial_state()
         state["cycles"] = 8
+        state["metrics"]["continuity"] = 1.0
+        state["metrics"]["self_model"] = 1.0
         state["questions"] = [
             {"id": f"Q{index:06d}", "status": "open"}
             for index in range(1, 7)
