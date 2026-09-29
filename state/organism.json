@@ -1,22 +1,40 @@
 {
   "accepted_changes": [],
+  "cognition_candidates": [],
+  "cognition_events": [
+    {
+      "context_hash": "267b266b3b8f3843482850a8c787f61d2e947853645934fd002be97c83208f6f",
+      "created_at": "2026-09-29T04:08:22.971033+00:00",
+      "cycle": 3,
+      "id": "G000001",
+      "model": null,
+      "prompt_version": "cognition-v1",
+      "provider": null,
+      "rejection_reason": "no cognition provider configured",
+      "response_id": null,
+      "status": "unavailable",
+      "usage": null
+    }
+  ],
   "concept_counts": {
-    "autonomous": 2,
-    "heartbeat": 2,
+    "autonomous": 3,
+    "heartbeat": 3,
     "observation": 1,
+    "python_files": 1,
+    "python_source_lines": 1,
     "repository": 1,
-    "tracked_files": 1,
+    "tracked_files": 2,
     "working_tree_clean": 1
   },
   "created_at": "2026-09-29T03:45:00+00:00",
-  "cycles": 2,
+  "cycles": 3,
   "drives": {
     "calibration_gap": 0.09999999999999998,
     "continuity_repair": 0.0,
-    "evidence_hunger": 0.25,
+    "evidence_hunger": 0.5,
     "novelty_hunger": 0.0,
     "prediction_error": 1.0,
-    "uncertainty": 0.16666666666666666
+    "uncertainty": 0.3333333333333333
   },
   "environment_snapshots": [
     {
@@ -45,6 +63,20 @@
       "sensor": "repository-v1",
       "test_files": 1,
       "tracked_files": 18,
+      "working_tree_clean": true
+    },
+    {
+      "branch": "autonomous/growth",
+      "cycle": 3,
+      "fingerprint": "5c2f2e3871605005",
+      "git_available": true,
+      "head": "bca94815ca1fa2f4edaa0b2a0d49e2a5da7c13a4",
+      "observed_at": "2026-09-29T04:08:22.970614+00:00",
+      "python_files": 10,
+      "python_source_lines": 1532,
+      "sensor": "repository-v1",
+      "test_files": 1,
+      "tracked_files": 20,
       "working_tree_clean": true
     }
   ],
@@ -92,6 +124,29 @@
       "id": "E000004",
       "kind": "stimulus",
       "time": "2026-09-29T03:57:01.799271+00:00"
+    },
+    {
+      "concepts": [
+        "tracked_files",
+        "python_files",
+        "python_source_lines"
+      ],
+      "content": "{\"branch\": \"autonomous/growth\", \"cycle\": 3, \"fingerprint\": \"5c2f2e3871605005\", \"git_available\": true, \"head\": \"bca94815ca1fa2f4edaa0b2a0d49e2a5da7c13a4\", \"observed_at\": \"2026-09-29T04:08:22.970614+00:00\", \"python_files\": 10, \"python_source_lines\": 1532, \"sensor\": \"repository-v1\", \"test_files\": 1, \"tracked_files\": 20, \"working_tree_clean\": true}",
+      "cycle": 3,
+      "id": "E000005",
+      "kind": "environment",
+      "time": "2026-09-29T04:08:22.970791+00:00"
+    },
+    {
+      "concepts": [
+        "autonomous",
+        "heartbeat"
+      ],
+      "content": "autonomous heartbeat",
+      "cycle": 3,
+      "id": "E000006",
+      "kind": "stimulus",
+      "time": "2026-09-29T04:08:22.970791+00:00"
     }
   ],
   "experiments": [
@@ -116,9 +171,22 @@
       "method": "Seek one observation that would make the current working idea less likely, and record the result before changing behavior.",
       "question_id": "Q000002",
       "status": "proposed"
+    },
+    {
+      "cognition_candidate_id": null,
+      "created_at": "2026-09-29T04:08:22.971053+00:00",
+      "cycle": 3,
+      "falsification": "The experiment fails if it cannot name a possible observation that would count against the hypothesis.",
+      "hypothesis": "A deliberately chosen disconfirming observation will reduce more uncertainty than collecting another confirming example.",
+      "id": "X000003",
+      "intention_id": "I000003",
+      "method": "Seek one observation that would make the current working idea less likely, and record the result before changing behavior.",
+      "predicted_observation": null,
+      "question_id": "Q000003",
+      "status": "proposed"
     }
   ],
-  "generation": 2,
+  "generation": 3,
   "identity": {
     "chosen_name": null,
     "description": "A persistent experimental process, not a claim of consciousness.",
@@ -143,18 +211,28 @@
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
       "strength": 1.0,
       "target": "S000001"
+    },
+    {
+      "cycle": 3,
+      "dominant_drive": "prediction_error",
+      "id": "I000003",
+      "kind": "explain_change",
+      "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
+      "strength": 1.0,
+      "target": "S000002"
     }
   ],
   "metrics": {
     "adaptation": 0.0,
-    "agency": 0.4,
+    "agency": 0.6,
+    "cognition": 0.0,
     "continuity": 1.0,
-    "curiosity": 0.4,
-    "learning": 0.2,
+    "curiosity": 0.6,
+    "learning": 0.4,
     "memory": 1.0,
     "open_endedness": 1.0,
-    "perception": 0.6666666666666666,
-    "reflection": 0.2,
+    "perception": 1.0,
+    "reflection": 0.4,
     "reproducibility": 0.8,
     "self_model": 0.9
   },
@@ -190,6 +268,22 @@
     {
       "created_at": "2026-09-29T03:57:01.799271+00:00",
       "cycle": 2,
+      "errors": {
+        "python_files": {
+          "expected": 9,
+          "observed": 10
+        },
+        "python_source_lines": {
+          "expected": 1049,
+          "observed": 1532
+        },
+        "tracked_files": {
+          "expected": 18,
+          "observed": 20
+        }
+      },
+      "evaluated_at": "2026-09-29T04:08:22.970791+00:00",
+      "evidence_strength": 1.0,
       "expected": {
         "branch": "autonomous/growth",
         "python_files": 9,
@@ -200,6 +294,22 @@
       },
       "falsification": "Any change in a measured comparable field violates this prediction.",
       "id": "P000002",
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening change occurs.",
+      "status": "violated"
+    },
+    {
+      "created_at": "2026-09-29T04:08:22.970791+00:00",
+      "cycle": 3,
+      "expected": {
+        "branch": "autonomous/growth",
+        "python_files": 10,
+        "python_source_lines": 1532,
+        "test_files": 1,
+        "tracked_files": 20,
+        "working_tree_clean": true
+      },
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "id": "P000003",
       "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening change occurs.",
       "status": "pending"
     }
@@ -220,6 +330,14 @@
       "status": "open",
       "text": "What caused repository tracked_files to change from 16 to 18, and did that change alter a verified capability?",
       "times_selected": 1
+    },
+    {
+      "created_cycle": 3,
+      "id": "Q000003",
+      "last_selected_cycle": 3,
+      "status": "open",
+      "text": "What caused repository python_files to change from 9 to 10, and did that change alter a verified capability?",
+      "times_selected": 1
     }
   ],
   "reflections": [
@@ -231,9 +349,18 @@
       "outcome": "violated",
       "prediction_id": "P000001",
       "source": "prediction"
+    },
+    {
+      "cycle": 3,
+      "evidence_strength": 1.0,
+      "id": "R000002",
+      "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
+      "outcome": "violated",
+      "prediction_id": "P000002",
+      "source": "prediction"
     }
   ],
-  "schema_version": 3,
+  "schema_version": 4,
   "self_model": {
     "capabilities": [
       "persistent structured state",
@@ -242,15 +369,17 @@
       "selection of explicit falsifiable experiments",
       "narrow repository self-perception through auditable sensors",
       "one-step prediction of measured repository state",
-      "endogenous evidence-driven intention selection"
+      "endogenous evidence-driven intention selection",
+      "validated boundary for optional model-generated candidate thoughts"
     ],
-    "last_updated_cycle": 2,
+    "last_updated_cycle": 3,
     "limitations": [
       "Perception is limited to explicitly implemented auditable sensors.",
-      "No model-backed generative cognition is configured.",
       "Environmental actions are not independently executed.",
       "No evidence currently establishes consciousness or subjective experience.",
-      "Code changes are proposals until independently evaluated."
+      "Code changes are proposals until independently evaluated.",
+      "Model cognition is optional and its output is untrusted until validated.",
+      "Model cognition cannot directly modify evidence, metrics, tools, or code."
     ]
   },
   "surprises": [
@@ -268,7 +397,26 @@
       "cycle": 2,
       "id": "S000001",
       "time": "2026-09-29T03:57:01.799271+00:00"
+    },
+    {
+      "changes": {
+        "python_files": {
+          "after": 10,
+          "before": 9
+        },
+        "python_source_lines": {
+          "after": 1532,
+          "before": 1049
+        },
+        "tracked_files": {
+          "after": 20,
+          "before": 18
+        }
+      },
+      "cycle": 3,
+      "id": "S000002",
+      "time": "2026-09-29T04:08:22.970791+00:00"
     }
   ],
-  "updated_at": "2026-09-29T03:57:01.799553+00:00"
+  "updated_at": "2026-09-29T04:08:22.971113+00:00"
 }
