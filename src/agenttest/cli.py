@@ -7,6 +7,7 @@ from pathlib import Path
 from .core import AgentCore
 from .evolution import propose_growth_experiment
 from .perception import repository_snapshot
+from .proposal_review import review_change_proposal
 from .self_proposal import propose_self_change
 from .state import StateStore, utc_now
 
@@ -53,6 +54,12 @@ def main() -> None:
     )
     propose_change.add_argument("--output", default="state/next_change.json")
 
+    review_change = sub.add_parser(
+        "review-change",
+        help="Review the active self-authored manifest for evidence relevance.",
+    )
+    review_change.add_argument("--output", default="state/next_change_review.json")
+
     outcome = sub.add_parser("outcome", help="Record evidence from an experiment.")
     outcome.add_argument("experiment_id")
     outcome.add_argument("outcome")
@@ -90,6 +97,30 @@ def main() -> None:
         result = {
             "created": created,
             "proposal": proposal,
+        }
+        path = Path(args.output)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        _print(result)
+    elif args.command == "review-change":
+        state = store.load()
+        review, created = review_change_proposal(state)
+        if created:
+            store.save(state)
+            store.append_journal(
+                {
+                    "event": "change_proposal_review",
+                    "time": utc_now(),
+                    "cycle": state.get("cycles", 0),
+                    "review_id": review["id"] if review else None,
+                    "proposal_id": review["proposal_id"] if review else None,
+                    "verdict": review["verdict"] if review else None,
+                    "patch_authority": review["patch_authority"] if review else None,
+                }
+            )
+        result = {
+            "created": created,
+            "review": review,
         }
         path = Path(args.output)
         path.parent.mkdir(parents=True, exist_ok=True)
