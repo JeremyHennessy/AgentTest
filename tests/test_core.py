@@ -788,6 +788,9 @@ class AgentCoreTests(unittest.TestCase):
 
         self.core.cycle("self model evidence")
         state = self.store.load()
+        # The diagnostic must still detect an explicit grounding defect even
+        # after production begins calibrating claims by default.
+        state["self_model"]["capability_claims"] = {}
         proposal = make_change_manifest(
             state,
             title="Calibrate self-model claims against behavioral checks",
@@ -887,6 +890,82 @@ class AgentCoreTests(unittest.TestCase):
             "src/agenttest/diagnostic_self_model.py",
             PROTECTED_PATHS,
         )
+
+
+    def test_runtime_self_model_calibration_closes_grounding_gap(self) -> None:
+        from agenttest.diagnostic_self_model import evaluate_self_model_grounding
+
+        result = self.core.cycle(
+            "self model calibration evidence",
+            observation=observation(100),
+        )
+        state = self.store.load()
+        diagnostic = evaluate_self_model_grounding(state)
+
+        self.assertEqual(diagnostic["outcome"], "grounded")
+        self.assertEqual(diagnostic["coverage"], 1.0)
+        self.assertEqual(state["metrics"]["self_model"], 1.0)
+        self.assertEqual(result["self_model_calibration"]["coverage"], 1.0)
+
+        claims = state["self_model"]["capability_claims"]
+        statuses = {claim["status"] for claim in claims.values()}
+        self.assertIn("observed", statuses)
+        self.assertIn("unverified", statuses)
+
+        for claim in claims.values():
+            if claim["status"] in {"observed", "verified"}:
+                self.assertTrue(claim["evidence_refs"])
+            else:
+                self.assertEqual(claim["status"], "unverified")
+                self.assertTrue(claim["reason"].strip())
+
+    def test_self_model_does_not_treat_unavailable_cognition_as_verified(self) -> None:
+        self.core.cycle(
+            "provider unavailable calibration",
+            cognition=True,
+            cognition_provider=None,
+        )
+        state = self.store.load()
+        claim = state["self_model"]["capability_claims"][
+            "validated boundary for optional model-generated candidate thoughts"
+        ]
+
+        self.assertEqual(claim["status"], "unverified")
+        self.assertEqual(claim["evidence_refs"], [])
+        self.assertIn("No accepted live cognition candidate", claim["reason"])
+
+    def test_accepted_cognition_candidate_can_ground_cognition_claim(self) -> None:
+        provider = StaticCognitionProvider(candidate("E000001"))
+        self.core.cycle(
+            "grounded stimulus",
+            cognition=True,
+            cognition_provider=provider,
+        )
+        state = self.store.load()
+        claim = state["self_model"]["capability_claims"][
+            "validated boundary for optional model-generated candidate thoughts"
+        ]
+
+        self.assertEqual(claim["status"], "observed")
+        self.assertTrue(claim["evidence_refs"])
+        self.assertIn("C000001", claim["evidence_refs"])
+
+    def test_unknown_future_self_model_capability_defaults_to_unverified(self) -> None:
+        state = self.store.load()
+        state["self_model"]["capabilities"].append(
+            "future capability without calibration rule"
+        )
+        self.store.save(state)
+
+        self.core.cycle("future capability evidence")
+        reloaded = self.store.load()
+        claim = reloaded["self_model"]["capability_claims"][
+            "future capability without calibration rule"
+        ]
+
+        self.assertEqual(claim["status"], "unverified")
+        self.assertEqual(claim["evidence_refs"], [])
+        self.assertIn("No explicit calibration rule", claim["reason"])
 
 
 if __name__ == "__main__":
