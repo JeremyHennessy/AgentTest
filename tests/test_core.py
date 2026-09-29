@@ -1956,5 +1956,220 @@ class AgentCoreTests(unittest.TestCase):
 
 
 
+    def test_specification_trace_blocks_generic_experiment_without_fabricating_evidence(self) -> None:
+        from agenttest.core import _trace_experiment_specifications
+
+        state = initial_state()
+        state["cycles"] = 8
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "cycle": 1,
+                "question_id": "Q000001",
+                "status": "proposed",
+                "readiness": "needs_specification",
+                "readiness_evidence_refs": ["P000004", "R000004"],
+                "hypothesis": "A generic hypothesis.",
+                "method": "Seek a disconfirming observation.",
+                "falsification": "The experiment fails if it cannot name an observation.",
+                "predicted_observation": None,
+                "cognition_candidate_id": None,
+            }
+        ]
+
+        update = _trace_experiment_specifications(state)
+        experiment = state["experiments"][0]
+        specification = experiment["specification"]
+
+        self.assertEqual(update["blocked_experiment_ids"], ["X000001"])
+        self.assertEqual(specification["actionability"], "blocked")
+        self.assertEqual(
+            specification["missing_fields"],
+            ["observable", "evidence_source", "resolution_rule"],
+        )
+        self.assertEqual(specification["grounded_evidence_refs"], [])
+        self.assertFalse(specification["current_grounded_evidence_can_supply"])
+        self.assertNotIn("evidence_contract", experiment)
+        self.assertNotIn(
+            "P000004",
+            specification["grounded_evidence_refs"],
+        )
+        self.assertNotIn(
+            "R000004",
+            specification["grounded_evidence_refs"],
+        )
+
+    def test_specification_trace_can_mark_grounded_cognition_fields_actionable_without_contract(self) -> None:
+        from agenttest.core import _trace_experiment_specifications
+
+        state = initial_state()
+        state["cycles"] = 8
+        state["episodes"] = [
+            {
+                "id": "E000001",
+                "cycle": 1,
+                "kind": "stimulus",
+                "content": "grounded source",
+                "concepts": ["grounded"],
+            }
+        ]
+        state["cognition_candidates"] = [
+            {
+                "id": "C000001",
+                "cycle": 2,
+                "status": "proposed",
+                "predicted_observation": "Repository tracked_files remains 10.",
+                "falsification": "Any tracked_files value other than 10 falsifies it.",
+                "evidence_refs": ["E000001"],
+            }
+        ]
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "cycle": 2,
+                "question_id": "Q000001",
+                "status": "proposed",
+                "readiness": "needs_specification",
+                "hypothesis": "The measured field remains stable.",
+                "method": "Observe the measured field.",
+                "falsification": "Any tracked_files value other than 10 falsifies it.",
+                "predicted_observation": "Repository tracked_files remains 10.",
+                "cognition_candidate_id": "C000001",
+            }
+        ]
+
+        update = _trace_experiment_specifications(state)
+        specification = state["experiments"][0]["specification"]
+
+        self.assertEqual(update["actionable_experiment_ids"], ["X000001"])
+        self.assertEqual(specification["actionability"], "actionable")
+        self.assertEqual(specification["missing_fields"], [])
+        self.assertEqual(specification["grounded_evidence_refs"], ["E000001"])
+        self.assertTrue(specification["current_grounded_evidence_can_supply"])
+        self.assertEqual(
+            specification["evidence_source"]["kind"],
+            "grounded_candidate_evidence",
+        )
+        self.assertNotIn("evidence_contract", state["experiments"][0])
+
+    def test_specification_trace_marks_existing_valid_contract_evidence_ready(self) -> None:
+        from agenttest.core import _trace_experiment_specifications
+
+        state = initial_state()
+        state["cycles"] = 3
+        state["predictions"] = [
+            {
+                "id": "P000001",
+                "cycle": 2,
+                "status": "pending",
+            }
+        ]
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "cycle": 2,
+                "question_id": "Q000001",
+                "status": "proposed",
+                "readiness": "evidence_ready",
+                "method": "Observe the next prediction.",
+                "evidence_contract": {
+                    "kind": "prediction_status",
+                    "prediction_id": "P000001",
+                    "expected_status": "confirmed",
+                },
+            }
+        ]
+
+        update = _trace_experiment_specifications(state)
+        experiment = state["experiments"][0]
+
+        self.assertEqual(
+            update["evidence_ready_experiment_ids"],
+            ["X000001"],
+        )
+        self.assertEqual(
+            experiment["specification"]["actionability"],
+            "evidence_ready",
+        )
+        self.assertEqual(experiment["specification"]["missing_fields"], [])
+        self.assertEqual(
+            experiment["evidence_contract"]["prediction_id"],
+            "P000001",
+        )
+
+    def test_specification_trace_is_idempotent_when_grounded_inputs_do_not_change(self) -> None:
+        from agenttest.core import _trace_experiment_specifications
+
+        state = initial_state()
+        state["cycles"] = 8
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "cycle": 1,
+                "question_id": "Q000001",
+                "status": "proposed",
+                "readiness": "needs_specification",
+                "method": "Seek a disconfirming observation.",
+                "falsification": "Name an observation.",
+            }
+        ]
+
+        first = _trace_experiment_specifications(state)
+        first_specification = json.loads(
+            json.dumps(state["experiments"][0]["specification"])
+        )
+        first_history = json.loads(
+            json.dumps(state["experiments"][0]["specification_history"])
+        )
+        state["cycles"] = 9
+        second = _trace_experiment_specifications(state)
+
+        self.assertEqual(first["changed_experiment_ids"], ["X000001"])
+        self.assertEqual(second["changed_experiment_ids"], [])
+        self.assertEqual(
+            state["experiments"][0]["specification"],
+            first_specification,
+        )
+        self.assertEqual(
+            state["experiments"][0]["specification_history"],
+            first_history,
+        )
+
+    def test_blocked_triaged_specifications_do_not_create_specification_pressure(self) -> None:
+        from agenttest.drives import choose_intention, compute_drives
+
+        state = initial_state()
+        state["cycles"] = 8
+        state["metrics"]["continuity"] = 1.0
+        state["metrics"]["self_model"] = 1.0
+        state["questions"] = [
+            {"id": f"Q{index:06d}", "status": "open"}
+            for index in range(1, 7)
+        ]
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "proposed",
+                "readiness": "needs_specification",
+                "specification": {
+                    "version": "experiment-specification-v1",
+                    "actionability": "blocked",
+                    "missing_fields": ["observable"],
+                },
+            }
+            for index in range(1, 5)
+        ]
+
+        drives = compute_drives(state)
+        intention = choose_intention(state, drives)
+
+        self.assertEqual(drives["specification_pressure"], 0.0)
+        self.assertEqual(drives["uncertainty"], 0.8)
+        self.assertEqual(intention["kind"], "reduce_uncertainty")
+        self.assertIsNone(intention["target"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
