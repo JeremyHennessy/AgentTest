@@ -4,6 +4,7 @@ import hashlib
 import json
 from typing import Any
 
+from .diagnostic_inquiry import DIAGNOSTIC_VERSION as INQUIRY_VERSION, evaluate_inquiry_families
 from .diagnostic_replay import DIAGNOSTIC_VERSION as REPLAY_VERSION, compare_replays
 from .diagnostic_self_model import DIAGNOSTIC_VERSION as SELF_MODEL_VERSION, evaluate_self_model_grounding
 from .state import utc_now
@@ -31,8 +32,8 @@ def _latest_diagnostic_review(
         if proposal_id is not None and review.get("proposal_id") != proposal_id:
             continue
         if (
-            review.get("verdict") == "measurement_gap"
-            and review.get("patch_authority") == "diagnostic_only"
+            review.get("verdict") in {"measurement_gap", "needs_evidence"}
+            and review.get("patch_authority") in {"diagnostic_only", "none"}
         ):
             return review
     return None
@@ -90,6 +91,9 @@ def run_proposal_diagnostic(
     elif target == "self_model":
         kind = "self_model_grounding"
         diagnostic_version = SELF_MODEL_VERSION
+    elif target == "open_endedness":
+        kind = "inquiry_family"
+        diagnostic_version = INQUIRY_VERSION
     else:
         return None, False
 
@@ -120,11 +124,12 @@ def run_proposal_diagnostic(
         ).encode("utf-8")
     ).hexdigest()
 
-    result = (
-        compare_replays()
-        if target == "reproducibility"
-        else evaluate_self_model_grounding(state)
-    )
+    if target == "reproducibility":
+        result = compare_replays()
+    elif target == "self_model":
+        result = evaluate_self_model_grounding(state)
+    else:
+        result = evaluate_inquiry_families(state)
     diagnostic = {
         "id": f"D{len(state.get('proposal_diagnostics', [])) + 1:06d}",
         "proposal_id": proposal["id"],

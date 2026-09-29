@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 DIMENSIONS = (
     "continuity",
@@ -43,6 +43,7 @@ CAPABILITY_CATALOG = (
     "verified read-only self-model grounding diagnostics",
     "evidence-grounded self-model calibration with explicit uncertainty",
     "baseline-scoped diagnostic re-evaluation after interventions",
+    "verified read-only inquiry-family diagnostics",
 )
 
 LIMITATION_CATALOG = (
@@ -52,6 +53,7 @@ LIMITATION_CATALOG = (
     "Diagnostic authority is limited to verified harnesses running on isolated or read-only state.",
     "Repository intervention detection identifies changed content but does not infer why it changed.",
     "Self-model calibration records evidence status but does not prove unverified capabilities.",
+    "Inquiry-family diagnostics use deterministic lexical similarity and do not establish semantic equivalence in every context.",
     "Semantic memory is lexical and co-occurrence based rather than embedding based.",
     "The world model currently represents only directly derived repository and evaluation claims.",
     "Perception is limited to explicitly implemented auditable sensors.",

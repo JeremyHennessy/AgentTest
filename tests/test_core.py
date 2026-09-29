@@ -1025,5 +1025,149 @@ class AgentCoreTests(unittest.TestCase):
             self.assertIn(limitation, limitations)
 
 
+    def test_inquiry_family_diagnostic_detects_paraphrase_churn_without_mutation(self) -> None:
+        from agenttest.diagnostic_inquiry import evaluate_inquiry_families
+
+        state = self.store.load()
+        state["questions"] = [
+            {
+                "id": f"Q{index:06d}",
+                "text": (
+                    f"What caused repository python_files to change from {index} "
+                    f"to {index + 1}, and did that change alter a verified capability?"
+                ),
+                "status": "open",
+            }
+            for index in range(1, 7)
+        ]
+        state["questions"].extend(
+            [
+                {
+                    "id": "Q000007",
+                    "text": "What evidence would distinguish memory from stored history?",
+                    "status": "open",
+                },
+                {
+                    "id": "Q000008",
+                    "text": "Which prediction failed after an unexpected observation?",
+                    "status": "open",
+                },
+            ]
+        )
+        before = json.dumps(state, sort_keys=True)
+
+        diagnostic = evaluate_inquiry_families(state)
+
+        self.assertEqual(diagnostic["outcome"], "paraphrase_churn")
+        self.assertGreaterEqual(diagnostic["largest_family_size"], 6)
+        self.assertGreaterEqual(diagnostic["duplicate_pressure"], 0.5)
+        self.assertFalse(diagnostic["source_state_mutated"])
+        self.assertEqual(before, json.dumps(state, sort_keys=True))
+
+    def test_inquiry_family_diagnostic_accepts_distinct_question_families(self) -> None:
+        from agenttest.diagnostic_inquiry import evaluate_inquiry_families
+
+        state = self.store.load()
+        state["questions"] = [
+            {
+                "id": "Q000001",
+                "text": "What evidence would demonstrate state persistence after restart?",
+                "status": "open",
+            },
+            {
+                "id": "Q000002",
+                "text": "Which observation would falsify the current repository prediction?",
+                "status": "open",
+            },
+            {
+                "id": "Q000003",
+                "text": "How should semantic memory preserve episode provenance?",
+                "status": "open",
+            },
+            {
+                "id": "Q000004",
+                "text": "Can a proposed code change preserve every verified behavior?",
+                "status": "open",
+            },
+        ]
+
+        diagnostic = evaluate_inquiry_families(state)
+
+        self.assertEqual(diagnostic["outcome"], "diverse")
+        self.assertEqual(diagnostic["largest_family_size"], 1)
+        self.assertEqual(diagnostic["duplicate_pressure"], 0.0)
+
+    def test_open_endedness_proposal_requires_and_uses_inquiry_diagnostic(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.diagnostics import run_proposal_diagnostic
+        from agenttest.proposal_review import review_change_proposal
+
+        state = self.store.load()
+        state["questions"] = [
+            {
+                "id": f"Q{index:06d}",
+                "text": (
+                    f"What caused repository python_files to change from {index} "
+                    f"to {index + 1}, and did that change alter a verified capability?"
+                ),
+                "status": "open",
+            }
+            for index in range(1, 7)
+        ]
+        proposal = make_change_manifest(
+            state,
+            title="Track inquiry families across cycles",
+            target_dimension="open_endedness",
+            files=[
+                "src/agenttest/core.py",
+                "src/agenttest/semantic.py",
+                "tests/test_core.py",
+            ],
+            hypothesis=(
+                "Explicit question-family tracking can distinguish genuine branching "
+                "from paraphrase churn."
+            ),
+            expected_effect=(
+                "Open-endedness reflects distinct evidence-grounded inquiry families."
+            ),
+            test_plan="Run the verified inquiry-family diagnostic.",
+            falsification="No paraphrase churn is detected.",
+            rollback="Revert.",
+            evidence_refs=["Q000001", "Q000002", "Q000003"],
+        )
+        proposal.update(
+            {"id": "M000001", "source": "test", "created_cycle": 1}
+        )
+        state["change_proposals"].append(proposal)
+
+        first_review, first_created = review_change_proposal(state, proposal)
+        diagnostic, diagnostic_created = run_proposal_diagnostic(
+            state,
+            proposal,
+            first_review,
+        )
+        second_review, second_created = review_change_proposal(state, proposal)
+
+        self.assertTrue(first_created)
+        self.assertEqual(first_review["verdict"], "needs_evidence")
+        self.assertEqual(first_review["patch_authority"], "none")
+        self.assertTrue(diagnostic_created)
+        self.assertEqual(diagnostic["kind"], "inquiry_family")
+        self.assertEqual(diagnostic["outcome"], "paraphrase_churn")
+        self.assertFalse(diagnostic["source_state_mutated"])
+        self.assertTrue(second_created)
+        self.assertEqual(second_review["verdict"], "supported_problem")
+        self.assertEqual(second_review["patch_authority"], "candidate_allowed")
+        self.assertEqual(second_review["direct_diagnostic_id"], diagnostic["id"])
+
+    def test_inquiry_family_diagnostic_authority_is_protected(self) -> None:
+        from agenttest.change_control import PROTECTED_PATHS
+
+        self.assertIn(
+            "src/agenttest/diagnostic_inquiry.py",
+            PROTECTED_PATHS,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
