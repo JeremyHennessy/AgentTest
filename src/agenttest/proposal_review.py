@@ -72,25 +72,38 @@ def _direct_replay_failure(
 
 
 def _learning_loop_gap(state: dict[str, Any]) -> tuple[bool, list[str]]:
-    evaluated = [
-        prediction
+    predictions = {
+        str(prediction.get("id")): prediction
         for prediction in state.get("predictions", [])
         if prediction.get("status") in {"confirmed", "violated"}
+        and prediction.get("id")
+    }
+    prediction_reflections = [
+        reflection
+        for reflection in state.get("reflections", [])
+        if reflection.get("source") == "prediction"
+        and str(reflection.get("prediction_id")) in predictions
     ]
-    evidence: list[str] = []
+
     for experiment in state.get("experiments", []):
         if experiment.get("status") != "proposed":
             continue
         created_cycle = int(experiment.get("cycle", 0))
         later = [
-            prediction
-            for prediction in evaluated
-            if int(prediction.get("cycle", 0)) > created_cycle
+            reflection
+            for reflection in prediction_reflections
+            if int(reflection.get("cycle", 0)) > created_cycle
         ]
         if later:
-            evidence.append(str(experiment["id"]))
-            evidence.extend(str(item["id"]) for item in later[-2:])
-            return True, evidence
+            refs = [str(experiment["id"])]
+            for reflection in later[-2:]:
+                prediction_id = str(reflection["prediction_id"])
+                if prediction_id not in refs:
+                    refs.append(prediction_id)
+                reflection_id = str(reflection.get("id"))
+                if reflection_id and reflection_id != "None" and reflection_id not in refs:
+                    refs.append(reflection_id)
+            return True, refs
     return False, []
 
 
