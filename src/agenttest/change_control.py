@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .cognition import known_evidence_ids
+from .evidence import known_evidence_ids
 from .state import DIMENSIONS, utc_now
 
 PROTECTED_PATHS = {
@@ -14,6 +14,7 @@ PROTECTED_PATHS = {
     "scripts/reconcile_verified_change.py",
     "scripts/experiment_design_eval.py",
     "src/agenttest/intervention.py",
+    "src/agenttest/evidence.py",
     "scripts/compare_eval.py",
     "src/agenttest/change_control.py",
     "src/agenttest/proposal_review.py",
