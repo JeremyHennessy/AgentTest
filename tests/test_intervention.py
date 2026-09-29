@@ -54,6 +54,7 @@ class VerifiedInterventionTests(unittest.TestCase):
             ],
             verify_run_id=12345,
             pr_number=28,
+            attribution_text="Accept M000008 after verified candidate evaluation.",
         )
 
         self.assertTrue(created)
@@ -75,6 +76,7 @@ class VerifiedInterventionTests(unittest.TestCase):
             changed_files=["src/agenttest/core.py"],
             verify_run_id=222,
             pr_number=28,
+            attribution_text="Accept M000008 after verified candidate evaluation.",
         )
         first, first_created = record_verified_intervention(state, **kwargs)
         second, second_created = record_verified_intervention(state, **kwargs)
@@ -95,6 +97,7 @@ class VerifiedInterventionTests(unittest.TestCase):
                 changed_files=["src/agenttest/core.py", "README.md"],
                 verify_run_id=333,
                 pr_number=28,
+            attribution_text="Accept M000008 after verified candidate evaluation.",
             )
 
         self.assertEqual(state["accepted_changes"], [])
@@ -114,6 +117,7 @@ class VerifiedInterventionTests(unittest.TestCase):
                 changed_files=["src/agenttest/core.py"],
                 verify_run_id=444,
                 pr_number=28,
+            attribution_text="Accept M000008 after verified candidate evaluation.",
                 verification_conclusion="failure",
             )
 
@@ -125,7 +129,23 @@ class VerifiedInterventionTests(unittest.TestCase):
                 changed_files=["src/agenttest/core.py"],
                 verify_run_id=445,
                 pr_number=28,
+            attribution_text="Accept M000008 after verified candidate evaluation.",
                 verification_event="pull_request",
+            )
+
+
+    def test_matching_file_scope_without_proposal_attribution_is_rejected(self) -> None:
+        state = self.supported_state()
+
+        with self.assertRaises(ValueError):
+            record_verified_intervention(
+                state,
+                proposal_id="M000008",
+                commit_sha="1" * 40,
+                changed_files=["src/agenttest/core.py"],
+                verify_run_id=777,
+                pr_number=28,
+                attribution_text="Unrelated core maintenance",
             )
 
     def test_scope_can_identify_single_matching_supported_proposal(self) -> None:
@@ -137,6 +157,7 @@ class VerifiedInterventionTests(unittest.TestCase):
             changed_files=["src/agenttest/drives.py"],
             verify_run_id=555,
             pr_number=28,
+            attribution_text="Accept M000008 after verified candidate evaluation.",
         )
 
         self.assertTrue(created)
