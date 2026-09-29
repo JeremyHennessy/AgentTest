@@ -51,6 +51,8 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose-change
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest diagnose-change
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
 
       - name: Verify invariants
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v

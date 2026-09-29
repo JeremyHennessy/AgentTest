@@ -620,6 +620,113 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(migrated["proposal_reviews"], [])
         self.assertEqual(migrated["proposal_diagnostics"], [])
 
+    def test_verified_replay_diagnostic_closes_clean_measurement_gap(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.diagnostics import run_proposal_diagnostic
+        from agenttest.proposal_review import review_change_proposal
+
+        self.core.cycle("replay gap evidence")
+        state = self.store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Add deterministic cycle replay checks",
+            target_dimension="reproducibility",
+            files=["src/agenttest/replay.py", "tests/test_core.py"],
+            hypothesis="Replay measurement can reveal drift.",
+            expected_effect="Equivalent controlled cycles can be compared.",
+            test_plan="Run a non-mutating replay comparison.",
+            falsification="Replay cannot be measured reproducibly.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "test", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+
+        first_review, first_created = review_change_proposal(state, proposal)
+        self.assertTrue(first_created)
+        self.assertEqual(first_review["verdict"], "measurement_gap")
+        self.assertEqual(first_review["patch_authority"], "diagnostic_only")
+
+        diagnostic, diagnostic_created = run_proposal_diagnostic(
+            state,
+            proposal,
+            first_review,
+        )
+        self.assertTrue(diagnostic_created)
+        self.assertEqual(diagnostic["status"], "completed")
+        self.assertEqual(diagnostic["outcome"], "stable")
+        self.assertFalse(diagnostic["source_state_mutated"])
+        self.assertEqual(diagnostic["mutation_scope"], "isolated_temp_state")
+        self.assertIsNone(diagnostic["result"]["first_difference"])
+
+        second_review, second_created = review_change_proposal(state, proposal)
+        self.assertTrue(second_created)
+        self.assertEqual(second_review["verdict"], "no_problem_observed")
+        self.assertEqual(second_review["patch_authority"], "none")
+        self.assertEqual(
+            second_review["direct_diagnostic_id"],
+            diagnostic["id"],
+        )
+        self.assertEqual(proposal["status"], "closed_no_problem_observed")
+
+        self.store.save(state)
+        result = self.core.cycle("post diagnostic evidence")
+        self.assertEqual(result["metrics"]["reproducibility"], 1.0)
+
+    def test_diagnostic_and_review_authority_paths_are_protected(self) -> None:
+        from agenttest.change_control import PROTECTED_PATHS
+
+        for path in (
+            "src/agenttest/change_control.py",
+            "src/agenttest/proposal_review.py",
+            "src/agenttest/self_proposal.py",
+            "src/agenttest/diagnostics.py",
+            "src/agenttest/diagnostic_replay.py",
+        ):
+            self.assertIn(path, PROTECTED_PATHS)
+
+    def test_replay_divergence_would_authorize_candidate_not_diagnostic_code(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.proposal_review import review_change_proposal
+
+        self.core.cycle("replay divergence evidence")
+        state = self.store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Add deterministic cycle replay checks",
+            target_dimension="reproducibility",
+            files=["src/agenttest/replay.py", "tests/test_core.py"],
+            hypothesis="Replay measurement can reveal drift.",
+            expected_effect="Equivalent controlled cycles can be compared.",
+            test_plan="Run a non-mutating replay comparison.",
+            falsification="Replay cannot be measured reproducibly.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "test", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+        first_review, _ = review_change_proposal(state, proposal)
+
+        state["proposal_diagnostics"].append(
+            {
+                "id": "D000001",
+                "proposal_id": proposal["id"],
+                "review_id": first_review["id"],
+                "target_dimension": "reproducibility",
+                "kind": "deterministic_replay",
+                "diagnostic_version": "deterministic-replay-v1",
+                "status": "completed",
+                "outcome": "divergent",
+                "source_state_mutated": False,
+            }
+        )
+        second_review, created = review_change_proposal(state, proposal)
+
+        self.assertTrue(created)
+        self.assertEqual(second_review["verdict"], "supported_problem")
+        self.assertEqual(second_review["patch_authority"], "candidate_allowed")
+        self.assertEqual(second_review["direct_diagnostic_id"], "D000001")
+
 
 if __name__ == "__main__":
     unittest.main()

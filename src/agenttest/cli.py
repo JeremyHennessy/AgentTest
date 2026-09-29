@@ -7,6 +7,7 @@ from pathlib import Path
 from .core import AgentCore
 from .evolution import propose_growth_experiment
 from .perception import repository_snapshot
+from .diagnostics import run_proposal_diagnostic
 from .proposal_review import review_change_proposal
 from .self_proposal import propose_self_change
 from .state import StateStore, utc_now
@@ -59,6 +60,15 @@ def main() -> None:
         help="Review the active self-authored manifest for evidence relevance.",
     )
     review_change.add_argument("--output", default="state/next_change_review.json")
+
+    diagnose_change = sub.add_parser(
+        "diagnose-change",
+        help="Run the smallest verified non-mutating diagnostic authorized by the active review.",
+    )
+    diagnose_change.add_argument(
+        "--output",
+        default="state/next_change_diagnostic.json",
+    )
 
     outcome = sub.add_parser("outcome", help="Record evidence from an experiment.")
     outcome.add_argument("experiment_id")
@@ -121,6 +131,30 @@ def main() -> None:
         result = {
             "created": created,
             "review": review,
+        }
+        path = Path(args.output)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        _print(result)
+    elif args.command == "diagnose-change":
+        state = store.load()
+        diagnostic, created = run_proposal_diagnostic(state)
+        if created:
+            store.save(state)
+            store.append_journal(
+                {
+                    "event": "change_proposal_diagnostic",
+                    "time": utc_now(),
+                    "cycle": state.get("cycles", 0),
+                    "diagnostic_id": diagnostic["id"] if diagnostic else None,
+                    "proposal_id": diagnostic["proposal_id"] if diagnostic else None,
+                    "kind": diagnostic["kind"] if diagnostic else None,
+                    "outcome": diagnostic["outcome"] if diagnostic else None,
+                }
+            )
+        result = {
+            "created": created,
+            "diagnostic": diagnostic,
         }
         path = Path(args.output)
         path.parent.mkdir(parents=True, exist_ok=True)

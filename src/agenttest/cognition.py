@@ -196,6 +196,8 @@ def _evidence_catalog(state: dict[str, Any]) -> list[dict[str, str]]:
     add(state.get("questions", []), "question", "text")
     add(state.get("experiments", []), "experiment", "hypothesis")
     add(state.get("reflections", []), "reflection", "lesson")
+    add(state.get("proposal_reviews", []), "proposal_review", "reason")
+    add(state.get("proposal_diagnostics", []), "proposal_diagnostic")
     for claim in current_world_claims(state, limit=8):
         catalog.append(
             {
@@ -251,6 +253,8 @@ def known_evidence_ids(state: dict[str, Any]) -> set[str]:
         "reflections",
         "cognition_events",
         "cognition_candidates",
+        "proposal_reviews",
+        "proposal_diagnostics",
     ):
         for item in state.get(key, []):
             identifier = item.get("id")

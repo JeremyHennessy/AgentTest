@@ -17,33 +17,29 @@ The project investigates whether simple, inspectable mechanisms can accumulate i
 - autonomous heartbeats on a separate growth branch;
 - a base-owned behavioral preservation gate;
 - evidence-backed self-authored change manifests;
-- evidence-relevance review that can deny patch authority.
+- evidence-relevance review that can deny patch authority;
+- verified non-mutating diagnostics that can resolve measurement gaps.
 
 ## Evolution discipline
 
-No version may call itself improved merely because code changed.
+AgentTest now separates:
 
-The evolution path now distinguishes several separate questions:
+1. whether evidence exists;
+2. whether the evidence is relevant;
+3. whether it demonstrates a defect or only a measurement gap;
+4. whether an independent verified diagnostic supports that defect;
+5. whether a later candidate preserves all verified behavior;
+6. whether the candidate adds positive evidence on its declared target.
 
-1. Is the cited evidence real?
-2. Is it relevant to the proposed target?
-3. Does it demonstrate a problem, or only a measurement gap?
-4. Does the proposed change preserve every previously verified behavior?
-5. Does the candidate produce positive evidence on its declared target?
+A self-authored candidate cannot alter the preservation evaluator, proposal authority, diagnostic authority, or autonomous-growth governance used to judge it.
 
-A failure at any earlier stage prevents later authority.
+## First self-proposal
 
-## First live self-proposal
+M000001 proposed deterministic replay checks because reproducibility had only partial evidence.
 
-The first self-authored manifest, M000001, proposes deterministic replay checks for reproducibility.
+Phase 7 correctly classified that proposal as a measurement gap rather than a demonstrated defect.
 
-Its evidence is valid but does not establish replay divergence. Under Phase 7 it is therefore a measurement-gap proposal: diagnostic work may eventually be appropriate, but the system may not claim a reproducibility defect from that evidence.
-
-## Governance
-
-Self-authored changes cannot target the verify workflow, autonomous-growth workflow, preservation evaluator/comparator, or change-control policy.
-
-The previous verified baseline supplies the evaluator used to judge future candidates.
+Phase 8 adds an independent verified replay diagnostic. If replay is stable, the proposal closes with no patch authority. Only actual normalized divergence could upgrade the proposal to a supported problem.
 
 ## About consciousness
 
