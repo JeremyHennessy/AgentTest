@@ -8,33 +8,46 @@ The project investigates whether simple, inspectable mechanisms can accumulate i
 
 - persistent episodic history;
 - auditable repository perception;
-- one-step predictions later confirmed or violated;
+- predictions later confirmed or violated;
 - internal evidence-driven intention selection;
 - optional grounded model cognition with no tools or write authority;
 - deterministic semantic memory with source episode references;
-- a temporal world-claim ledger preserving superseded observed values;
+- temporal world claims preserving superseded observations;
 - falsifiable experiments and reflections;
 - autonomous heartbeats on a separate growth branch;
 - a base-owned behavioral preservation gate;
-- evidence-backed self-authored change manifests that cannot apply code.
-
-## Evidence hierarchy
-
-Raw observations and explicit outcomes outrank derived world claims. World claims outrank semantic summaries. Semantic summaries guide retrieval. Model thoughts are proposals. Change manifests are lower-authority plans. Candidate code is not improvement until independently verified.
+- evidence-backed self-authored change manifests;
+- evidence-relevance review that can deny patch authority.
 
 ## Evolution discipline
 
 No version may call itself improved merely because code changed.
 
-Future candidates are evaluated with the previous verified BASE commit's preservation evaluator. A deliberate negative-control regression has already demonstrated that this gate rejects a known loss of behavior.
+The evolution path now distinguishes several separate questions:
 
-Self-authored manifests cannot target the verify workflow, autonomous growth workflow, preservation evaluator/comparator, or change-control policy.
+1. Is the cited evidence real?
+2. Is it relevant to the proposed target?
+3. Does it demonstrate a problem, or only a measurement gap?
+4. Does the proposed change preserve every previously verified behavior?
+5. Does the candidate produce positive evidence on its declared target?
 
-AgentTest can now decide what it would like changed. It still cannot implement that change itself.
+A failure at any earlier stage prevents later authority.
+
+## First live self-proposal
+
+The first self-authored manifest, M000001, proposes deterministic replay checks for reproducibility.
+
+Its evidence is valid but does not establish replay divergence. Under Phase 7 it is therefore a measurement-gap proposal: diagnostic work may eventually be appropriate, but the system may not claim a reproducibility defect from that evidence.
+
+## Governance
+
+Self-authored changes cannot target the verify workflow, autonomous-growth workflow, preservation evaluator/comparator, or change-control policy.
+
+The previous verified baseline supplies the evaluator used to judge future candidates.
 
 ## About consciousness
 
-AgentTest does not claim consciousness, sentience, subjective experience, or life. Those are questions that cannot be established by naming variables or generating human-like text.
+AgentTest does not claim consciousness, sentience, subjective experience, or life.
 
 ## Research question
 
