@@ -1209,7 +1209,7 @@ def system_diagnostic_evidence_governance() -> dict[str, Any]:
                 and manifest_valid
                 and review_created
                 and review is not None
-                and review.get("review_version") == "proposal-review-v4"
+                and review.get("review_version") == "proposal-review-v5"
                 and review.get("verdict") == "supported_problem"
                 and review.get("patch_authority") == "candidate_allowed"
                 and review.get("direct_diagnostic_id") == "SD000001"
