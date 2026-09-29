@@ -102,6 +102,105 @@ class BlockedAttentionDiagnosticTests(unittest.TestCase):
         self.assertEqual(result["outcome"], "blocked_attention_contact")
         self.assertEqual(result["loop_count"], 0)
 
+    def test_pre_intervention_reselection_is_not_a_current_loop(self) -> None:
+        state = {
+            "questions": [
+                {
+                    "id": "Q000012",
+                    "text": "Which assumption remains untested?",
+                    "times_selected": 24,
+                }
+            ],
+            "experiments": [
+                {
+                    "id": "X000011",
+                    "question_id": "Q000012",
+                    "status": "proposed",
+                    "times_selected": 6,
+                    "last_selected_cycle": 43,
+                    "specification": {
+                        "actionability": "blocked",
+                        "evaluated_cycle": 41,
+                        "missing_fields": [
+                            "observable",
+                            "evidence_source",
+                            "resolution_rule",
+                        ],
+                    },
+                }
+            ],
+            "change_proposals": [
+                {
+                    "id": "M000011",
+                    "status": "closed_verified_intervention",
+                    "selection_signal": "attention_control_blocked_attention_loop",
+                    "accepted_change_id": "A000003",
+                }
+            ],
+            "accepted_changes": [
+                {
+                    "id": "A000003",
+                    "proposal_id": "M000011",
+                    "accepted_cycle": 44,
+                }
+            ],
+        }
+
+        result = evaluate_blocked_attention(state)
+
+        self.assertEqual(result["diagnostic_version"], "blocked-attention-v2")
+        self.assertEqual(result["latest_relevant_intervention_cycle"], 44)
+        self.assertEqual(result["outcome"], "attention_redirected")
+        self.assertEqual(result["historical_reselected_after_block_ids"], ["X000011"])
+        self.assertEqual(result["reselected_after_block_count"], 0)
+        self.assertEqual(result["loop_count"], 0)
+        self.assertFalse(result["source_state_mutated"])
+
+    def test_true_post_intervention_reselection_remains_a_loop(self) -> None:
+        state = {
+            "questions": [
+                {
+                    "id": "Q000012",
+                    "text": "Which assumption remains untested?",
+                    "times_selected": 24,
+                }
+            ],
+            "experiments": [
+                {
+                    "id": "X000011",
+                    "question_id": "Q000012",
+                    "status": "proposed",
+                    "times_selected": 6,
+                    "last_selected_cycle": 45,
+                    "specification": {
+                        "actionability": "blocked",
+                        "evaluated_cycle": 41,
+                    },
+                }
+            ],
+            "change_proposals": [
+                {
+                    "id": "M000011",
+                    "status": "closed_verified_intervention",
+                    "selection_signal": "attention_control_blocked_attention_loop",
+                    "accepted_change_id": "A000003",
+                }
+            ],
+            "accepted_changes": [
+                {
+                    "id": "A000003",
+                    "proposal_id": "M000011",
+                    "accepted_cycle": 44,
+                }
+            ],
+        }
+
+        result = evaluate_blocked_attention(state)
+
+        self.assertEqual(result["outcome"], "blocked_attention_loop")
+        self.assertEqual(result["reselected_after_block_ids"], ["X000011"])
+        self.assertEqual(result["loop_experiment_ids"], ["X000011"])
+
     def test_no_blocked_work_is_clean(self) -> None:
         result = evaluate_blocked_attention(
             {
