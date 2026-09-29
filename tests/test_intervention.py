@@ -6,10 +6,19 @@ from agenttest.intervention import (
     CLOSED_VERIFIED_INTERVENTION,
     record_verified_intervention,
 )
+from agenttest.change_control import PROTECTED_PATHS
 from agenttest.state import initial_state
 
 
 class VerifiedInterventionTests(unittest.TestCase):
+    def test_reconciliation_authority_paths_are_protected(self) -> None:
+        for path in (
+            ".github/workflows/reconcile.yml",
+            "scripts/reconcile_verified_change.py",
+            "src/agenttest/intervention.py",
+        ):
+            self.assertIn(path, PROTECTED_PATHS)
+
     def supported_state(self) -> dict:
         state = initial_state()
         state["cycles"] = 12
