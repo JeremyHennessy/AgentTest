@@ -13,9 +13,17 @@ _TEMPLATES = {
         "Test whether prior experience changes a later choice.",
         "Present two otherwise equal choices where only one has supporting prior evidence.",
     ),
+    "semantic_memory": (
+        "Test durable semantic consolidation.",
+        "Repeat and vary concepts across episodes, then verify counts, source episode references, and associations update once without deleting raw episodes.",
+    ),
     "perception": (
         "Test whether self-observation detects a real environmental change.",
         "Change one measured repository property and verify the next observation records exactly that surprise.",
+    ),
+    "world_model": (
+        "Test temporal world-state revision.",
+        "Change one observed repository field and verify the old claim is preserved as superseded while the new current claim cites its source evidence.",
     ),
     "cognition": (
         "Test grounded generative cognition.",

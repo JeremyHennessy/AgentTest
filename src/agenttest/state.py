@@ -5,12 +5,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 DIMENSIONS = (
     "continuity",
     "memory",
+    "semantic_memory",
     "perception",
+    "world_model",
     "cognition",
     "self_model",
     "curiosity",
@@ -27,6 +29,24 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _empty_semantic_memory() -> dict[str, Any]:
+    return {
+        "last_episode_index": 0,
+        "concepts": {},
+        "associations": {},
+    }
+
+
+def _empty_world_model() -> dict[str, Any]:
+    return {
+        "claims": [],
+        "current": {},
+        "last_snapshot_index": 0,
+        "seen_prediction_status": {},
+        "seen_experiment_status": {},
+    }
+
+
 def initial_state() -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -40,11 +60,13 @@ def initial_state() -> dict[str, Any]:
         "generation": 0,
         "concept_counts": {},
         "episodes": [],
+        "semantic_memory": _empty_semantic_memory(),
         "environment_snapshots": [],
         "surprises": [],
         "predictions": [],
         "intentions": [],
         "drives": {},
+        "world_model": _empty_world_model(),
         "cognition_events": [],
         "cognition_candidates": [],
         "questions": [],
@@ -55,6 +77,8 @@ def initial_state() -> dict[str, Any]:
             "capabilities": [
                 "persistent structured state",
                 "append-only event journal",
+                "deterministic semantic consolidation with source episode references",
+                "temporal world claims that preserve superseded observed values",
                 "question generation from accumulated concepts",
                 "selection of explicit falsifiable experiments",
                 "narrow repository self-perception through auditable sensors",
@@ -63,6 +87,8 @@ def initial_state() -> dict[str, Any]:
                 "validated boundary for optional model-generated candidate thoughts",
             ],
             "limitations": [
+                "Semantic memory is lexical and co-occurrence based rather than embedding based.",
+                "The world model currently represents only directly derived repository and evaluation claims.",
                 "Perception is limited to explicitly implemented auditable sensors.",
                 "Model cognition is optional and its output is untrusted until validated.",
                 "Model cognition cannot directly modify evidence, metrics, tools, or code.",
@@ -80,11 +106,13 @@ def initial_state() -> dict[str, Any]:
 
 def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     for key, default in (
+        ("semantic_memory", _empty_semantic_memory()),
         ("environment_snapshots", []),
         ("surprises", []),
         ("predictions", []),
         ("intentions", []),
         ("drives", {}),
+        ("world_model", _empty_world_model()),
         ("cognition_events", []),
         ("cognition_candidates", []),
         ("episodes", []),
@@ -96,6 +124,18 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     ):
         state.setdefault(key, default)
 
+    semantic = state["semantic_memory"]
+    semantic.setdefault("last_episode_index", 0)
+    semantic.setdefault("concepts", {})
+    semantic.setdefault("associations", {})
+
+    world = state["world_model"]
+    world.setdefault("claims", [])
+    world.setdefault("current", {})
+    world.setdefault("last_snapshot_index", 0)
+    world.setdefault("seen_prediction_status", {})
+    world.setdefault("seen_experiment_status", {})
+
     metrics = state.setdefault("metrics", {})
     for dimension in DIMENSIONS:
         metrics.setdefault(dimension, 0.0)
@@ -103,6 +143,8 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     self_model = state.setdefault("self_model", {})
     capabilities = self_model.setdefault("capabilities", [])
     for capability in (
+        "deterministic semantic consolidation with source episode references",
+        "temporal world claims that preserve superseded observed values",
         "narrow repository self-perception through auditable sensors",
         "one-step prediction of measured repository state",
         "endogenous evidence-driven intention selection",
@@ -112,12 +154,9 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
             capabilities.append(capability)
 
     limitations = self_model.setdefault("limitations", [])
-    obsolete = {
-        "No external perception unless observations are supplied.",
-        "No model-backed generative cognition is configured.",
-    }
-    limitations[:] = [item for item in limitations if item not in obsolete]
     for limitation in (
+        "Semantic memory is lexical and co-occurrence based rather than embedding based.",
+        "The world model currently represents only directly derived repository and evaluation claims.",
         "Perception is limited to explicitly implemented auditable sensors.",
         "Model cognition is optional and its output is untrusted until validated.",
         "Model cognition cannot directly modify evidence, metrics, tools, or code.",

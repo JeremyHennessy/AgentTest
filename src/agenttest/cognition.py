@@ -7,9 +7,11 @@ import urllib.error
 import urllib.request
 from typing import Any, Protocol
 
+from .semantic import retrieve_semantic_memory
 from .state import utc_now
+from .world import current_world_claims
 
-PROMPT_VERSION = "cognition-v1"
+PROMPT_VERSION = "cognition-v2"
 DEFAULT_MODEL = "gpt-6-luna"
 RESPONSES_URL = "https://api.openai.com/v1/responses"
 
@@ -49,6 +51,7 @@ persistent evidence-driven machine growth. Produce exactly one testable candidat
 Rules:
 - Use only evidence explicitly supplied in the context.
 - Reference evidence by its supplied IDs.
+- World claims are derived summaries; prefer raw evidence when practical.
 - Do not claim an observation happened unless it appears in evidence.
 - Do not claim consciousness, subjective experience, sentience, or improvement.
 - Prefer a hypothesis that could be wrong.
@@ -67,8 +70,6 @@ class CognitionProvider(Protocol):
 
 
 class StaticCognitionProvider:
-    """Test provider. It never performs network I/O."""
-
     name = "static-test"
 
     def __init__(self, candidate: dict[str, Any]) -> None:
@@ -85,8 +86,6 @@ class StaticCognitionProvider:
 
 
 class OpenAIResponsesProvider:
-    """Small provider boundary around the Responses API; no tools are exposed."""
-
     name = "openai-responses"
 
     def __init__(
@@ -197,19 +196,39 @@ def _evidence_catalog(state: dict[str, Any]) -> list[dict[str, str]]:
     add(state.get("questions", []), "question", "text")
     add(state.get("experiments", []), "experiment", "hypothesis")
     add(state.get("reflections", []), "reflection", "lesson")
-    return catalog[-24:]
+    for claim in current_world_claims(state, limit=8):
+        catalog.append(
+            {
+                "id": claim["id"],
+                "kind": "world_claim",
+                "summary": (
+                    f"{claim['subject']} {claim['predicate']} = "
+                    f"{json.dumps(claim.get('value'), sort_keys=True)}; "
+                    f"evidence={claim.get('evidence_refs', [])}"
+                )[:500],
+            }
+        )
+    return catalog[-28:]
 
 
 def build_context(
     state: dict[str, Any],
     intention: dict[str, Any],
 ) -> dict[str, Any]:
+    query = " ".join(
+        [
+            str(intention.get("kind", "")),
+            str(intention.get("rationale", "")),
+            " ".join(str(key) for key, value in state.get("drives", {}).items() if value),
+        ]
+    )
     return {
         "cycle": state.get("cycles", 0),
         "identity": state.get("identity", {}),
         "current_drives": state.get("drives", {}),
         "current_intention": intention,
         "self_model": state.get("self_model", {}),
+        "semantic_memory": retrieve_semantic_memory(state, query, limit=8),
         "evidence": _evidence_catalog(state),
         "constraints": {
             "candidate_is_untrusted": True,
@@ -235,6 +254,10 @@ def known_evidence_ids(state: dict[str, Any]) -> set[str]:
             identifier = item.get("id")
             if identifier:
                 ids.add(str(identifier))
+    for claim in state.get("world_model", {}).get("claims", []):
+        identifier = claim.get("id")
+        if identifier:
+            ids.add(str(identifier))
     return ids
 
 
