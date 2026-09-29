@@ -48,6 +48,29 @@
         "workflow": "verify"
       },
       "verification_scope": "applied_and_preserved"
+    },
+    {
+      "accepted_at": "2026-09-29T17:30:41.420344+00:00",
+      "accepted_cycle": 44,
+      "authority": "trusted_verification_workflow",
+      "changed_files": [
+        "src/agenttest/core.py",
+        "tests/test_core.py"
+      ],
+      "commit_sha": "2e70b0b74da0b947d4bc0c43954b0285b5c9b5fd",
+      "id": "A000003",
+      "improvement_claim": "not_implied",
+      "pr_number": 45,
+      "prior_proposal_status": "reviewed_supported_problem",
+      "proposal_id": "M000011",
+      "target_dimension": "agency",
+      "verification": {
+        "conclusion": "success",
+        "event": "push",
+        "run_id": 36605404370,
+        "workflow": "verify"
+      },
+      "verification_scope": "applied_and_preserved"
     }
   ],
   "change_proposals": [
@@ -490,6 +513,7 @@
       "verified_commit_sha": "27e3c88dc322336f6b53504ab1d8eb0c71c8501d"
     },
     {
+      "accepted_change_id": "A000003",
       "baseline_metric": 1.0,
       "created_at": "2026-09-29T17:26:26.579943+00:00",
       "created_cycle": 43,
@@ -504,6 +528,7 @@
       ],
       "hypothesis": "If uncertainty-driven inquiry stops reselecting questions whose active experiment is explicitly blocked, attention can move to other unresolved evidence without deleting blocked history.",
       "id": "M000011",
+      "improvement_claim": "not_implied",
       "protected_paths": [
         ".github/workflows/growth.yml",
         ".github/workflows/interact.yml",
@@ -532,10 +557,13 @@
       "selection_signal": "attention_control_blocked_attention_loop",
       "source": "self-proposal-v1",
       "source_diagnostic_id": "SD000009",
-      "status": "reviewed_supported_problem",
+      "status": "closed_verified_intervention",
       "target_dimension": "agency",
       "test_plan": "Construct blocked and non-blocked inquiry states, verify blocked questions are skipped while eligible questions remain selectable, verify blocked history is preserved, and run the baseline-owned preservation gate.",
-      "title": "Redirect inquiry away from blocked experiments"
+      "title": "Redirect inquiry away from blocked experiments",
+      "verification_run_id": 36605404370,
+      "verification_scope": "applied_and_preserved",
+      "verified_commit_sha": "2e70b0b74da0b947d4bc0c43954b0285b5c9b5fd"
     }
   ],
   "cognition_candidates": [],
@@ -4348,7 +4376,7 @@
     }
   ],
   "metrics": {
-    "adaptation": 0.6666666666666666,
+    "adaptation": 1.0,
     "agency": 1.0,
     "cognition": 0.0,
     "continuity": 1.0,
@@ -13803,7 +13831,7 @@
       "status": "completed"
     }
   ],
-  "updated_at": "2026-09-29T17:30:29.255618+00:00",
+  "updated_at": "2026-09-29T17:30:41.420420+00:00",
   "world_model": {
     "claims": [
       {
