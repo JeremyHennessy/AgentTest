@@ -1,24 +1,135 @@
 {
-  "schema_version": 3,
-  "identity": {
-    "designation": "Genesis-0",
-    "chosen_name": null,
-    "origin": "2026-09-29",
-    "description": "A persistent experimental process, not a claim of consciousness."
-  },
-  "cycles": 0,
-  "generation": 0,
-  "concept_counts": {},
-  "episodes": [],
-  "environment_snapshots": [],
-  "surprises": [],
-  "predictions": [],
-  "intentions": [],
-  "drives": {},
-  "questions": [],
-  "experiments": [],
-  "reflections": [],
   "accepted_changes": [],
+  "concept_counts": {
+    "autonomous": 1,
+    "heartbeat": 1,
+    "observation": 1,
+    "repository": 1
+  },
+  "created_at": "2026-09-29T03:45:00+00:00",
+  "cycles": 1,
+  "drives": {
+    "calibration_gap": 0.15000000000000002,
+    "continuity_repair": 0.5,
+    "evidence_hunger": 0.0,
+    "novelty_hunger": 0.5,
+    "prediction_error": 0.0,
+    "uncertainty": 0.0
+  },
+  "environment_snapshots": [
+    {
+      "branch": "autonomous/growth",
+      "cycle": 1,
+      "fingerprint": "53501f2bc6989e59",
+      "git_available": true,
+      "head": "c7166a6f9b99478f36600985ec46f63fbe21f3e8",
+      "observed_at": "2026-09-29T03:55:18.790216+00:00",
+      "python_files": 9,
+      "python_source_lines": 1049,
+      "sensor": "repository-v1",
+      "test_files": 1,
+      "tracked_files": 16,
+      "working_tree_clean": false
+    }
+  ],
+  "episodes": [
+    {
+      "concepts": [
+        "repository",
+        "observation"
+      ],
+      "content": "{\"branch\": \"autonomous/growth\", \"cycle\": 1, \"fingerprint\": \"53501f2bc6989e59\", \"git_available\": true, \"head\": \"c7166a6f9b99478f36600985ec46f63fbe21f3e8\", \"observed_at\": \"2026-09-29T03:55:18.790216+00:00\", \"python_files\": 9, \"python_source_lines\": 1049, \"sensor\": \"repository-v1\", \"test_files\": 1, \"tracked_files\": 16, \"working_tree_clean\": false}",
+      "cycle": 1,
+      "id": "E000001",
+      "kind": "environment",
+      "time": "2026-09-29T03:55:18.790334+00:00"
+    },
+    {
+      "concepts": [
+        "autonomous",
+        "heartbeat"
+      ],
+      "content": "autonomous heartbeat",
+      "cycle": 1,
+      "id": "E000002",
+      "kind": "stimulus",
+      "time": "2026-09-29T03:55:18.790334+00:00"
+    }
+  ],
+  "experiments": [
+    {
+      "created_at": "2026-09-29T03:55:18.790512+00:00",
+      "cycle": 1,
+      "falsification": "The experiment fails if it cannot name a possible observation that would count against the hypothesis.",
+      "hypothesis": "A deliberately chosen disconfirming observation will reduce more uncertainty than collecting another confirming example.",
+      "id": "X000001",
+      "intention_id": "I000001",
+      "method": "Seek one observation that would make the current working idea less likely, and record the result before changing behavior.",
+      "question_id": "Q000001",
+      "status": "proposed"
+    }
+  ],
+  "generation": 1,
+  "identity": {
+    "chosen_name": null,
+    "description": "A persistent experimental process, not a claim of consciousness.",
+    "designation": "Genesis-0",
+    "origin": "2026-09-29"
+  },
+  "intentions": [
+    {
+      "cycle": 1,
+      "dominant_drive": "continuity_repair",
+      "id": "I000001",
+      "kind": "preserve_continuity",
+      "rationale": "continuity_repair had the highest current pressure (0.500); ties use a fixed order so the choice is reproducible.",
+      "strength": 0.5,
+      "target": null
+    }
+  ],
+  "metrics": {
+    "adaptation": 0.0,
+    "agency": 0.2,
+    "continuity": 0.5,
+    "curiosity": 0.2,
+    "learning": 0.0,
+    "memory": 0.5,
+    "open_endedness": 1.0,
+    "perception": 0.3333333333333333,
+    "reflection": 0.0,
+    "reproducibility": 0.8,
+    "self_model": 0.85
+  },
+  "predictions": [
+    {
+      "created_at": "2026-09-29T03:55:18.790334+00:00",
+      "cycle": 1,
+      "expected": {
+        "branch": "autonomous/growth",
+        "python_files": 9,
+        "python_source_lines": 1049,
+        "test_files": 1,
+        "tracked_files": 16,
+        "working_tree_clean": false
+      },
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "id": "P000001",
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening change occurs.",
+      "status": "pending"
+    }
+  ],
+  "questions": [
+    {
+      "created_cycle": 1,
+      "id": "Q000001",
+      "last_selected_cycle": 1,
+      "status": "open",
+      "text": "What observation could distinguish whether autonomous and heartbeat are meaningfully related rather than merely co-occurring?",
+      "times_selected": 1
+    }
+  ],
+  "reflections": [],
+  "schema_version": 3,
   "self_model": {
     "capabilities": [
       "persistent structured state",
@@ -29,28 +140,15 @@
       "one-step prediction of measured repository state",
       "endogenous evidence-driven intention selection"
     ],
+    "last_updated_cycle": 1,
     "limitations": [
       "Perception is limited to explicitly implemented auditable sensors.",
       "No model-backed generative cognition is configured.",
       "Environmental actions are not independently executed.",
       "No evidence currently establishes consciousness or subjective experience.",
       "Code changes are proposals until independently evaluated."
-    ],
-    "last_updated_cycle": 0
+    ]
   },
-  "metrics": {
-    "continuity": 0.0,
-    "memory": 0.0,
-    "perception": 0.0,
-    "self_model": 0.0,
-    "curiosity": 0.0,
-    "agency": 0.0,
-    "learning": 0.0,
-    "adaptation": 0.0,
-    "reflection": 0.0,
-    "open_endedness": 0.0,
-    "reproducibility": 0.0
-  },
-  "created_at": "2026-09-29T03:45:00+00:00",
-  "updated_at": "2026-09-29T03:45:00+00:00"
+  "surprises": [],
+  "updated_at": "2026-09-29T03:55:18.790552+00:00"
 }
