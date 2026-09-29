@@ -11,6 +11,9 @@ class PagesInteractionTests(unittest.TestCase):
 
         self.assertIn("AgentTest · Persistent Growth Console", page)
         self.assertIn("autonomous/growth/state/last_interaction.json", page)
+        self.assertIn("autonomous/growth/state/organism.json", page)
+        self.assertIn("Bounded Action Lab", page)
+        self.assertIn("renderActionLab", page)
         self.assertIn("https://github.com/JeremyHennessy/AgentTest/issues/new", page)
         self.assertIn('body: "/agent " + message', page)
         self.assertNotIn("github_pat_", page)
