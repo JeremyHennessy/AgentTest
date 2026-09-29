@@ -1203,5 +1203,92 @@ class AgentCoreTests(unittest.TestCase):
         )
 
 
+    def test_runtime_inquiry_metric_collapses_paraphrase_family_without_deleting_history(self) -> None:
+        from agenttest.diagnostic_inquiry import evaluate_inquiry_families
+        from agenttest.semantic import consolidate_inquiry_families
+
+        state = self.store.load()
+        state["cycles"] = 6
+        state["questions"] = [
+            {
+                "id": f"Q{index:06d}",
+                "text": (
+                    f"What caused repository python_files to change from {index} "
+                    f"to {index + 1}, and did that change alter a verified capability?"
+                ),
+                "status": "open",
+            }
+            for index in range(1, 7)
+        ]
+        original_questions = json.loads(json.dumps(state["questions"]))
+
+        summary = consolidate_inquiry_families(state)
+        self.core._update_metrics(state)
+        diagnostic = evaluate_inquiry_families(state)
+
+        self.assertEqual(summary["question_count"], 6)
+        self.assertEqual(summary["family_count"], 1)
+        self.assertEqual(summary["open_endedness"], 1.0 / 6.0)
+        self.assertEqual(state["metrics"]["open_endedness"], 1.0 / 6.0)
+        self.assertEqual(state["questions"], original_questions)
+        self.assertEqual(set(summary["question_to_family"].values()), {"F001"})
+        self.assertEqual(diagnostic["outcome"], "paraphrase_churn")
+        self.assertEqual(diagnostic["metric_status"], "aligned")
+        self.assertAlmostEqual(diagnostic["metric_gap"], 0.0)
+
+    def test_runtime_inquiry_metric_preserves_distinct_question_families(self) -> None:
+        from agenttest.diagnostic_inquiry import evaluate_inquiry_families
+        from agenttest.semantic import consolidate_inquiry_families
+
+        state = self.store.load()
+        state["cycles"] = 4
+        state["questions"] = [
+            {
+                "id": "Q000001",
+                "text": "What evidence would demonstrate state persistence after restart?",
+                "status": "open",
+            },
+            {
+                "id": "Q000002",
+                "text": "Which observation would falsify the current repository prediction?",
+                "status": "open",
+            },
+            {
+                "id": "Q000003",
+                "text": "How should semantic memory preserve episode provenance?",
+                "status": "open",
+            },
+            {
+                "id": "Q000004",
+                "text": "Can a proposed code change preserve every verified behavior?",
+                "status": "open",
+            },
+        ]
+
+        summary = consolidate_inquiry_families(state)
+        self.core._update_metrics(state)
+        diagnostic = evaluate_inquiry_families(state)
+
+        self.assertEqual(summary["family_count"], 4)
+        self.assertEqual(state["metrics"]["open_endedness"], 1.0)
+        self.assertEqual(diagnostic["outcome"], "diverse")
+        self.assertEqual(diagnostic["metric_status"], "aligned")
+        self.assertAlmostEqual(diagnostic["metric_gap"], 0.0)
+
+    def test_cycle_persists_inquiry_family_summary(self) -> None:
+        result = self.core.cycle("inquiry family runtime evidence")
+        state = self.store.load()
+
+        self.assertIn("inquiry_update", result)
+        self.assertIn("inquiry_families", state["semantic_memory"])
+        summary = state["semantic_memory"]["inquiry_families"]
+        self.assertEqual(summary["updated_cycle"], state["cycles"])
+        self.assertEqual(summary["question_count"], len(state["questions"]))
+        self.assertEqual(
+            state["metrics"]["open_endedness"],
+            summary["open_endedness"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
