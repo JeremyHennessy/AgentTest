@@ -1850,7 +1850,21 @@ class AgentCoreTests(unittest.TestCase):
             "times_selected": 1,
             "last_selected_cycle": 4,
         }
-        state["questions"] = [blocked_question, eligible_question]
+        state["questions"] = [
+            blocked_question,
+            eligible_question,
+            {
+                "id": "Q000003",
+                "text": (
+                    "What smallest reversible experiment could increase continuity "
+                    "without reducing reproducibility?"
+                ),
+                "status": "closed",
+                "created_cycle": 3,
+                "times_selected": 1,
+                "last_selected_cycle": 3,
+            },
+        ]
         state["experiments"] = [
             {
                 "id": "X000001",
@@ -1896,7 +1910,18 @@ class AgentCoreTests(unittest.TestCase):
                 "created_cycle": 1,
                 "times_selected": 8,
                 "last_selected_cycle": 19,
-            }
+            },
+            {
+                "id": "Q000002",
+                "text": (
+                    "What smallest reversible experiment could increase continuity "
+                    "without reducing reproducibility?"
+                ),
+                "status": "closed",
+                "created_cycle": 2,
+                "times_selected": 1,
+                "last_selected_cycle": 2,
+            },
         ]
         state["experiments"] = [
             {
@@ -1941,7 +1966,18 @@ class AgentCoreTests(unittest.TestCase):
                 "created_cycle": 1,
                 "times_selected": 3,
                 "last_selected_cycle": 19,
-            }
+            },
+            {
+                "id": "Q000002",
+                "text": (
+                    "What smallest reversible experiment could increase continuity "
+                    "without reducing reproducibility?"
+                ),
+                "status": "closed",
+                "created_cycle": 2,
+                "times_selected": 1,
+                "last_selected_cycle": 2,
+            },
         ]
         state["experiments"] = []
         state["concept_counts"] = {}
