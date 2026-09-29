@@ -1060,10 +1060,11 @@ class AgentCoreTests(unittest.TestCase):
 
         diagnostic = evaluate_inquiry_families(state)
 
-        self.assertEqual(diagnostic["outcome"], "metric_inflation")
+        self.assertEqual(diagnostic["outcome"], "paraphrase_churn")
         self.assertGreaterEqual(diagnostic["largest_family_size"], 6)
         self.assertGreaterEqual(diagnostic["duplicate_pressure"], 0.5)
         self.assertGreater(diagnostic["metric_gap"], 0.05)
+        self.assertEqual(diagnostic["metric_status"], "inflated")
         self.assertFalse(diagnostic["source_state_mutated"])
         self.assertEqual(before, json.dumps(state, sort_keys=True))
 
@@ -1160,7 +1161,7 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(first_review["patch_authority"], "none")
         self.assertTrue(diagnostic_created)
         self.assertEqual(diagnostic["kind"], "inquiry_family")
-        self.assertEqual(diagnostic["outcome"], "metric_inflation")
+        self.assertEqual(diagnostic["outcome"], "paraphrase_churn")
         self.assertFalse(diagnostic["source_state_mutated"])
         self.assertTrue(second_created)
         self.assertEqual(second_review["verdict"], "supported_problem")
@@ -1187,10 +1188,8 @@ class AgentCoreTests(unittest.TestCase):
 
         diagnostic = evaluate_inquiry_families(state)
 
-        self.assertEqual(
-            diagnostic["outcome"],
-            "paraphrase_churn_metric_aligned",
-        )
+        self.assertEqual(diagnostic["outcome"], "paraphrase_churn")
+        self.assertEqual(diagnostic["metric_status"], "aligned")
         self.assertAlmostEqual(diagnostic["metric_gap"], 0.0)
         self.assertEqual(diagnostic["family_count"], 1)
 
