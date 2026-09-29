@@ -13,7 +13,7 @@ from agenttest.core import AgentCore
 from agenttest.evolution import propose_growth_experiment
 from agenttest.perception import repository_snapshot
 from agenttest.semantic import retrieve_semantic_memory
-from agenttest.state import SCHEMA_VERSION, StateStore
+from agenttest.state import CAPABILITY_CATALOG, LIMITATION_CATALOG, SCHEMA_VERSION, StateStore, initial_state
 from agenttest.world import current_world_claims
 
 
@@ -966,6 +966,63 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(claim["status"], "unverified")
         self.assertEqual(claim["evidence_refs"], [])
         self.assertIn("No explicit calibration rule", claim["reason"])
+
+
+    def test_canonical_capability_catalog_is_unique_and_used_by_initial_state(self) -> None:
+        state = initial_state()
+
+        self.assertEqual(len(CAPABILITY_CATALOG), len(set(CAPABILITY_CATALOG)))
+        self.assertEqual(len(LIMITATION_CATALOG), len(set(LIMITATION_CATALOG)))
+        self.assertEqual(
+            state["self_model"]["capabilities"],
+            list(CAPABILITY_CATALOG),
+        )
+        self.assertEqual(
+            state["self_model"]["limitations"],
+            list(LIMITATION_CATALOG),
+        )
+        self.assertIn(
+            "baseline-scoped diagnostic re-evaluation after interventions",
+            CAPABILITY_CATALOG,
+        )
+        self.assertIn(
+            "evidence-grounded self-model calibration with explicit uncertainty",
+            CAPABILITY_CATALOG,
+        )
+
+    def test_state_migration_deduplicates_and_adds_canonical_self_model_entries(self) -> None:
+        legacy = {
+            "schema_version": 10,
+            "cycles": 3,
+            "generation": 3,
+            "self_model": {
+                "capabilities": [
+                    "persistent structured state",
+                    "persistent structured state",
+                    "custom experimental capability",
+                ],
+                "limitations": [
+                    "Custom limitation.",
+                    "Custom limitation.",
+                ],
+            },
+            "metrics": {},
+        }
+        self.state_path.write_text(json.dumps(legacy), encoding="utf-8")
+
+        migrated = self.store.load()
+        capabilities = migrated["self_model"]["capabilities"]
+        limitations = migrated["self_model"]["limitations"]
+
+        self.assertEqual(migrated["schema_version"], SCHEMA_VERSION)
+        self.assertEqual(len(capabilities), len(set(capabilities)))
+        self.assertEqual(len(limitations), len(set(limitations)))
+        self.assertIn("custom experimental capability", capabilities)
+        self.assertIn("Custom limitation.", limitations)
+        for capability in CAPABILITY_CATALOG:
+            self.assertIn(capability, capabilities)
+        for limitation in LIMITATION_CATALOG:
+            self.assertIn(limitation, limitations)
 
 
 if __name__ == "__main__":
