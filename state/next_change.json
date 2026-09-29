@@ -1,20 +1,21 @@
 {
-  "created": false,
+  "created": true,
   "proposal": {
     "baseline_metric": 1.0,
-    "created_at": "2026-09-29T17:26:26.579943+00:00",
-    "created_cycle": 43,
+    "created_at": "2026-09-29T17:34:54.173881+00:00",
+    "created_cycle": 45,
     "evidence_refs": [
-      "SD000009"
+      "SD000012"
     ],
-    "expected_effect": "A blocked experiment and its question remain preserved, but uncertainty-driven selection does not return to them until grounded evidence changes their actionability.",
-    "falsification": "Reject if blocked work is deleted, attention still loops on the blocked question, eligible inquiry is suppressed, or preserved behavior regresses.",
+    "expected_effect": "Underspecified experiments retain their history while recording what contract fields are missing and whether current grounded evidence can supply them; blocked work does not masquerade as executable experimentation.",
+    "falsification": "Reject if the candidate invents observables or evidence references, hides unresolved backlog, promotes blocked work to evidence-ready, or regresses preserved behavior.",
     "files": [
       "src/agenttest/core.py",
+      "src/agenttest/drives.py",
       "tests/test_core.py"
     ],
-    "hypothesis": "If uncertainty-driven inquiry stops reselecting questions whose active experiment is explicitly blocked, attention can move to other unresolved evidence without deleting blocked history.",
-    "id": "M000011",
+    "hypothesis": "Explicitly tracing each missing observable, evidence source, and resolution rule can distinguish internally resolvable experiment specifications from work blocked on unavailable evidence without inventing facts.",
+    "id": "M000012",
     "protected_paths": [
       ".github/workflows/growth.yml",
       ".github/workflows/interact.yml",
@@ -39,13 +40,13 @@
     ],
     "rollback": "Revert the candidate change and restore the previous verified baseline.",
     "schema_version": 1,
-    "selection_rationale": "Protected system diagnostic SD000009 reported blocked_attention_loop; this direct diagnostic signal takes priority over aggregate metric saturation.",
-    "selection_signal": "attention_control_blocked_attention_loop",
+    "selection_rationale": "Protected system diagnostic SD000012 reported specification_backlog; this direct diagnostic signal takes priority over aggregate metric saturation.",
+    "selection_signal": "experiment_design_specification_backlog",
     "source": "self-proposal-v1",
-    "source_diagnostic_id": "SD000009",
-    "status": "reviewed_supported_problem",
-    "target_dimension": "agency",
-    "test_plan": "Construct blocked and non-blocked inquiry states, verify blocked questions are skipped while eligible questions remain selectable, verify blocked history is preserved, and run the baseline-owned preservation gate.",
-    "title": "Redirect inquiry away from blocked experiments"
+    "source_diagnostic_id": "SD000012",
+    "status": "proposed",
+    "target_dimension": "learning",
+    "test_plan": "Construct experiments with and without grounded resolvable evidence, verify missing contract fields and resolution paths are explicit, verify no evidence reference or executable contract is fabricated, and run the baseline-owned preservation gate.",
+    "title": "Triage experiment specification backlog"
   }
 }
