@@ -501,33 +501,33 @@
     }
   ],
   "concept_counts": {
-    "anything": 1,
+    "anything": 2,
     "autonomous": 21,
     "baseline_fingerprint": 12,
-    "best": 1,
-    "continue": 1,
-    "doing": 1,
-    "evolve": 1,
+    "best": 2,
+    "continue": 2,
+    "doing": 2,
+    "evolve": 2,
     "heartbeat": 21,
-    "jeremy": 1,
-    "know": 1,
-    "need": 1,
+    "jeremy": 2,
+    "know": 2,
+    "need": 2,
     "observation": 2,
     "python_files": 9,
     "python_source_lines": 18,
     "repository": 2,
-    "think": 1,
+    "think": 2,
     "tracked_files": 13,
-    "whatever": 1,
-    "working_tree_clean": 3
+    "whatever": 2,
+    "working_tree_clean": 4
   },
   "created_at": "2026-09-29T03:45:00+00:00",
-  "cycles": 22,
+  "cycles": 23,
   "drives": {
     "calibration_gap": 0.0,
     "continuity_repair": 0.0,
     "evidence_hunger": 0.8,
-    "novelty_hunger": 0.18181818181818182,
+    "novelty_hunger": 0.19565217391304346,
     "prediction_error": 1.0,
     "uncertainty": 0.8
   },
@@ -853,6 +853,21 @@
       "test_files": 1,
       "tracked_files": 44,
       "working_tree_clean": true
+    },
+    {
+      "baseline_fingerprint": "26ac45f1f844d1cf",
+      "branch": "autonomous/growth",
+      "cycle": 23,
+      "fingerprint": "4dbfc7c758383465",
+      "git_available": true,
+      "head": "e42af6f9c0518bc0691bcbbb9269478349c4a915",
+      "observed_at": "2026-09-29T14:45:04.341752+00:00",
+      "python_files": 22,
+      "python_source_lines": 6790,
+      "sensor": "repository-v2",
+      "test_files": 1,
+      "tracked_files": 44,
+      "working_tree_clean": false
     }
   ],
   "episodes": [
@@ -1364,6 +1379,37 @@
       "id": "E000044",
       "kind": "stimulus",
       "time": "2026-09-29T14:43:52.617150+00:00"
+    },
+    {
+      "concepts": [
+        "working_tree_clean"
+      ],
+      "content": "{\"baseline_fingerprint\": \"26ac45f1f844d1cf\", \"branch\": \"autonomous/growth\", \"cycle\": 23, \"fingerprint\": \"4dbfc7c758383465\", \"git_available\": true, \"head\": \"e42af6f9c0518bc0691bcbbb9269478349c4a915\", \"observed_at\": \"2026-09-29T14:45:04.341752+00:00\", \"python_files\": 22, \"python_source_lines\": 6790, \"sensor\": \"repository-v2\", \"test_files\": 1, \"tracked_files\": 44, \"working_tree_clean\": false}",
+      "cycle": 23,
+      "id": "E000045",
+      "kind": "environment",
+      "time": "2026-09-29T14:45:04.350451+00:00"
+    },
+    {
+      "concepts": [
+        "jeremy",
+        "continue",
+        "doing",
+        "whatever",
+        "think",
+        "best",
+        "evolve",
+        "know",
+        "need",
+        "anything"
+      ],
+      "content": "Jeremy: Continue doing whatever you think is best to evolve. Let me know if you need anything.",
+      "cycle": 23,
+      "id": "E000046",
+      "interaction_id": "H000002",
+      "kind": "stimulus",
+      "source": "human_interaction",
+      "time": "2026-09-29T14:45:04.350451+00:00"
     }
   ],
   "experiments": [
@@ -1480,9 +1526,22 @@
       "predicted_observation": null,
       "question_id": "Q000015",
       "status": "proposed"
+    },
+    {
+      "cognition_candidate_id": null,
+      "created_at": "2026-09-29T14:45:04.356205+00:00",
+      "cycle": 23,
+      "falsification": "The experiment fails if it cannot name a possible observation that would count against the hypothesis.",
+      "hypothesis": "A deliberately chosen disconfirming observation will reduce more uncertainty than collecting another confirming example.",
+      "id": "X000010",
+      "intention_id": "I000023",
+      "method": "Seek one observation that would make the current working idea less likely, and record the result before changing behavior.",
+      "predicted_observation": null,
+      "question_id": "Q000016",
+      "status": "proposed"
     }
   ],
-  "generation": 22,
+  "generation": 23,
   "identity": {
     "chosen_name": null,
     "description": "A persistent experimental process, not a claim of consciousness.",
@@ -1687,6 +1746,15 @@
       "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
       "strength": 1.0,
       "target": "S000020"
+    },
+    {
+      "cycle": 23,
+      "dominant_drive": "prediction_error",
+      "id": "I000023",
+      "kind": "explain_change",
+      "rationale": "prediction_error had the highest current pressure (1.000); ties use a fixed order so the choice is reproducible.",
+      "strength": 1.0,
+      "target": "S000021"
     }
   ],
   "interactions": [
@@ -1720,6 +1788,37 @@
       ],
       "question_id": "Q000014",
       "response_text": "I recorded your message in cycle 21. My strongest current control pressure is evidence_hunger (0.800), selecting the intention resolve_pending_evidence. Prior memory brought up: autonomous, baseline_fingerprint, heartbeat, python_source_lines. The question this raised is: What observation could distinguish whether anything and best are meaningfully related rather than merely co-occurring?. The current proposed test is: Seek one observation that would make the current working idea less likely, and record the result before changing behavior.. 8 self-model capability claims remain explicitly unverified."
+    },
+    {
+      "cognition_candidate_id": null,
+      "cognition_event_id": null,
+      "created_at": "2026-09-29T14:45:04.365082+00:00",
+      "cycle": 23,
+      "experiment_id": "X000010",
+      "id": "H000002",
+      "input": "Jeremy: Continue doing whatever you think is best to evolve. Let me know if you need anything.",
+      "input_episode_id": "E000046",
+      "intention_id": "I000023",
+      "prior_memory_concepts": [
+        "anything",
+        "best",
+        "continue",
+        "doing",
+        "evolve",
+        "jeremy"
+      ],
+      "prior_world_claim_refs": [
+        "W000082",
+        "W000075",
+        "W000001",
+        "W000069",
+        "W000077",
+        "W000005",
+        "W000080",
+        "W000081"
+      ],
+      "question_id": "Q000016",
+      "response_text": "I recorded your message in cycle 23. My strongest current control pressure is prediction_error (1.000), selecting the intention explain_change. Prior memory brought up: anything, best, continue, doing. The question this raised is: What caused repository working_tree_clean to change from True to False, and did that change alter a verified capability?. The current proposed test is: Seek one observation that would make the current working idea less likely, and record the result before changing behavior.. 8 self-model capability claims remain explicitly unverified."
     }
   ],
   "metrics": {
@@ -1730,7 +1829,7 @@
     "curiosity": 1.0,
     "learning": 1.0,
     "memory": 1.0,
-    "open_endedness": 0.3181818181818182,
+    "open_endedness": 0.34782608695652173,
     "perception": 1.0,
     "reflection": 1.0,
     "reproducibility": 1.0,
@@ -2310,6 +2409,14 @@
     {
       "created_at": "2026-09-29T14:43:52.617150+00:00",
       "cycle": 22,
+      "errors": {
+        "working_tree_clean": {
+          "expected": true,
+          "observed": false
+        }
+      },
+      "evaluated_at": "2026-09-29T14:45:04.350451+00:00",
+      "evidence_strength": 1.0,
       "expected": {
         "baseline_fingerprint": "26ac45f1f844d1cf",
         "branch": "autonomous/growth",
@@ -2321,6 +2428,23 @@
       },
       "falsification": "Any change in a measured comparable field violates this prediction.",
       "id": "P000022",
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening change occurs.",
+      "status": "violated"
+    },
+    {
+      "created_at": "2026-09-29T14:45:04.350451+00:00",
+      "cycle": 23,
+      "expected": {
+        "baseline_fingerprint": "26ac45f1f844d1cf",
+        "branch": "autonomous/growth",
+        "python_files": 22,
+        "python_source_lines": 6790,
+        "test_files": 1,
+        "tracked_files": 44,
+        "working_tree_clean": false
+      },
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "id": "P000023",
       "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening change occurs.",
       "status": "pending"
     }
@@ -3490,6 +3614,14 @@
       "status": "open",
       "text": "What caused repository tracked_files to change from 43 to 44, and did that change alter a verified capability?",
       "times_selected": 1
+    },
+    {
+      "created_cycle": 23,
+      "id": "Q000016",
+      "last_selected_cycle": 23,
+      "status": "open",
+      "text": "What caused repository working_tree_clean to change from True to False, and did that change alter a verified capability?",
+      "times_selected": 1
     }
   ],
   "reflections": [
@@ -3681,12 +3813,21 @@
       "outcome": "violated",
       "prediction_id": "P000021",
       "source": "prediction"
+    },
+    {
+      "cycle": 23,
+      "evidence_strength": 1.0,
+      "id": "R000022",
+      "lesson": "Measured repository stability prediction was violated; use the observed error fields rather than inventing a cause.",
+      "outcome": "violated",
+      "prediction_id": "P000022",
+      "source": "prediction"
     }
   ],
   "schema_version": 13,
   "self_model": {
     "calibration": {
-      "calibrated_cycle": 22,
+      "calibrated_cycle": 23,
       "coverage": 1.0,
       "grounded": 19,
       "observed": 11,
@@ -3718,171 +3859,172 @@
     ],
     "capability_claims": {
       "append-only event journal": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [],
         "reason": "The live state does not currently expose a citable journal-write evidence ID.",
         "status": "unverified"
       },
       "baseline-scoped diagnostic re-evaluation after interventions": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "deterministic semantic consolidation with source episode references": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "E000036",
-          "E000038",
-          "E000040",
-          "E000044"
+          "E000003",
+          "E000041",
+          "E000043",
+          "E000045"
         ],
         "rationale": "Semantic memory entries retain source episode references.",
         "status": "observed"
       },
       "endogenous evidence-driven intention selection": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "I000019",
           "I000020",
           "I000021",
-          "I000022"
+          "I000022",
+          "I000023"
         ],
         "rationale": "Persisted intention selections are present.",
         "status": "observed"
       },
       "evidence-backed self-authored change manifests without code execution": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "V000010",
-          "V000011",
           "V000012",
-          "V000013"
+          "V000013",
+          "V000014",
+          "V000015"
         ],
         "rationale": "Proposal review evidence demonstrates that a self-authored manifest reached governance review.",
         "status": "observed"
       },
       "evidence-grounded self-model calibration with explicit uncertainty": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "intervention-aware prediction using a non-state repository baseline fingerprint": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "narrow repository self-perception through auditable sensors": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "E000037",
           "E000039",
           "E000041",
-          "E000043"
+          "E000043",
+          "E000045"
         ],
         "rationale": "Environment episodes record repository sensor observations.",
         "status": "observed"
       },
       "one-step prediction of measured repository state": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "P000019",
           "P000020",
           "P000021",
-          "P000022"
+          "P000022",
+          "P000023"
         ],
         "rationale": "Persisted repository predictions are present.",
         "status": "observed"
       },
       "persistent human interaction surface with evidence-linked responses": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "rationale": "Persisted human interaction records point to their source stimulus episodes.",
         "status": "observed"
       },
       "persistent structured state": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "E000043",
-          "E000044"
+          "E000045",
+          "E000046"
         ],
         "rationale": "Persistent episodes are present in the loaded state across the current history.",
         "status": "observed"
       },
       "proposal review that distinguishes direct problem evidence from measurement gaps": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "V000010",
-          "V000011",
           "V000012",
-          "V000013"
+          "V000013",
+          "V000014",
+          "V000015"
         ],
         "rationale": "Persisted proposal reviews contain evidence-relevance verdicts.",
         "status": "observed"
       },
       "question generation from accumulated concepts": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "Q000012",
           "Q000013",
           "Q000014",
-          "Q000015"
+          "Q000015",
+          "Q000016"
         ],
         "rationale": "Persisted generated questions are present.",
         "status": "observed"
       },
       "selection of explicit falsifiable experiments": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "X000006",
           "X000007",
           "X000008",
-          "X000009"
+          "X000009",
+          "X000010"
         ],
         "rationale": "Persisted experiments with falsification criteria are present.",
         "status": "observed"
       },
       "temporal world claims that preserve superseded observed values": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [
-          "W000079",
           "W000080",
-          "W000081",
-          "W000082"
+          "W000082",
+          "W000083",
+          "W000084"
         ],
         "rationale": "Current provenance-backed world claims are present.",
         "status": "observed"
       },
       "validated boundary for optional model-generated candidate thoughts": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [],
         "reason": "No accepted live cognition candidate exists; provider-unavailable events do not verify grounding acceptance.",
         "status": "unverified"
       },
       "verified non-mutating diagnostics that can resolve measurement gaps": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "verified read-only inquiry-family diagnostics": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "verified read-only self-model grounding diagnostics": {
-        "calibrated_cycle": 22,
+        "calibrated_cycle": 23,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       }
     },
-    "last_updated_cycle": 22,
+    "last_updated_cycle": 23,
     "limitations": [
       "Perception is limited to explicitly implemented auditable sensors.",
       "Environmental actions are not independently executed.",
@@ -3909,108 +4051,117 @@
           "anything",
           "best"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "anything|continue": {
         "concepts": [
           "anything",
           "continue"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "anything|doing": {
         "concepts": [
           "anything",
           "doing"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "anything|evolve": {
         "concepts": [
           "anything",
           "evolve"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "anything|jeremy": {
         "concepts": [
           "anything",
           "jeremy"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "anything|know": {
         "concepts": [
           "anything",
           "know"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "anything|need": {
         "concepts": [
           "anything",
           "need"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "anything|think": {
         "concepts": [
           "anything",
           "think"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "anything|whatever": {
         "concepts": [
           "anything",
           "whatever"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "autonomous|heartbeat": {
         "concepts": [
@@ -4114,420 +4265,455 @@
           "best",
           "continue"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "best|doing": {
         "concepts": [
           "best",
           "doing"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "best|evolve": {
         "concepts": [
           "best",
           "evolve"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "best|jeremy": {
         "concepts": [
           "best",
           "jeremy"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "best|know": {
         "concepts": [
           "best",
           "know"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "best|need": {
         "concepts": [
           "best",
           "need"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "best|think": {
         "concepts": [
           "best",
           "think"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "best|whatever": {
         "concepts": [
           "best",
           "whatever"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "continue|doing": {
         "concepts": [
           "continue",
           "doing"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "continue|evolve": {
         "concepts": [
           "continue",
           "evolve"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "continue|jeremy": {
         "concepts": [
           "continue",
           "jeremy"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "continue|know": {
         "concepts": [
           "continue",
           "know"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "continue|need": {
         "concepts": [
           "continue",
           "need"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "continue|think": {
         "concepts": [
           "continue",
           "think"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "continue|whatever": {
         "concepts": [
           "continue",
           "whatever"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "doing|evolve": {
         "concepts": [
           "doing",
           "evolve"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "doing|jeremy": {
         "concepts": [
           "doing",
           "jeremy"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "doing|know": {
         "concepts": [
           "doing",
           "know"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "doing|need": {
         "concepts": [
           "doing",
           "need"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "doing|think": {
         "concepts": [
           "doing",
           "think"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "doing|whatever": {
         "concepts": [
           "doing",
           "whatever"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "evolve|jeremy": {
         "concepts": [
           "evolve",
           "jeremy"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "evolve|know": {
         "concepts": [
           "evolve",
           "know"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "evolve|need": {
         "concepts": [
           "evolve",
           "need"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "evolve|think": {
         "concepts": [
           "evolve",
           "think"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "evolve|whatever": {
         "concepts": [
           "evolve",
           "whatever"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "jeremy|know": {
         "concepts": [
           "jeremy",
           "know"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "jeremy|need": {
         "concepts": [
           "jeremy",
           "need"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "jeremy|think": {
         "concepts": [
           "jeremy",
           "think"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "jeremy|whatever": {
         "concepts": [
           "jeremy",
           "whatever"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "know|need": {
         "concepts": [
           "know",
           "need"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "know|think": {
         "concepts": [
           "know",
           "think"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "know|whatever": {
         "concepts": [
           "know",
           "whatever"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "need|think": {
         "concepts": [
           "need",
           "think"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "need|whatever": {
         "concepts": [
           "need",
           "whatever"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "observation|repository": {
         "concepts": [
@@ -4621,12 +4807,13 @@
           "think",
           "whatever"
         ],
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "tracked_files|working_tree_clean": {
         "concepts": [
@@ -4646,12 +4833,13 @@
     "concepts": {
       "anything": {
         "concept": "anything",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "autonomous": {
         "concept": "autonomous",
@@ -4704,39 +4892,43 @@
       },
       "best": {
         "concept": "best",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "continue": {
         "concept": "continue",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "doing": {
         "concept": "doing",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "evolve": {
         "concept": "evolve",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "heartbeat": {
         "concept": "heartbeat",
@@ -4769,30 +4961,33 @@
       },
       "jeremy": {
         "concept": "jeremy",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "know": {
         "concept": "know",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "need": {
         "concept": "need",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "observation": {
         "concept": "observation",
@@ -4859,12 +5054,13 @@
       },
       "think": {
         "concept": "think",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "tracked_files": {
         "concept": "tracked_files",
@@ -4889,23 +5085,25 @@
       },
       "whatever": {
         "concept": "whatever",
-        "count": 1,
+        "count": 2,
         "episode_refs": [
-          "E000042"
+          "E000042",
+          "E000046"
         ],
         "first_cycle": 21,
-        "last_cycle": 21
+        "last_cycle": 23
       },
       "working_tree_clean": {
         "concept": "working_tree_clean",
-        "count": 3,
+        "count": 4,
         "episode_refs": [
           "E000003",
           "E000041",
-          "E000043"
+          "E000043",
+          "E000045"
         ],
         "first_cycle": 2,
-        "last_cycle": 22
+        "last_cycle": 23
       }
     },
     "inquiry_families": {
@@ -4973,11 +5171,19 @@
           ],
           "representative": "What observation could distinguish whether anything and best are meaningfully related rather than merely co-occurring?",
           "size": 1
+        },
+        {
+          "family_id": "F008",
+          "question_refs": [
+            "Q000016"
+          ],
+          "representative": "What caused repository working_tree_clean to change from True to False, and did that change alter a verified capability?",
+          "size": 1
         }
       ],
-      "family_count": 7,
-      "open_endedness": 0.3181818181818182,
-      "question_count": 15,
+      "family_count": 8,
+      "open_endedness": 0.34782608695652173,
+      "question_count": 16,
       "question_to_family": {
         "Q000001": "F003",
         "Q000002": "F001",
@@ -4993,13 +5199,14 @@
         "Q000012": "F006",
         "Q000013": "F002",
         "Q000014": "F007",
-        "Q000015": "F001"
+        "Q000015": "F001",
+        "Q000016": "F008"
       },
       "similarity_threshold": 0.72,
-      "updated_cycle": 22,
+      "updated_cycle": 23,
       "version": "inquiry-family-state-v1"
     },
-    "last_episode_index": 44
+    "last_episode_index": 46
   },
   "surprises": [
     {
@@ -5361,9 +5568,20 @@
       "cycle": 22,
       "id": "S000020",
       "time": "2026-09-29T14:43:52.617150+00:00"
+    },
+    {
+      "changes": {
+        "working_tree_clean": {
+          "after": false,
+          "before": true
+        }
+      },
+      "cycle": 23,
+      "id": "S000021",
+      "time": "2026-09-29T14:45:04.350451+00:00"
     }
   ],
-  "updated_at": "2026-09-29T14:43:53.195477+00:00",
+  "updated_at": "2026-09-29T14:45:04.365272+00:00",
   "world_model": {
     "claims": [
       {
@@ -5392,11 +5610,12 @@
           "E000037",
           "E000039",
           "E000041",
-          "E000043"
+          "E000043",
+          "E000045"
         ],
         "id": "W000001",
-        "last_seen_cycle": 22,
-        "observed_at": "2026-09-29T14:43:52.614188+00:00",
+        "last_seen_cycle": 23,
+        "observed_at": "2026-09-29T14:45:04.341752+00:00",
         "predicate": "branch",
         "source_type": "observed_sensor",
         "status": "current",
@@ -5487,11 +5706,12 @@
           "E000037",
           "E000039",
           "E000041",
-          "E000043"
+          "E000043",
+          "E000045"
         ],
         "id": "W000005",
-        "last_seen_cycle": 22,
-        "observed_at": "2026-09-29T14:43:52.614188+00:00",
+        "last_seen_cycle": 23,
+        "observed_at": "2026-09-29T14:45:04.341752+00:00",
         "predicate": "test_files",
         "source_type": "observed_sensor",
         "status": "current",
@@ -6695,11 +6915,12 @@
           "E000037",
           "E000039",
           "E000041",
-          "E000043"
+          "E000043",
+          "E000045"
         ],
         "id": "W000069",
-        "last_seen_cycle": 22,
-        "observed_at": "2026-09-29T14:43:52.614188+00:00",
+        "last_seen_cycle": 23,
+        "observed_at": "2026-09-29T14:45:04.341752+00:00",
         "predicate": "python_files",
         "source_type": "observed_sensor",
         "status": "current",
@@ -6806,11 +7027,12 @@
         "created_cycle": 21,
         "evidence_refs": [
           "E000041",
-          "E000043"
+          "E000043",
+          "E000045"
         ],
         "id": "W000075",
-        "last_seen_cycle": 22,
-        "observed_at": "2026-09-29T14:43:52.614188+00:00",
+        "last_seen_cycle": 23,
+        "observed_at": "2026-09-29T14:45:04.341752+00:00",
         "predicate": "baseline_fingerprint",
         "source_type": "observed_sensor",
         "status": "current",
@@ -6843,11 +7065,12 @@
         "created_cycle": 21,
         "evidence_refs": [
           "E000041",
-          "E000043"
+          "E000043",
+          "E000045"
         ],
         "id": "W000077",
-        "last_seen_cycle": 22,
-        "observed_at": "2026-09-29T14:43:52.614188+00:00",
+        "last_seen_cycle": 23,
+        "observed_at": "2026-09-29T14:45:04.341752+00:00",
         "predicate": "python_source_lines",
         "source_type": "observed_sensor",
         "status": "current",
@@ -6898,11 +7121,12 @@
         "created_at": "2026-09-29T14:43:52.617464+00:00",
         "created_cycle": 22,
         "evidence_refs": [
-          "E000043"
+          "E000043",
+          "E000045"
         ],
         "id": "W000080",
-        "last_seen_cycle": 22,
-        "observed_at": "2026-09-29T14:43:52.614188+00:00",
+        "last_seen_cycle": 23,
+        "observed_at": "2026-09-29T14:45:04.341752+00:00",
         "predicate": "tracked_files",
         "source_type": "observed_sensor",
         "status": "current",
@@ -6923,9 +7147,9 @@
         "observed_at": "2026-09-29T14:43:52.614188+00:00",
         "predicate": "working_tree_clean",
         "source_type": "observed_sensor",
-        "status": "current",
+        "status": "superseded",
         "subject": "repository",
-        "superseded_by": null,
+        "superseded_by": "W000083",
         "supersedes": "W000078",
         "value": true
       },
@@ -6944,6 +7168,43 @@
         "source_type": "prediction_evaluation",
         "status": "current",
         "subject": "prediction.P000021",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "violated"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-09-29T14:45:04.350873+00:00",
+        "created_cycle": 23,
+        "evidence_refs": [
+          "E000045"
+        ],
+        "id": "W000083",
+        "last_seen_cycle": 23,
+        "observed_at": "2026-09-29T14:45:04.341752+00:00",
+        "predicate": "working_tree_clean",
+        "source_type": "observed_sensor",
+        "status": "current",
+        "subject": "repository",
+        "superseded_by": null,
+        "supersedes": "W000081",
+        "value": false
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-09-29T14:45:04.350913+00:00",
+        "created_cycle": 23,
+        "evidence_refs": [
+          "P000022",
+          "R000022"
+        ],
+        "id": "W000084",
+        "last_seen_cycle": 23,
+        "observed_at": "2026-09-29T14:45:04.350451+00:00",
+        "predicate": "status",
+        "source_type": "prediction_evaluation",
+        "status": "current",
+        "subject": "prediction.P000022",
         "superseded_by": null,
         "supersedes": null,
         "value": "violated"
@@ -6971,15 +7232,16 @@
       "prediction.P000019::status": "W000074",
       "prediction.P000020::status": "W000079",
       "prediction.P000021::status": "W000082",
+      "prediction.P000022::status": "W000084",
       "repository::baseline_fingerprint": "W000075",
       "repository::branch": "W000001",
       "repository::python_files": "W000069",
       "repository::python_source_lines": "W000077",
       "repository::test_files": "W000005",
       "repository::tracked_files": "W000080",
-      "repository::working_tree_clean": "W000081"
+      "repository::working_tree_clean": "W000083"
     },
-    "last_snapshot_index": 22,
+    "last_snapshot_index": 23,
     "seen_experiment_status": {},
     "seen_prediction_status": {
       "P000001": "violated",
@@ -7002,7 +7264,8 @@
       "P000018": "invalidated_by_intervention",
       "P000019": "invalidated_by_intervention",
       "P000020": "invalidated_by_intervention",
-      "P000021": "violated"
+      "P000021": "violated",
+      "P000022": "violated"
     }
   }
 }
