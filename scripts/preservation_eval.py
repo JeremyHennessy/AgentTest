@@ -21,7 +21,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v11"
+SUITE = "behavioral-preservation-v12"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -994,6 +994,16 @@ def evidence_debt_evolution_governor() -> dict[str, Any]:
         debt_state = store_debt.load()
         debt_state["metrics"]["learning"] = 1.0
         debt_state["drives"]["evidence_hunger"] = 0.8
+        debt_experiment = next(
+            item
+            for item in debt_state["experiments"]
+            if item.get("id") == first["experiment"]["id"]
+        )
+        # Preserve Phase 14 for genuinely evidence-ready closure debt. Phase 15
+        # introduced readiness states, so an underspecified experiment is no longer
+        # part of this preservation invariant; its governance semantics are tested
+        # independently before they are locked into the baseline.
+        debt_experiment["readiness"] = "evidence_ready"
         debt_selected = select_change_target(debt_state)
 
         aligned_state = store_aligned.load()
@@ -1040,6 +1050,7 @@ def evidence_debt_evolution_governor() -> dict[str, Any]:
                 and aligned_selected is None
             ),
             "debt_target": debt_selected.get("dimension") if debt_selected else None,
+            "debt_readiness": debt_experiment.get("readiness"),
             "debt_signal": debt_selected.get("selection_signal") if debt_selected else None,
             "debt_experiment": debt_selected.get("experiment_id") if debt_selected else None,
             "aligned_open_endedness_target": (
