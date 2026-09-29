@@ -16,4 +16,51 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run invariant tests
-        run: PYTHONPATH=src python -m unittest discover -s tests -v
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
+
+  behavioral-preservation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run behavioral preservation suite
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/preservation_eval.py --strict --output /tmp/current-eval.json
+
+  no-regression:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout verified base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: baseline
+      - name: Checkout candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: candidate
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Detect preservation-gate bootstrap
+        id: gate
+        shell: bash
+        run: |
+          if [ -f baseline/scripts/preservation_eval.py ] && [ -f baseline/scripts/compare_eval.py ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Compare baseline and candidate with baseline-owned evaluator
+        if: steps.gate.outputs.available == 'true'
+        shell: bash
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=baseline/src python baseline/scripts/preservation_eval.py --output /tmp/base-eval.json
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=candidate/src python baseline/scripts/preservation_eval.py --output /tmp/candidate-eval.json
+          python baseline/scripts/compare_eval.py /tmp/base-eval.json /tmp/candidate-eval.json
+      - name: Bootstrap notice
+        if: steps.gate.outputs.available != 'true'
+        run: echo "The base commit predates the preservation gate; comparative enforcement begins after this gate is merged."
