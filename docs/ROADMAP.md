@@ -2,21 +2,23 @@
 
 This roadmap is hypothesis-driven. A phase advances only when its predecessor produces reproducible evidence.
 
-## Phase 0 — Persistence
+## Phase 0 — Persistence — implemented baseline
 
-Build continuity, memory, a self-model, internal question generation, falsifiable experiments, reflection, and immutable history.
+Continuity, memory, a self-model, internal question generation, falsifiable experiments, reflection, and immutable history.
 
-**Exit evidence:** repeated cycles survive restarts; prior outcomes measurably change later selection.
+**Evidence so far:** invariant tests verify persistence mechanics and outcome-driven reflection. Longer-run behavioral evidence is still required.
 
-## Phase 1 — Perception and environment
+## Phase 1 — Perception and environment — repository sensor implemented
 
-Add narrow, auditable sensors: repository state, test results, selected public information, and explicit human observations.
+The first auditable sensor can observe repository structure and detect changes without assigning them invented meaning.
 
-**Question:** can richer perception improve decisions without merely increasing noise?
+**Next evidence:** autonomous runs must demonstrate that real repository changes produce precise surprises while routine timestamps/commit movement do not create fake novelty.
+
+Future sensors may include test outcomes and tightly scoped public information, but only with explicit provenance.
 
 ## Phase 2 — Generative cognition
 
-Attach a model behind a small interface rather than adopting an agent framework.
+Attach a model behind a small original interface rather than adopting an agent framework.
 
 The model may suggest hypotheses and interpretations, but structured state and evidence remain authoritative.
 
