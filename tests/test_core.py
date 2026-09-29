@@ -1890,6 +1890,141 @@ class AgentCoreTests(unittest.TestCase):
         )
         self.assertIsNotNone(result["prediction_experiment"])
 
+    def test_strict_mode_parks_mature_blocked_experiment_without_erasing_history(self) -> None:
+        first = self.core.cycle(observation=observation(100))
+        generic_id = first["experiment"]["id"]
+
+        result = None
+        for _ in range(3):
+            result = self.core.cycle(
+                observation=observation(100),
+                strict_experiment_admission=True,
+            )
+
+        self.assertIsNotNone(result)
+        state = self.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == generic_id
+        )
+
+        self.assertEqual(experiment["status"], "parked_blocked")
+        self.assertEqual(experiment["readiness"], "needs_specification")
+        self.assertEqual(
+            experiment["specification"]["actionability"],
+            "blocked",
+        )
+        self.assertIn(
+            generic_id,
+            result["experiment_parking_update"]["parked_experiment_ids"],
+        )
+        self.assertTrue(
+            any(
+                item.get("from") == "proposed"
+                and item.get("to") == "parked_blocked"
+                for item in experiment.get("status_history", [])
+            )
+        )
+
+    def test_default_mode_does_not_park_blocked_experiment(self) -> None:
+        first = self.core.cycle(observation=observation(100))
+        generic_id = first["experiment"]["id"]
+
+        result = None
+        for _ in range(3):
+            result = self.core.cycle(observation=observation(100))
+
+        self.assertIsNotNone(result)
+        state = self.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == generic_id
+        )
+
+        self.assertEqual(experiment["status"], "proposed")
+        self.assertEqual(experiment["readiness"], "needs_specification")
+        self.assertEqual(
+            experiment["specification"]["actionability"],
+            "blocked",
+        )
+        self.assertEqual(
+            result["experiment_parking_update"]["parked_experiment_ids"],
+            [],
+        )
+
+    def test_parked_experiment_reactivates_when_grounded_evidence_becomes_actionable(self) -> None:
+        from agenttest.core import (
+            _reconcile_blocked_experiment_parking,
+            _trace_experiment_specifications,
+        )
+
+        state = initial_state()
+        state["cycles"] = 8
+        state["cognition_candidates"] = [
+            {
+                "id": "C000001",
+                "cycle": 2,
+                "status": "proposed",
+                "predicted_observation": "Repository tracked_files remains 10.",
+                "falsification": "Any tracked_files value other than 10 falsifies it.",
+                "evidence_refs": ["E000001"],
+            }
+        ]
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "cycle": 2,
+                "question_id": "Q000001",
+                "status": "parked_blocked",
+                "readiness": "needs_specification",
+                "hypothesis": "The measured field remains stable.",
+                "method": "Observe the measured field.",
+                "falsification": "Any tracked_files value other than 10 falsifies it.",
+                "predicted_observation": "Repository tracked_files remains 10.",
+                "cognition_candidate_id": "C000001",
+                "specification": {
+                    "version": "experiment-specification-v1",
+                    "actionability": "blocked",
+                    "missing_fields": ["evidence_source"],
+                    "grounded_evidence_refs": [],
+                },
+            }
+        ]
+
+        _trace_experiment_specifications(state)
+        still_parked = _reconcile_blocked_experiment_parking(
+            state,
+            allow_parking=False,
+        )
+        self.assertEqual(state["experiments"][0]["status"], "parked_blocked")
+        self.assertEqual(still_parked["reactivated_experiment_ids"], [])
+
+        state["episodes"] = [
+            {
+                "id": "E000001",
+                "cycle": 9,
+                "kind": "stimulus",
+                "content": "grounded source",
+                "concepts": ["grounded"],
+            }
+        ]
+        state["cycles"] = 9
+        _trace_experiment_specifications(state)
+        reactivated = _reconcile_blocked_experiment_parking(
+            state,
+            allow_parking=False,
+        )
+
+        self.assertEqual(state["experiments"][0]["status"], "proposed")
+        self.assertEqual(
+            state["experiments"][0]["specification"]["actionability"],
+            "actionable",
+        )
+        self.assertEqual(
+            reactivated["reactivated_experiment_ids"],
+            ["X000001"],
+        )
+
     def test_self_observation_creates_executable_prediction_experiment(self) -> None:
         from agenttest.diagnostic_experiments import evaluate_experiment_design
 
