@@ -8,6 +8,12 @@ from typing import Any
 from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
 from .evidence import known_evidence_ids
+from .learning import (
+    REPOSITORY_STABILITY_FAMILY,
+    consolidate_empirical_learning,
+    empirical_family,
+    expected_prediction_status,
+)
 from .perception import COMPARABLE_FIELDS, changed_fields
 from .semantic import (
     actionable_open_questions,
@@ -851,6 +857,7 @@ class AgentCore:
 
         semantic_update = consolidate_semantic_memory(state)
         world_update = consolidate_world(state)
+        empirical_learning_update = consolidate_empirical_learning(state)
 
         self._update_metrics(state)
         strict_question_attention = (
@@ -929,6 +936,7 @@ class AgentCore:
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
+            "empirical_learning_update": empirical_learning_update,
             "self_model_calibration": self_model_calibration,
             "intention_id": intention["id"],
             "cognition_event_id": cognition_event["id"] if cognition_event else None,
@@ -962,6 +970,7 @@ class AgentCore:
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
+            "empirical_learning_update": empirical_learning_update,
             "self_model_calibration": self_model_calibration,
             "drives": drives,
             "strict_actionable_questions": (
@@ -1127,17 +1136,58 @@ class AgentCore:
         now: str,
     ) -> dict[str, Any]:
         expected = {field: observation.get(field) for field in COMPARABLE_FIELDS}
+        expected_status = expected_prediction_status(
+            state,
+            REPOSITORY_STABILITY_FAMILY,
+        )
+        family = empirical_family(state, REPOSITORY_STABILITY_FAMILY)
+        if expected_status == "violated":
+            statement = (
+                "At least one measured repository field will change before the next "
+                "self-observation unless an intervening code change alters the baseline."
+            )
+            falsification = (
+                "If every measured comparable field remains unchanged on the next "
+                "same-baseline observation, this change expectation is falsified."
+            )
+        else:
+            statement = (
+                "Measured repository fields will remain unchanged until the next "
+                "self-observation unless an intervening code change alters the baseline."
+            )
+            falsification = (
+                "Any change in a measured comparable field violates this prediction."
+            )
+
+        empirical_basis = None
+        if family is not None:
+            empirical_basis = {
+                "version": state.get("empirical_learning", {}).get("version"),
+                "evaluable_trials": int(family.get("evaluable_trials", 0) or 0),
+                "stable_observations": int(
+                    family.get("stable_observations", 0) or 0
+                ),
+                "change_observations": int(
+                    family.get("change_observations", 0) or 0
+                ),
+                "inconclusive_trials": int(
+                    family.get("inconclusive_trials", 0) or 0
+                ),
+                "stability_rate": family.get("stability_rate"),
+                "evidence_refs": list(family.get("evidence_refs", []))[-16:],
+            }
+
         return {
             "id": f"P{len(state['predictions']) + 1:06d}",
             "cycle": state["cycles"],
             "created_at": now,
             "status": "pending",
-            "statement": (
-                "Measured repository fields will remain unchanged until the next "
-                "self-observation unless an intervening change occurs."
-            ),
+            "statement": statement,
             "expected": expected,
-            "falsification": "Any change in a measured comparable field violates this prediction.",
+            "expected_status": expected_status,
+            "learning_family": REPOSITORY_STABILITY_FAMILY,
+            "empirical_basis": empirical_basis,
+            "falsification": falsification,
         }
 
     def _create_prediction_experiment(
@@ -1174,13 +1224,26 @@ class AgentCore:
             ),
             "falsification": prediction["falsification"],
             "predicted_observation": (
-                "The next comparable repository self-observation matches the "
-                "prediction's measured fields."
+                "The next comparable repository self-observation differs in at least "
+                "one measured field."
+                if prediction.get("expected_status") == "violated"
+                else (
+                    "The next comparable repository self-observation matches the "
+                    "prediction's measured fields."
+                )
             ),
+            "learning_family": prediction.get(
+                "learning_family",
+                REPOSITORY_STABILITY_FAMILY,
+            ),
+            "empirical_basis": prediction.get("empirical_basis"),
             "evidence_contract": {
                 "kind": PREDICTION_CONTRACT_KIND,
                 "prediction_id": prediction["id"],
-                "expected_status": "confirmed",
+                "expected_status": prediction.get(
+                    "expected_status",
+                    "confirmed",
+                ),
             },
             "created_at": now,
             "times_selected": 1,
