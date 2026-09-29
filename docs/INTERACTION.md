@@ -19,6 +19,26 @@ PYTHONPATH=src python -m agenttest interact \
 
 `--cognition` only uses a configured provider. If no provider is available, the interaction remains fully functional through the deterministic evidence loop.
 
+## GitHub-native channel
+
+After Phase 13 is enabled, the repository owner can use either surface:
+
+### Issue / pull-request comment
+
+```text
+/agent What are you investigating now?
+```
+
+Only comments authored by the repository owner are accepted. The response is posted back to the same issue or pull request after the interaction state passes verification.
+
+### Actions workflow
+
+Open **Actions → Human Interaction → Run workflow**, enter a message, and optionally enable configured model cognition.
+
+Both paths use the same persistent `autonomous/growth` state and the same `agenttest interact` implementation. They are transports, not separate agents.
+
+The interaction workflow shares the autonomous-growth concurrency group, so a human turn and a scheduled heartbeat cannot write the persistent branch simultaneously.
+
 ## What a turn does
 
 1. Load the persistent state.
