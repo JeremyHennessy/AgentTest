@@ -12,6 +12,7 @@ from typing import Any, Callable
 from agenttest.change_control import PROTECTED_PATHS, make_change_manifest, validate_change_manifest
 from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
+from agenttest.interaction import interact
 from agenttest.diagnostics import run_proposal_diagnostic
 from agenttest.proposal_review import review_change_proposal
 from agenttest.semantic import retrieve_semantic_memory
@@ -19,7 +20,7 @@ from agenttest.self_proposal import propose_self_change
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v8"
+SUITE = "behavioral-preservation-v9"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -921,6 +922,67 @@ def inquiry_family_evidence_review() -> dict[str, Any]:
         temp_diverse.cleanup()
 
 
+def human_interaction_roundtrip() -> dict[str, Any]:
+    temp, store, core = fresh()
+    try:
+        core.cycle("alpha persistence memory evidence")
+        result = interact(
+            "alpha interaction question",
+            store=store,
+            cognition=True,
+            cognition_provider=None,
+        )
+        reloaded = StateStore(store.path).load()
+        record = reloaded["interactions"][-1]
+        source_episode = next(
+            episode
+            for episode in reloaded["episodes"]
+            if episode.get("id") == record.get("input_episode_id")
+        )
+        prior_concepts = [
+            item.get("concept")
+            for item in result["memory"]["prior_semantic"]
+        ]
+        interaction_claim = reloaded["self_model"]["capability_claims"][
+            "persistent human interaction surface with evidence-linked responses"
+        ]
+        response_text = result["response_text"]
+        response_in_episode = any(
+            episode.get("content") == response_text
+            for episode in reloaded["episodes"]
+        )
+        response_in_world = any(
+            claim.get("value") == response_text
+            for claim in reloaded.get("world_model", {}).get("claims", [])
+        )
+
+        return {
+            "passed": (
+                record["id"] == "H000001"
+                and source_episode.get("source") == "human_interaction"
+                and source_episode.get("interaction_id") == record["id"]
+                and "alpha" in prior_concepts
+                and result["cognition"]["event"]["status"] == "unavailable"
+                and result["cognition"]["candidate"] is None
+                and record.get("question_id") == result["current"]["question"]["id"]
+                and record.get("experiment_id") == result["current"]["experiment"]["id"]
+                and interaction_claim["status"] == "observed"
+                and record["input_episode_id"] in interaction_claim["evidence_refs"]
+                and not response_in_episode
+                and not response_in_world
+            ),
+            "interaction_id": record.get("id"),
+            "input_episode_id": record.get("input_episode_id"),
+            "prior_memory_concepts": prior_concepts,
+            "cognition_status": result["cognition"]["event"].get("status"),
+            "interaction_claim_status": interaction_claim.get("status"),
+            "response_promoted_to_episode": response_in_episode,
+            "response_promoted_to_world_claim": response_in_world,
+        }
+    finally:
+        temp.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -937,6 +999,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("self_model_grounding_review", self_model_grounding_review),
     ("diagnostic_rechecks_after_intervention", diagnostic_rechecks_after_intervention),
     ("inquiry_family_evidence_review", inquiry_family_evidence_review),
+    ("human_interaction_roundtrip", human_interaction_roundtrip),
 ]
 
 
