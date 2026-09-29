@@ -7,6 +7,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Protocol
 
+from .evidence import known_evidence_ids
 from .semantic import retrieve_semantic_memory
 from .state import utc_now
 from .world import current_world_claims
@@ -198,6 +199,7 @@ def _evidence_catalog(state: dict[str, Any]) -> list[dict[str, str]]:
     add(state.get("reflections", []), "reflection", "lesson")
     add(state.get("proposal_reviews", []), "proposal_review", "reason")
     add(state.get("proposal_diagnostics", []), "proposal_diagnostic")
+    add(state.get("system_diagnostics", []), "system_diagnostic")
     for claim in current_world_claims(state, limit=8):
         catalog.append(
             {
@@ -239,32 +241,6 @@ def build_context(
             "may_not_claim_consciousness": True,
         },
     }
-
-
-def known_evidence_ids(state: dict[str, Any]) -> set[str]:
-    ids: set[str] = set()
-    for key in (
-        "episodes",
-        "surprises",
-        "predictions",
-        "intentions",
-        "questions",
-        "experiments",
-        "reflections",
-        "cognition_events",
-        "cognition_candidates",
-        "proposal_reviews",
-        "proposal_diagnostics",
-    ):
-        for item in state.get(key, []):
-            identifier = item.get("id")
-            if identifier:
-                ids.add(str(identifier))
-    for claim in state.get("world_model", {}).get("claims", []):
-        identifier = claim.get("id")
-        if identifier:
-            ids.add(str(identifier))
-    return ids
 
 
 def validate_candidate(
