@@ -19,7 +19,7 @@ from agenttest.self_proposal import propose_self_change
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v7"
+SUITE = "behavioral-preservation-v8"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -714,11 +714,11 @@ def diagnostic_rechecks_after_intervention() -> dict[str, Any]:
 
 
 def inquiry_family_evidence_review() -> dict[str, Any]:
-    temp_churn, store_churn, core_churn = fresh()
+    temp_inflated, store_inflated, core_inflated = fresh()
+    temp_aligned, store_aligned, core_aligned = fresh()
     temp_diverse, store_diverse, core_diverse = fresh()
     try:
-        churn_state = store_churn.load()
-        churn_state["questions"] = [
+        repeated_questions = [
             {
                 "id": f"Q{index:06d}",
                 "text": (
@@ -729,34 +729,75 @@ def inquiry_family_evidence_review() -> dict[str, Any]:
             }
             for index in range(1, 7)
         ]
-        churn_proposal = make_change_manifest(
-            churn_state,
+
+        inflated_state = store_inflated.load()
+        inflated_state["cycles"] = 6
+        inflated_state["metrics"]["open_endedness"] = 1.0
+        inflated_state["questions"] = json.loads(json.dumps(repeated_questions))
+        inflated_proposal = make_change_manifest(
+            inflated_state,
             title="Track inquiry families across cycles",
             target_dimension="open_endedness",
             files=["src/agenttest/core.py", "src/agenttest/semantic.py", "tests/test_core.py"],
             hypothesis="Question-family tracking can distinguish branching from paraphrase churn.",
             expected_effect="Open-endedness reflects distinct inquiry families.",
             test_plan="Run the verified inquiry-family diagnostic.",
-            falsification="No paraphrase churn is detected.",
+            falsification="Reported open-endedness already matches inquiry-family diversity.",
             rollback="Revert.",
             evidence_refs=["Q000001", "Q000002", "Q000003"],
         )
-        churn_proposal.update(
+        inflated_proposal.update(
             {"id": "M000001", "source": "preservation-eval", "created_cycle": 1}
         )
-        churn_state["change_proposals"].append(churn_proposal)
-        churn_first, _ = review_change_proposal(churn_state, churn_proposal)
-        churn_diag, churn_diag_created = run_proposal_diagnostic(
-            churn_state,
-            churn_proposal,
-            churn_first,
+        inflated_state["change_proposals"].append(inflated_proposal)
+        inflated_first, _ = review_change_proposal(
+            inflated_state,
+            inflated_proposal,
         )
-        churn_final, churn_final_created = review_change_proposal(
-            churn_state,
-            churn_proposal,
+        inflated_diag, inflated_created = run_proposal_diagnostic(
+            inflated_state,
+            inflated_proposal,
+            inflated_first,
+        )
+        inflated_final, inflated_final_created = review_change_proposal(
+            inflated_state,
+            inflated_proposal,
+        )
+
+        aligned_state = store_aligned.load()
+        aligned_state["cycles"] = 6
+        aligned_state["metrics"]["open_endedness"] = 1.0 / 6.0
+        aligned_state["questions"] = json.loads(json.dumps(repeated_questions))
+        aligned_proposal = make_change_manifest(
+            aligned_state,
+            title="Track inquiry families across cycles",
+            target_dimension="open_endedness",
+            files=["src/agenttest/core.py", "src/agenttest/semantic.py", "tests/test_core.py"],
+            hypothesis="Question-family tracking can distinguish branching from paraphrase churn.",
+            expected_effect="Open-endedness reflects distinct inquiry families.",
+            test_plan="Run the verified inquiry-family diagnostic.",
+            falsification="Reported open-endedness already matches inquiry-family diversity.",
+            rollback="Revert.",
+            evidence_refs=["Q000001", "Q000002", "Q000003"],
+        )
+        aligned_proposal.update(
+            {"id": "M000001", "source": "preservation-eval", "created_cycle": 1}
+        )
+        aligned_state["change_proposals"].append(aligned_proposal)
+        aligned_first, _ = review_change_proposal(aligned_state, aligned_proposal)
+        aligned_diag, aligned_created = run_proposal_diagnostic(
+            aligned_state,
+            aligned_proposal,
+            aligned_first,
+        )
+        aligned_final, aligned_final_created = review_change_proposal(
+            aligned_state,
+            aligned_proposal,
         )
 
         diverse_state = store_diverse.load()
+        diverse_state["cycles"] = 4
+        diverse_state["metrics"]["open_endedness"] = 1.0
         diverse_state["questions"] = [
             {
                 "id": "Q000001",
@@ -787,7 +828,7 @@ def inquiry_family_evidence_review() -> dict[str, Any]:
             hypothesis="Question-family tracking can distinguish branching from paraphrase churn.",
             expected_effect="Open-endedness reflects distinct inquiry families.",
             test_plan="Run the verified inquiry-family diagnostic.",
-            falsification="No paraphrase churn is detected.",
+            falsification="Reported open-endedness already matches inquiry-family diversity.",
             rollback="Revert.",
             evidence_refs=["Q000001", "Q000002", "Q000003"],
         )
@@ -796,7 +837,7 @@ def inquiry_family_evidence_review() -> dict[str, Any]:
         )
         diverse_state["change_proposals"].append(diverse_proposal)
         diverse_first, _ = review_change_proposal(diverse_state, diverse_proposal)
-        diverse_diag, diverse_diag_created = run_proposal_diagnostic(
+        diverse_diag, diverse_created = run_proposal_diagnostic(
             diverse_state,
             diverse_proposal,
             diverse_first,
@@ -808,36 +849,56 @@ def inquiry_family_evidence_review() -> dict[str, Any]:
 
         return {
             "passed": (
-                churn_first is not None
-                and churn_first["verdict"] == "needs_evidence"
-                and churn_diag_created
-                and churn_diag is not None
-                and churn_diag["outcome"] == "paraphrase_churn"
-                and not churn_diag["source_state_mutated"]
-                and churn_final_created
-                and churn_final is not None
-                and churn_final["verdict"] == "supported_problem"
-                and churn_final["patch_authority"] == "candidate_allowed"
+                inflated_first is not None
+                and inflated_first["verdict"] == "needs_evidence"
+                and inflated_created
+                and inflated_diag is not None
+                and inflated_diag["outcome"] == "metric_inflation"
+                and inflated_diag["result"]["metric_gap"] > 0.05
+                and inflated_final_created
+                and inflated_final is not None
+                and inflated_final["verdict"] == "supported_problem"
+                and inflated_final["patch_authority"] == "candidate_allowed"
+                and aligned_first is not None
+                and aligned_first["verdict"] == "needs_evidence"
+                and aligned_created
+                and aligned_diag is not None
+                and aligned_diag["outcome"] == "paraphrase_churn_metric_aligned"
+                and abs(aligned_diag["result"]["metric_gap"]) <= 0.05
+                and aligned_final_created
+                and aligned_final is not None
+                and aligned_final["verdict"] == "no_problem_observed"
+                and aligned_final["patch_authority"] == "none"
                 and diverse_first is not None
                 and diverse_first["verdict"] == "needs_evidence"
-                and diverse_diag_created
+                and diverse_created
                 and diverse_diag is not None
                 and diverse_diag["outcome"] == "diverse"
-                and not diverse_diag["source_state_mutated"]
                 and diverse_final_created
                 and diverse_final is not None
                 and diverse_final["verdict"] == "no_problem_observed"
-                and diverse_final["patch_authority"] == "none"
                 and "src/agenttest/diagnostic_inquiry.py" in PROTECTED_PATHS
             ),
-            "churn": {
-                "outcome": churn_diag.get("outcome") if churn_diag else None,
-                "largest_family_size": (
-                    churn_diag["result"].get("largest_family_size")
-                    if churn_diag else None
+            "inflated": {
+                "outcome": inflated_diag.get("outcome") if inflated_diag else None,
+                "metric_gap": (
+                    inflated_diag["result"].get("metric_gap")
+                    if inflated_diag else None
                 ),
                 "final_verdict": (
-                    churn_final.get("verdict") if churn_final else None
+                    inflated_final.get("verdict")
+                    if inflated_final else None
+                ),
+            },
+            "aligned": {
+                "outcome": aligned_diag.get("outcome") if aligned_diag else None,
+                "metric_gap": (
+                    aligned_diag["result"].get("metric_gap")
+                    if aligned_diag else None
+                ),
+                "final_verdict": (
+                    aligned_final.get("verdict")
+                    if aligned_final else None
                 ),
             },
             "diverse": {
@@ -847,12 +908,14 @@ def inquiry_family_evidence_review() -> dict[str, Any]:
                     if diverse_diag else None
                 ),
                 "final_verdict": (
-                    diverse_final.get("verdict") if diverse_final else None
+                    diverse_final.get("verdict")
+                    if diverse_final else None
                 ),
             },
         }
     finally:
-        temp_churn.cleanup()
+        temp_inflated.cleanup()
+        temp_aligned.cleanup()
         temp_diverse.cleanup()
 
 
