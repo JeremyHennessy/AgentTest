@@ -72,51 +72,20 @@ def _successful_cognition_exists(state: dict[str, Any]) -> bool:
     )
 
 
-def _direct_replay_failure(
+def _latest_completed_diagnostic(
     state: dict[str, Any],
     proposal_id: str,
+    kind: str,
 ) -> dict[str, Any] | None:
     for diagnostic in reversed(state.get("proposal_diagnostics", [])):
         if (
             diagnostic.get("proposal_id") == proposal_id
-            and diagnostic.get("kind") == "deterministic_replay"
+            and diagnostic.get("kind") == kind
             and diagnostic.get("status") == "completed"
-            and diagnostic.get("outcome") in {"divergent", "failure"}
         ):
             return diagnostic
     return None
 
-
-def _direct_replay_stable(
-    state: dict[str, Any],
-    proposal_id: str,
-) -> dict[str, Any] | None:
-    for diagnostic in reversed(state.get("proposal_diagnostics", [])):
-        if (
-            diagnostic.get("proposal_id") == proposal_id
-            and diagnostic.get("kind") == "deterministic_replay"
-            and diagnostic.get("status") == "completed"
-            and diagnostic.get("outcome") == "stable"
-        ):
-            return diagnostic
-    return None
-
-
-
-def _self_model_grounding_diagnostic(
-    state: dict[str, Any],
-    proposal_id: str,
-    outcome: str,
-) -> dict[str, Any] | None:
-    for diagnostic in reversed(state.get("proposal_diagnostics", [])):
-        if (
-            diagnostic.get("proposal_id") == proposal_id
-            and diagnostic.get("kind") == "self_model_grounding"
-            and diagnostic.get("status") == "completed"
-            and diagnostic.get("outcome") == outcome
-        ):
-            return diagnostic
-    return None
 
 
 def _learning_loop_gap(state: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -199,47 +168,50 @@ def classify_proposal(
         }
 
     if target == "reproducibility":
-        failure = _direct_replay_failure(state, str(proposal.get("id")))
-        if failure is not None:
+        replay = _latest_completed_diagnostic(
+            state,
+            str(proposal.get("id")),
+            "deterministic_replay",
+        )
+        if replay is not None and replay.get("outcome") in {"divergent", "failure"}:
             return {
                 "verdict": "supported_problem",
                 "patch_authority": "candidate_allowed",
                 "reason": (
-                    "A completed deterministic-replay diagnostic directly reports divergence."
+                    "The latest completed deterministic-replay diagnostic for this "
+                    "proposal reports divergence."
                 ),
                 "required_next_evidence": None,
                 "resolved_evidence_count": len(cited),
                 "evidence_kinds": dict(kinds),
-                "direct_diagnostic_id": failure.get("id"),
+                "direct_diagnostic_id": replay.get("id"),
             }
 
-        stable = _direct_replay_stable(state, str(proposal.get("id")))
-        if stable is not None:
+        if replay is not None and replay.get("outcome") == "stable":
             return {
                 "verdict": "no_problem_observed",
                 "patch_authority": "none",
                 "reason": (
-                    "The requested verified deterministic-replay diagnostic completed on "
-                    "isolated temporary state and produced equivalent normalized results. "
-                    "No reproducibility defect is currently supported by direct evidence."
+                    "The latest verified deterministic-replay diagnostic completed "
+                    "on isolated temporary state and produced equivalent normalized "
+                    "results. No reproducibility defect is currently supported."
                 ),
                 "required_next_evidence": None,
                 "resolved_evidence_count": len(cited),
                 "evidence_kinds": dict(kinds),
-                "direct_diagnostic_id": stable.get("id"),
+                "direct_diagnostic_id": replay.get("id"),
             }
 
         return {
             "verdict": "measurement_gap",
             "patch_authority": "diagnostic_only",
             "reason": (
-                "The cited evidence shows evaluated predictions and reflections, but no "
-                "direct deterministic-replay comparison demonstrates divergence. The proposal "
-                "may add measurement, but it is not evidence of a reproducibility defect."
+                "The cited evidence shows evaluated predictions and reflections, but "
+                "no current deterministic-replay diagnostic resolves the question."
             ),
             "required_next_evidence": (
-                "Run a non-mutating deterministic replay diagnostic on equivalent controlled "
-                "inputs and record whether normalized outputs diverge."
+                "Run a non-mutating deterministic replay diagnostic on equivalent "
+                "controlled inputs and record whether normalized outputs diverge."
             ),
             "resolved_evidence_count": len(cited),
             "evidence_kinds": dict(kinds),
@@ -247,57 +219,54 @@ def classify_proposal(
 
 
     if target == "self_model":
-        gap = _self_model_grounding_diagnostic(
+        grounding = _latest_completed_diagnostic(
             state,
             str(proposal.get("id")),
-            "grounding_gap",
+            "self_model_grounding",
         )
-        if gap is not None:
+        if grounding is not None and grounding.get("outcome") == "grounding_gap":
             return {
                 "verdict": "supported_problem",
                 "patch_authority": "candidate_allowed",
                 "reason": (
-                    "A verified read-only self-model diagnostic found capability claims "
-                    "without explicit calibration records. This supports a traceability "
-                    "problem, not a claim that the capabilities themselves are false."
+                    "The latest verified read-only self-model diagnostic found "
+                    "capability claims without explicit calibration records. This "
+                    "supports a traceability problem, not a claim that the "
+                    "capabilities themselves are false."
                 ),
                 "required_next_evidence": None,
                 "resolved_evidence_count": len(cited),
                 "evidence_kinds": dict(kinds),
-                "direct_diagnostic_id": gap.get("id"),
+                "direct_diagnostic_id": grounding.get("id"),
             }
 
-        grounded = _self_model_grounding_diagnostic(
-            state,
-            str(proposal.get("id")),
-            "grounded",
-        )
-        if grounded is not None:
+        if grounding is not None and grounding.get("outcome") == "grounded":
             return {
                 "verdict": "no_problem_observed",
                 "patch_authority": "none",
                 "reason": (
-                    "The verified self-model diagnostic found every capability claim "
-                    "explicitly calibrated as verified, observed, or unverified with "
-                    "valid provenance or uncertainty rationale."
+                    "The latest verified self-model diagnostic found every capability "
+                    "claim explicitly calibrated as verified, observed, or unverified "
+                    "with valid provenance or uncertainty rationale."
                 ),
                 "required_next_evidence": None,
                 "resolved_evidence_count": len(cited),
                 "evidence_kinds": dict(kinds),
-                "direct_diagnostic_id": grounded.get("id"),
+                "direct_diagnostic_id": grounding.get("id"),
             }
 
         return {
             "verdict": "measurement_gap",
             "patch_authority": "diagnostic_only",
             "reason": (
-                "The self-model proposal concerns calibration and traceability, but no "
-                "verified grounding diagnostic has measured claim-by-claim coverage yet."
+                "The self-model proposal concerns calibration and traceability, but "
+                "no current verified grounding diagnostic has measured claim-by-claim "
+                "coverage yet."
             ),
             "required_next_evidence": (
-                "Run the verified read-only self-model grounding diagnostic and record "
-                "whether each capability has an explicit status plus evidence or an "
-                "unverified rationale."
+                "Run the verified read-only self-model grounding diagnostic and "
+                "record whether each capability has an explicit status plus evidence "
+                "or an unverified rationale."
             ),
             "resolved_evidence_count": len(cited),
             "evidence_kinds": dict(kinds),
