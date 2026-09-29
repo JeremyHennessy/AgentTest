@@ -25,6 +25,8 @@ class PagesInteractionTests(unittest.TestCase):
         self.assertIn("startsWith(github.event.issue.body, '/agent ')", workflow)
         self.assertIn('ISSUE_BODY: ${{ github.event.issue.body }}', workflow)
         self.assertIn('elif event == "issues":', workflow)
+        self.assertIn("Close one-shot interaction issue", workflow)
+        self.assertIn('gh issue close "$ISSUE_NUMBER" --reason completed', workflow)
 
 
 if __name__ == "__main__":
