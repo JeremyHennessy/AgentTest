@@ -102,14 +102,26 @@ def evaluate_inquiry_families(state: dict[str, Any]) -> dict[str, Any]:
         0.0 if question_count == 0 else largest_family_size / question_count
     )
 
-    family_open_endedness = min(
-        1.0,
-        family_count / max(1, int(state.get("cycles", 0))),
+    cycle_count = int(state.get("cycles", 0))
+    metric_present = (
+        cycle_count > 0
+        and "open_endedness" in state.get("metrics", {})
     )
-    reported_open_endedness = float(
-        state.get("metrics", {}).get("open_endedness", 0.0)
+    family_open_endedness = (
+        min(1.0, family_count / cycle_count)
+        if cycle_count > 0
+        else None
     )
-    metric_gap = reported_open_endedness - family_open_endedness
+    reported_open_endedness = (
+        float(state.get("metrics", {}).get("open_endedness"))
+        if metric_present
+        else None
+    )
+    metric_gap = (
+        reported_open_endedness - family_open_endedness
+        if metric_present and family_open_endedness is not None
+        else None
+    )
     churn_present = (
         largest_family_size >= CHURN_MIN_FAMILY
         and duplicate_pressure >= CHURN_MIN_DUPLICATE_PRESSURE
@@ -118,18 +130,23 @@ def evaluate_inquiry_families(state: dict[str, Any]) -> dict[str, Any]:
     if question_count < MIN_QUESTIONS:
         outcome = "insufficient_data"
         metric_status = "unknown"
+    elif not metric_present:
+        outcome = "paraphrase_churn" if churn_present else "diverse"
+        metric_status = "unknown"
     elif churn_present:
         outcome = "paraphrase_churn"
         metric_status = (
             "inflated"
-            if metric_gap > METRIC_ALIGNMENT_TOLERANCE
+            if metric_gap is not None
+            and metric_gap > METRIC_ALIGNMENT_TOLERANCE
             else "aligned"
         )
     else:
         outcome = "diverse"
         metric_status = (
             "inflated"
-            if metric_gap > METRIC_ALIGNMENT_TOLERANCE
+            if metric_gap is not None
+            and metric_gap > METRIC_ALIGNMENT_TOLERANCE
             else "aligned"
         )
 
