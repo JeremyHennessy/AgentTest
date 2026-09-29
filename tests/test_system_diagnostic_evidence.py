@@ -139,7 +139,7 @@ class SystemDiagnosticEvidenceTests(unittest.TestCase):
         self.assertEqual(proposal["source_diagnostic_id"], "SD000001")
         self.assertEqual(proposal["evidence_refs"], ["SD000001"])
         self.assertTrue(review_created)
-        self.assertEqual(review["review_version"], "proposal-review-v4")
+        self.assertEqual(review["review_version"], "proposal-review-v5")
         self.assertEqual(review["verdict"], "supported_problem")
         self.assertEqual(review["patch_authority"], "candidate_allowed")
         self.assertEqual(review["direct_diagnostic_id"], "SD000001")
@@ -152,7 +152,7 @@ class SystemDiagnosticEvidenceTests(unittest.TestCase):
     def test_same_cycle_new_experiment_backlog_does_not_trigger_self_change(self) -> None:
         from agenttest.self_proposal import select_change_target
 
-        state = self.store.load()
+        state = saturated_state()
         state["cycles"] = 45
         state["metrics"].update({name: 1.0 for name in state["metrics"]})
         state["experiments"] = [
@@ -185,7 +185,7 @@ class SystemDiagnosticEvidenceTests(unittest.TestCase):
     def test_older_untriaged_backlog_remains_self_change_evidence(self) -> None:
         from agenttest.self_proposal import select_change_target
 
-        state = self.store.load()
+        state = saturated_state()
         state["cycles"] = 45
         state["metrics"].update({name: 1.0 for name in state["metrics"]})
         state["experiments"] = [
@@ -223,7 +223,7 @@ class SystemDiagnosticEvidenceTests(unittest.TestCase):
         from agenttest.change_control import make_change_manifest
         from agenttest.proposal_review import review_change_proposal
 
-        state = self.store.load()
+        state = saturated_state()
         state["cycles"] = 45
         state["experiments"] = [
             {
