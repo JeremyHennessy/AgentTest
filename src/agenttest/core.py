@@ -231,6 +231,40 @@ class AgentCore:
 
         prediction = pending[-1]
         expected = prediction["expected"]
+
+        expected_baseline = expected.get("baseline_fingerprint")
+        observed_baseline = observation.get("baseline_fingerprint")
+        baseline_changed = (
+            observed_baseline is not None
+            and expected_baseline != observed_baseline
+        )
+
+        if baseline_changed:
+            prediction["status"] = "invalidated_by_intervention"
+            prediction["evaluated_at"] = now
+            prediction["errors"] = {
+                "baseline_fingerprint": {
+                    "expected": expected_baseline,
+                    "observed": observed_baseline,
+                }
+            }
+            prediction["evidence_strength"] = 1.0
+            reflection = {
+                "id": f"R{len(state['reflections']) + 1:06d}",
+                "source": "prediction",
+                "prediction_id": prediction["id"],
+                "cycle": state["cycles"],
+                "outcome": prediction["status"],
+                "evidence_strength": 1.0,
+                "lesson": (
+                    "The prior repository-stability prediction was invalidated by a "
+                    "non-state repository intervention. Do not score the intervention "
+                    "as an environmental prediction error."
+                ),
+            }
+            state["reflections"].append(reflection)
+            return prediction
+
         changes = {}
         for field in COMPARABLE_FIELDS:
             before = expected.get(field)

@@ -3,85 +3,68 @@
 This roadmap is hypothesis-driven. A phase advances only when its predecessor produces reproducible evidence.
 
 ## Phase 0 — Persistence — verified
-
 Persistent state, episodic memory, questions, experiments, reflection, and immutable history.
 
 ## Phase 1 — Perception — verified
-
 Auditable repository sensing and explicit surprise detection.
 
 ## Phase 2 — Predictive drives — verified
-
 Predictions are tested against later observations and prediction error changes attention.
 
 ## Phase 3 — Grounded generative cognition — verified boundary
-
-Optional model cognition is structurally gated, tool-less, provenance-recorded, and fail-closed. No API key is currently configured, so live cognition remains unavailable rather than simulated.
+Optional model cognition is structurally gated, tool-less, provenance-recorded, and fail-closed. Live cognition remains unavailable until a provider is configured.
 
 ## Phase 4 — Semantic memory and temporal world model — verified
-
 Semantic memory preserves source episode references. Temporal world claims preserve superseded facts and link derived claims to raw evidence.
 
 ## Phase 5 — Evolution preservation gate — verified
-
-The previous verified base supplies the evaluator used against both baseline and candidate code.
-
-A deliberate negative-control regression was correctly rejected by the base-owned gate.
+The previous verified base supplies the evaluator used against both baseline and candidate code. A deliberate negative-control regression was correctly rejected.
 
 ## Phase 6 — Self-authored change manifests — verified
-
-The live organism generated its first change manifest, M000001, from its own accumulated state.
-
-M000001 targeted reproducibility and proposed deterministic replay checks. It was structurally valid and cited real evidence.
+The live organism generated M000001 from accumulated evidence without code authority.
 
 ## Phase 7 — Proposal evidence review — verified
+M000001 was correctly classified as a measurement gap rather than a demonstrated reproducibility defect.
 
-A structurally valid proposal is not enough. Reviews distinguish:
+## Phase 8 — Verified non-mutating diagnostics — code verified
+The verified replay harness can resolve M000001 without letting candidate code grade itself.
 
-- supported_problem;
-- measurement_gap;
-- needs_evidence.
+A stable replay closes the proposal with no patch authority; divergence can support a problem. The diagnostic and review authority are protected governance code.
 
-The first live proposal M000001 was classified measurement_gap because its cited prediction evidence did not demonstrate replay divergence.
+Live autonomous execution of the new diagnostic is the remaining operational observation.
 
-## Phase 8 — Verified non-mutating evidence diagnostics — implementation under verification
+## Phase 9 — Intervention-aware prediction — implementation under verification
 
-Measurement gaps may request a diagnostic, but the diagnostic code belongs to the verified governance surface rather than the self-authored candidate.
+The live organism has repeatedly treated intentional repository evolution as prediction failure because structural fields changed after verified merges.
 
-Initial implementation:
+Phase 9 introduces a non-state repository baseline fingerprint.
 
-- deterministic replay runs twice in isolated temporary state;
-- only volatile timestamp fields are normalized;
-- all other structured output and state are compared;
-- the live source state is not used as the replay workspace;
-- exact divergence path is retained when results differ;
-- completed diagnostics become citable evidence;
-- proposal reviews are reconsidered only when completed diagnostic evidence changes;
-- a stable replay produces no_problem_observed and no patch authority;
-- replay divergence produces supported_problem and candidate_allowed;
-- a clean verified replay raises the reproducibility metric to 1.0 on the next adaptive cycle;
-- diagnostic, proposal-review, proposal-generation, and preservation code are protected from self-authored modification.
+Prediction semantics become:
 
-Required evidence before promotion: the full candidate suite and base-owned preservation gate must pass, then the live M000001 diagnostic must run on autonomous/growth without history loss.
+- same baseline + same measured state → confirmed;
+- same baseline + unexpected measured change → violated;
+- changed non-state baseline → invalidated_by_intervention.
 
-## Phase 9 — Isolated self-authored patches
+An intervention-invalidated prediction is retained as evidence but contributes zero prediction-error drive. This allows evidence debt and uncertainty to compete for attention instead of every code upgrade monopolizing the organism's internal drives.
 
-Only proposals with supported_problem may become bounded candidate patches.
+Persistent state files are excluded from the baseline fingerprint so autonomous journal commits do not masquerade as code interventions.
 
-A candidate may not modify governance, diagnostic, preservation, proposal-review, or autonomous-growth authority.
+Required evidence:
+- old prediction-error behavior remains preserved for genuine same-baseline changes;
+- intervention invalidation is deterministic;
+- state-only file mutation does not change the baseline fingerprint;
+- the previous verified base evaluator reports no regression.
 
-No automatic promotion. Candidate code must pass the previous verified base evaluator and demonstrate positive evidence on its declared target.
+## Phase 10 — Isolated self-authored patches
+Only proposals with supported_problem may become bounded candidate patches. Candidate code cannot alter governance or evidence authority.
 
-## Phase 10 — Broader world interaction
-
+## Phase 11 — Broader world interaction
 Add narrowly scoped external sensors and actions with explicit permissions, provenance, rate limits, and outcome verification.
 
-## Phase 11 — Open-ended research
-
+## Phase 12 — Open-ended research
 Maintain a frontier of unresolved questions and select among them using expected information gain and evidence debt.
 
-## Phase 12 — Emergent identity study
-
+## Phase 13 — Emergent identity study
 Only after substantial persistent history exists, test whether identity-like continuity emerges from memory, prediction, self-modeling, and internally selected goals.
 
 No phase is permitted to assume consciousness in advance.

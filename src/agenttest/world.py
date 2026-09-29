@@ -131,7 +131,11 @@ def consolidate_world(state: dict[str, Any]) -> dict[str, int]:
     for prediction in state.get("predictions", []):
         prediction_id = prediction.get("id")
         status = prediction.get("status")
-        if not prediction_id or status not in {"confirmed", "violated"}:
+        if not prediction_id or status not in {
+            "confirmed",
+            "violated",
+            "invalidated_by_intervention",
+        }:
             continue
         if seen_predictions.get(prediction_id) == status:
             continue

@@ -10,6 +10,7 @@ from .state import utc_now
 
 COMPARABLE_FIELDS = (
     "branch",
+    "baseline_fingerprint",
     "tracked_files",
     "python_files",
     "python_source_lines",
@@ -32,6 +33,31 @@ def _git(root: Path, *args: str) -> str | None:
     if result.returncode != 0:
         return None
     return result.stdout.strip()
+
+
+def baseline_content_fingerprint(
+    root: Path,
+    tracked: list[str],
+) -> str | None:
+    if not tracked:
+        return None
+
+    digest = hashlib.sha256()
+    for relative in sorted(tracked):
+        if relative == "state" or relative.startswith("state/"):
+            continue
+        candidate = root / relative
+        if not candidate.is_file():
+            continue
+        try:
+            payload = candidate.read_bytes()
+        except OSError:
+            continue
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(payload)
+        digest.update(b"\0")
+    return digest.hexdigest()[:16]
 
 
 def _fingerprint(snapshot: dict[str, Any]) -> str:
@@ -60,11 +86,12 @@ def repository_snapshot(root: str | Path = ".") -> dict[str, Any]:
     branch = _git(path, "branch", "--show-current")
 
     snapshot = {
-        "sensor": "repository-v1",
+        "sensor": "repository-v2",
         "observed_at": utc_now(),
         "git_available": head is not None,
         "head": head,
         "branch": branch,
+        "baseline_fingerprint": baseline_content_fingerprint(path, tracked),
         "tracked_files": len(tracked),
         "python_files": len(python_paths),
         "python_source_lines": source_lines,

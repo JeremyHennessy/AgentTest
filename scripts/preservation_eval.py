@@ -19,7 +19,7 @@ from agenttest.self_proposal import propose_self_change
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v4"
+SUITE = "behavioral-preservation-v5"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -394,6 +394,49 @@ def verified_diagnostic_resolution() -> dict[str, Any]:
         temp.cleanup()
 
 
+def intervention_aware_prediction_scope() -> dict[str, Any]:
+    temp_a, store_a, core_a = fresh()
+    temp_b, store_b, core_b = fresh()
+    try:
+        first = observation(100)
+        first["baseline_fingerprint"] = "baseline-a"
+        intervened = observation(120)
+        intervened["baseline_fingerprint"] = "baseline-b"
+
+        core_a.cycle(observation=first)
+        intervention_result = core_a.cycle(observation=intervened)
+
+        stable_first = observation(100)
+        stable_first["baseline_fingerprint"] = "baseline-a"
+        unexpected = observation(100)
+        unexpected["baseline_fingerprint"] = "baseline-a"
+        unexpected["working_tree_clean"] = False
+
+        core_b.cycle(observation=stable_first)
+        violation_result = core_b.cycle(observation=unexpected)
+
+        return {
+            "passed": (
+                intervention_result["prediction_result"]["status"]
+                == "invalidated_by_intervention"
+                and intervention_result["drives"]["prediction_error"] == 0.0
+                and intervention_result["intention"]["kind"] != "explain_change"
+                and violation_result["prediction_result"]["status"] == "violated"
+                and violation_result["drives"]["prediction_error"] == 1.0
+                and violation_result["intention"]["kind"] == "explain_change"
+            ),
+            "intervention_status": intervention_result["prediction_result"]["status"],
+            "intervention_prediction_error": intervention_result["drives"]["prediction_error"],
+            "intervention_intention": intervention_result["intention"]["kind"],
+            "unexpected_status": violation_result["prediction_result"]["status"],
+            "unexpected_prediction_error": violation_result["drives"]["prediction_error"],
+            "unexpected_intention": violation_result["intention"]["kind"],
+        }
+    finally:
+        temp_a.cleanup()
+        temp_b.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -406,6 +449,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("self_change_proposal_governance", self_change_proposal_governance),
     ("proposal_review_requires_direct_problem_evidence", proposal_review_requires_direct_problem_evidence),
     ("verified_diagnostic_resolution", verified_diagnostic_resolution),
+    ("intervention_aware_prediction_scope", intervention_aware_prediction_scope),
 ]
 
 
