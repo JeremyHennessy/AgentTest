@@ -1,26 +1,25 @@
 {
   "created": true,
   "proposal": {
-    "baseline_metric": 0.3333333333333333,
-    "created_at": "2026-09-29T14:47:22.003133+00:00",
-    "created_cycle": 24,
+    "baseline_metric": 1.0,
+    "created_at": "2026-09-29T14:54:39.225682+00:00",
+    "created_cycle": 26,
     "evidence_refs": [
-      "Q000016",
-      "Q000015",
-      "Q000014",
-      "Q000013",
-      "Q000012",
-      "Q000011"
+      "X000001",
+      "P000024",
+      "R000024",
+      "P000025",
+      "R000025"
     ],
-    "expected_effect": "Open-endedness is supported by distinct evidence-grounded inquiry families rather than raw question count.",
-    "falsification": "Reject if paraphrases inflate open-endedness or distinct evidence-grounded questions collapse incorrectly.",
+    "expected_effect": "An experiment with a concrete evidence contract can close only from matching later evidence; an underspecified stale experiment is retained but marked as needing specification and no longer contributes to resolvable evidence hunger.",
+    "falsification": "Reject if unrelated evidence closes an experiment, history is deleted, evidence hunger still counts work that cannot be resolved, or any preserved behavior regresses.",
     "files": [
       "src/agenttest/core.py",
-      "src/agenttest/semantic.py",
+      "src/agenttest/drives.py",
       "tests/test_core.py"
     ],
-    "hypothesis": "Explicit question-family tracking can distinguish genuine branching from paraphrase churn.",
-    "id": "M000007",
+    "hypothesis": "Separating evidence-ready experiments from underspecified investigations can prevent stale unresolved work from dominating attention while preserving every historical experiment and its provenance.",
+    "id": "M000008",
     "protected_paths": [
       ".github/workflows/growth.yml",
       ".github/workflows/interact.yml",
@@ -37,11 +36,11 @@
     ],
     "rollback": "Revert the candidate change and restore the previous verified baseline.",
     "schema_version": 1,
-    "selection_rationale": "open_endedness was the highest eligible evidence-backed deficit (0.667) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
+    "selection_rationale": "Stale evidence debt was detected in experiment X000001 after 25 cycles despite later evaluated evidence; this overrides the saturated aggregate learning metric.",
     "source": "self-proposal-v1",
     "status": "proposed",
-    "target_dimension": "open_endedness",
-    "test_plan": "Generate paraphrases and distinct evidence-driven questions, then verify family counts distinguish them.",
-    "title": "Track inquiry families across cycles"
+    "target_dimension": "learning",
+    "test_plan": "Construct evidence-ready and underspecified experiments, provide later evaluated prediction evidence, verify only a legitimate match closes, verify stale underspecified work remains preserved with an explicit non-ready status, and run the baseline-owned preservation gate.",
+    "title": "Resolve stale experiment evidence debt"
   }
 }
