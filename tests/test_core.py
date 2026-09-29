@@ -450,6 +450,176 @@ class AgentCoreTests(unittest.TestCase):
         self.assertIn("change_proposals", migrated)
         self.assertEqual(migrated["change_proposals"], [])
 
+    def test_reproducibility_proposal_is_measurement_gap_without_direct_failure(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.proposal_review import review_change_proposal
+
+        self.core.cycle("replay evidence context")
+        state = self.store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Add deterministic cycle replay checks",
+            target_dimension="reproducibility",
+            files=["src/agenttest/replay.py", "tests/test_core.py"],
+            hypothesis="Replay measurement can reveal drift.",
+            expected_effect="Equivalent controlled cycles can be compared.",
+            test_plan="Run a non-mutating replay comparison.",
+            falsification="Replay cannot be measured reproducibly.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "test", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+
+        review, created = review_change_proposal(state, proposal)
+
+        self.assertTrue(created)
+        self.assertEqual(review["verdict"], "measurement_gap")
+        self.assertEqual(review["patch_authority"], "diagnostic_only")
+        self.assertEqual(proposal["status"], "reviewed_measurement_gap")
+
+    def test_direct_replay_divergence_supports_reproducibility_problem(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.proposal_review import review_change_proposal
+
+        self.core.cycle("replay evidence context")
+        state = self.store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Add deterministic cycle replay checks",
+            target_dimension="reproducibility",
+            files=["src/agenttest/replay.py", "tests/test_core.py"],
+            hypothesis="Replay measurement can reveal drift.",
+            expected_effect="Equivalent controlled cycles can be compared.",
+            test_plan="Run a non-mutating replay comparison.",
+            falsification="Replay cannot be measured reproducibly.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "test", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+        state["proposal_diagnostics"].append(
+            {
+                "id": "D000001",
+                "proposal_id": "M000001",
+                "kind": "deterministic_replay",
+                "status": "completed",
+                "outcome": "divergent",
+            }
+        )
+
+        review, _ = review_change_proposal(state, proposal)
+
+        self.assertEqual(review["verdict"], "supported_problem")
+        self.assertEqual(review["patch_authority"], "candidate_allowed")
+        self.assertEqual(review["direct_diagnostic_id"], "D000001")
+        self.assertEqual(proposal["status"], "reviewed_supported_problem")
+
+    def test_review_is_reused_and_blocks_proposal_proliferation(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.proposal_review import review_change_proposal
+        from agenttest.self_proposal import propose_self_change
+
+        self.core.cycle("replay evidence context")
+        state = self.store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Add deterministic cycle replay checks",
+            target_dimension="reproducibility",
+            files=["src/agenttest/replay.py", "tests/test_core.py"],
+            hypothesis="Replay measurement can reveal drift.",
+            expected_effect="Equivalent controlled cycles can be compared.",
+            test_plan="Run a non-mutating replay comparison.",
+            falsification="Replay cannot be measured reproducibly.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "test", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+
+        first, first_created = review_change_proposal(state, proposal)
+        second, second_created = review_change_proposal(state, proposal)
+        reused_proposal, proposal_created = propose_self_change(state)
+
+        self.assertTrue(first_created)
+        self.assertFalse(second_created)
+        self.assertEqual(first["id"], second["id"])
+        self.assertFalse(proposal_created)
+        self.assertEqual(reused_proposal["id"], "M000001")
+        self.assertEqual(len(state["change_proposals"]), 1)
+
+    def test_learning_gap_can_be_supported_by_later_unclosed_evidence(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.proposal_review import review_change_proposal
+
+        first = self.core.cycle(observation=observation(100))
+        self.core.cycle(observation=observation(120))
+        state = self.store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Close measurable experiment loops",
+            target_dimension="learning",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Later measured evidence can close eligible experiments.",
+            expected_effect="Matching pending experiments close with provenance.",
+            test_plan="Use later evaluated prediction evidence.",
+            falsification="No matching experiment closes or an unrelated one closes.",
+            rollback="Revert.",
+            evidence_refs=[first["experiment"]["id"], "P000001"],
+        )
+        proposal.update({"id": "M000001", "source": "test", "created_cycle": 2})
+        state["change_proposals"].append(proposal)
+
+        review, _ = review_change_proposal(state, proposal)
+
+        self.assertEqual(review["verdict"], "supported_problem")
+        self.assertEqual(review["patch_authority"], "candidate_allowed")
+        self.assertTrue(review["direct_evidence_refs"])
+
+    def test_v6_state_migrates_proposal_review_state_without_history_loss(self) -> None:
+        legacy = {
+            "schema_version": 6,
+            "cycles": 6,
+            "generation": 6,
+            "episodes": [{"id": "E000001", "cycle": 1, "concepts": ["alpha"]}],
+            "semantic_memory": {
+                "last_episode_index": 1,
+                "concepts": {},
+                "associations": {},
+            },
+            "environment_snapshots": [],
+            "surprises": [],
+            "predictions": [],
+            "intentions": [],
+            "drives": {},
+            "world_model": {
+                "claims": [],
+                "current": {},
+                "last_snapshot_index": 0,
+                "seen_prediction_status": {},
+                "seen_experiment_status": {},
+            },
+            "cognition_events": [],
+            "cognition_candidates": [],
+            "questions": [],
+            "experiments": [],
+            "change_proposals": [{"id": "M000001", "status": "proposed"}],
+            "reflections": [],
+            "accepted_changes": [],
+            "concept_counts": {"alpha": 1},
+            "metrics": {"continuity": 1.0},
+            "self_model": {"capabilities": [], "limitations": []},
+        }
+        self.state_path.write_text(json.dumps(legacy), encoding="utf-8")
+
+        migrated = self.store.load()
+
+        self.assertEqual(migrated["schema_version"], SCHEMA_VERSION)
+        self.assertEqual(migrated["cycles"], 6)
+        self.assertEqual(migrated["change_proposals"][0]["id"], "M000001")
+        self.assertEqual(migrated["proposal_reviews"], [])
+        self.assertEqual(migrated["proposal_diagnostics"], [])
+
 
 if __name__ == "__main__":
     unittest.main()
