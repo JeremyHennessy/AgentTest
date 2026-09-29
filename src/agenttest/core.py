@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 import re
 from collections import Counter
 from typing import Any
 
+from .perception import changed_fields
 from .state import DIMENSIONS, StateStore, utc_now
 
 _STOPWORDS = {
@@ -23,36 +25,62 @@ def _norm(text: str) -> str:
 
 
 class AgentCore:
-    """Smallest persistent loop that can observe, remember, question, choose and reflect."""
+    """Persistent loop that can observe, remember, question, choose and reflect."""
 
     def __init__(self, store: StateStore | None = None) -> None:
         self.store = store or StateStore()
 
-    def cycle(self, stimulus: str | None = None) -> dict[str, Any]:
+    def cycle(
+        self,
+        stimulus: str | None = None,
+        observation: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         state = self.store.load()
         state["cycles"] += 1
         state["generation"] = state["cycles"]
         cycle = state["cycles"]
         now = utc_now()
+        surprise = None
 
-        if stimulus:
-            episode_id = f"E{len(state['episodes']) + 1:06d}"
-            concepts = _concepts(stimulus)
-            state["episodes"].append(
-                {
-                    "id": episode_id,
+        if observation is not None:
+            previous = (
+                state["environment_snapshots"][-1]
+                if state["environment_snapshots"]
+                else None
+            )
+            snapshot = dict(observation)
+            snapshot["cycle"] = cycle
+            state["environment_snapshots"].append(snapshot)
+            changes = changed_fields(previous, snapshot)
+            if changes:
+                surprise = {
+                    "id": f"S{len(state['surprises']) + 1:06d}",
                     "cycle": cycle,
                     "time": now,
-                    "kind": "observation",
-                    "content": stimulus,
-                    "concepts": concepts,
+                    "changes": changes,
                 }
-            )
-            counts = Counter(state.get("concept_counts", {}))
-            counts.update(concepts)
-            state["concept_counts"] = dict(counts)
+                state["surprises"].append(surprise)
 
-        question_text = self._generate_question(state)
+            self._remember(
+                state,
+                cycle,
+                now,
+                "environment",
+                json.dumps(snapshot, sort_keys=True),
+                list(changes.keys()) or ["repository", "observation"],
+            )
+
+        if stimulus:
+            self._remember(
+                state,
+                cycle,
+                now,
+                "stimulus",
+                stimulus,
+                _concepts(stimulus),
+            )
+
+        question_text = self._generate_question(state, surprise)
         question = self._upsert_question(state, question_text)
         question["times_selected"] += 1
         question["last_selected_cycle"] = cycle
@@ -69,6 +97,8 @@ class AgentCore:
             "cycle": cycle,
             "time": now,
             "stimulus_supplied": bool(stimulus),
+            "observation_supplied": observation is not None,
+            "surprise_id": surprise["id"] if surprise else None,
             "selected_question_id": question["id"],
             "proposed_experiment_id": experiment["id"],
             "metrics": state["metrics"],
@@ -76,6 +106,7 @@ class AgentCore:
         self.store.append_journal(event)
         return {
             "cycle": cycle,
+            "surprise": surprise,
             "question": question,
             "experiment": experiment,
             "metrics": state["metrics"],
@@ -130,7 +161,45 @@ class AgentCore:
         )
         return reflection
 
-    def _generate_question(self, state: dict[str, Any]) -> str:
+    def _remember(
+        self,
+        state: dict[str, Any],
+        cycle: int,
+        now: str,
+        kind: str,
+        content: str,
+        concepts: list[str],
+    ) -> None:
+        episode_id = f"E{len(state['episodes']) + 1:06d}"
+        state["episodes"].append(
+            {
+                "id": episode_id,
+                "cycle": cycle,
+                "time": now,
+                "kind": kind,
+                "content": content,
+                "concepts": concepts,
+            }
+        )
+        counts = Counter(state.get("concept_counts", {}))
+        counts.update(concepts)
+        state["concept_counts"] = dict(counts)
+
+    def _generate_question(
+        self,
+        state: dict[str, Any],
+        surprise: dict[str, Any] | None = None,
+    ) -> str:
+        if surprise and surprise["changes"]:
+            field = sorted(surprise["changes"])[0]
+            change = surprise["changes"][field]
+            candidate = (
+                f"What caused repository {field} to change from {change['before']!r} "
+                f"to {change['after']!r}, and did that change alter a verified capability?"
+            )
+            if not self._question_exists(state, candidate):
+                return candidate
+
         counts = state.get("concept_counts", {})
         ranked = sorted(counts.items(), key=lambda item: (item[1], item[0]))
 
@@ -216,8 +285,11 @@ class AgentCore:
         state["metrics"].update(
             {
                 "continuity": 1.0 if cycles >= 2 else (0.5 if cycles == 1 else 0.0),
-                "memory": min(1.0, len(state["episodes"]) / 3.0),
-                "self_model": 0.75 if cycles else 0.0,
+                "memory": min(1.0, len(state["episodes"]) / 4.0),
+                "perception": min(1.0, len(state["environment_snapshots"]) / 3.0),
+                "self_model": (
+                    0.85 if state["environment_snapshots"] else (0.75 if cycles else 0.0)
+                ),
                 "curiosity": min(1.0, len(open_questions) / 5.0),
                 "agency": min(1.0, len(state["experiments"]) / 5.0),
                 "learning": min(1.0, len(completed) / 3.0),
