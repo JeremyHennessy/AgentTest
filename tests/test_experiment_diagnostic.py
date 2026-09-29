@@ -3,10 +3,15 @@ from __future__ import annotations
 import copy
 import unittest
 
+from agenttest.change_control import PROTECTED_PATHS
 from agenttest.diagnostic_experiments import evaluate_experiment_design
 
 
 class ExperimentDesignDiagnosticTests(unittest.TestCase):
+    def test_diagnostic_authority_is_protected(self) -> None:
+        self.assertIn("src/agenttest/diagnostic_experiments.py", PROTECTED_PATHS)
+        self.assertIn("scripts/experiment_design_eval.py", PROTECTED_PATHS)
+
     def test_duplicate_uncontracted_experiments_are_specification_churn(self) -> None:
         state = {
             "questions": [
