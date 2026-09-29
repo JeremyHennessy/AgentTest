@@ -1848,6 +1848,51 @@ class AgentCoreTests(unittest.TestCase):
             stale["id"],
         )
 
+    def test_observed_cycle_does_not_admit_ungrounded_generic_experiment(self) -> None:
+        result = self.core.cycle(observation=observation(100))
+        state = self.store.load()
+
+        self.assertIsNone(result["experiment"])
+        self.assertIsNotNone(result["prediction_experiment"])
+        self.assertEqual(len(state["experiments"]), 1)
+        self.assertEqual(
+            state["experiments"][0]["source"],
+            "repository_stability_prediction",
+        )
+        self.assertEqual(state["experiments"][0]["readiness"], "evidence_ready")
+
+    def test_unobserved_cycle_preserves_legacy_generic_experiment_behavior(self) -> None:
+        result = self.core.cycle()
+
+        self.assertIsNotNone(result["experiment"])
+        self.assertIsNone(result["prediction_experiment"])
+        self.assertEqual(result["experiment"]["status"], "proposed")
+        self.assertNotIn("evidence_contract", result["experiment"])
+
+    def test_grounded_cognition_can_still_admit_experiment_during_observed_cycle(self) -> None:
+        provider = StaticCognitionProvider(candidate("E000001"))
+
+        result = self.core.cycle(
+            "grounded evidence",
+            observation=observation(100),
+            cognition=True,
+            cognition_provider=provider,
+        )
+        state = self.store.load()
+
+        self.assertIsNotNone(result["thought"])
+        self.assertIsNotNone(result["experiment"])
+        self.assertEqual(
+            result["experiment"]["cognition_candidate_id"],
+            result["thought"]["id"],
+        )
+        self.assertIsNotNone(result["prediction_experiment"])
+        self.assertNotEqual(
+            result["experiment"]["id"],
+            result["prediction_experiment"]["id"],
+        )
+        self.assertEqual(len(state["experiments"]), 2)
+
     def test_self_observation_creates_executable_prediction_experiment(self) -> None:
         from agenttest.diagnostic_experiments import evaluate_experiment_design
 
