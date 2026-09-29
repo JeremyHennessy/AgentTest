@@ -8,7 +8,9 @@ from typing import Any
 from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
 from .perception import COMPARABLE_FIELDS, changed_fields
+from .semantic import consolidate_semantic_memory
 from .state import DIMENSIONS, StateStore, utc_now
+from .world import consolidate_world
 
 _STOPWORDS = {
     "about", "after", "again", "agent", "could", "cycle", "from", "have",
@@ -27,7 +29,7 @@ def _norm(text: str) -> str:
 
 
 class AgentCore:
-    """Persistent loop with perception, prediction, drives, cognition and reflection."""
+    """Persistent loop with memory, world model, prediction, drives and cognition."""
 
     def __init__(self, store: StateStore | None = None) -> None:
         self.store = store or StateStore()
@@ -86,6 +88,9 @@ class AgentCore:
                 _concepts(stimulus),
             )
 
+        semantic_update = consolidate_semantic_memory(state)
+        world_update = consolidate_world(state)
+
         self._update_metrics(state)
         drives = compute_drives(state, surprise, prediction_result)
         state["drives"] = drives
@@ -132,6 +137,8 @@ class AgentCore:
             "prediction_result_id": (
                 prediction_result["id"] if prediction_result else None
             ),
+            "semantic_update": semantic_update,
+            "world_update": world_update,
             "intention_id": intention["id"],
             "cognition_event_id": cognition_event["id"] if cognition_event else None,
             "cognition_candidate_id": thought["id"] if thought else None,
@@ -146,6 +153,8 @@ class AgentCore:
             "cycle": cycle,
             "surprise": surprise,
             "prediction_result": prediction_result,
+            "semantic_update": semantic_update,
+            "world_update": world_update,
             "drives": drives,
             "intention": intention,
             "cognition_event": cognition_event,
@@ -193,6 +202,7 @@ class AgentCore:
             ),
         }
         state["reflections"].append(reflection)
+        consolidate_world(state)
         self._update_metrics(state)
         self.store.save(state)
         self.store.append_journal(
@@ -444,6 +454,10 @@ class AgentCore:
             for item in state.get("cognition_candidates", [])
             if item.get("status") == "proposed"
         ]
+        semantic = state.get("semantic_memory", {})
+        semantic_concepts = len(semantic.get("concepts", {}))
+        world = state.get("world_model", {})
+        current_claims = len(world.get("current", {}))
         open_questions = [
             question for question in state["questions"] if question["status"] == "open"
         ]
@@ -453,7 +467,9 @@ class AgentCore:
             {
                 "continuity": 1.0 if cycles >= 2 else (0.5 if cycles == 1 else 0.0),
                 "memory": min(1.0, len(state["episodes"]) / 4.0),
+                "semantic_memory": min(1.0, semantic_concepts / 8.0),
                 "perception": min(1.0, len(state["environment_snapshots"]) / 3.0),
+                "world_model": min(1.0, current_claims / 8.0),
                 "cognition": min(1.0, len(accepted_cognition) / 3.0),
                 "self_model": (
                     0.9 if evaluated_predictions else
