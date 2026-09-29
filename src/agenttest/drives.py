@@ -21,6 +21,7 @@ def compute_drives(
     pending = [
         item for item in state.get("experiments", [])
         if item.get("status") == "proposed"
+        and item.get("readiness") != "needs_specification"
     ]
     open_questions = [
         item for item in state.get("questions", [])
@@ -54,6 +55,7 @@ def choose_intention(
     pending = [
         item for item in state.get("experiments", [])
         if item.get("status") == "proposed"
+        and item.get("readiness") != "needs_specification"
     ]
     latest_surprise = state.get("surprises", [])[-1] if state.get("surprises") else None
 
