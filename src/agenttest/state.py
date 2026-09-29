@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 DIMENSIONS = (
     "continuity",
@@ -41,6 +41,9 @@ def initial_state() -> dict[str, Any]:
         "episodes": [],
         "environment_snapshots": [],
         "surprises": [],
+        "predictions": [],
+        "intentions": [],
+        "drives": {},
         "questions": [],
         "experiments": [],
         "reflections": [],
@@ -52,10 +55,13 @@ def initial_state() -> dict[str, Any]:
                 "question generation from accumulated concepts",
                 "selection of explicit falsifiable experiments",
                 "narrow repository self-perception through auditable sensors",
+                "one-step prediction of measured repository state",
+                "endogenous evidence-driven intention selection",
             ],
             "limitations": [
                 "Perception is limited to explicitly implemented auditable sensors.",
                 "No model-backed generative cognition is configured.",
+                "Environmental actions are not independently executed.",
                 "No evidence currently establishes consciousness or subjective experience.",
                 "Code changes are proposals until independently evaluated.",
             ],
@@ -68,14 +74,20 @@ def initial_state() -> dict[str, Any]:
 
 
 def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
-    state.setdefault("environment_snapshots", [])
-    state.setdefault("surprises", [])
-    state.setdefault("episodes", [])
-    state.setdefault("questions", [])
-    state.setdefault("experiments", [])
-    state.setdefault("reflections", [])
-    state.setdefault("accepted_changes", [])
-    state.setdefault("concept_counts", {})
+    for key, default in (
+        ("environment_snapshots", []),
+        ("surprises", []),
+        ("predictions", []),
+        ("intentions", []),
+        ("drives", {}),
+        ("episodes", []),
+        ("questions", []),
+        ("experiments", []),
+        ("reflections", []),
+        ("accepted_changes", []),
+        ("concept_counts", {}),
+    ):
+        state.setdefault(key, default)
 
     metrics = state.setdefault("metrics", {})
     for dimension in DIMENSIONS:
@@ -83,17 +95,24 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
 
     self_model = state.setdefault("self_model", {})
     capabilities = self_model.setdefault("capabilities", [])
-    perception_capability = "narrow repository self-perception through auditable sensors"
-    if perception_capability not in capabilities:
-        capabilities.append(perception_capability)
+    for capability in (
+        "narrow repository self-perception through auditable sensors",
+        "one-step prediction of measured repository state",
+        "endogenous evidence-driven intention selection",
+    ):
+        if capability not in capabilities:
+            capabilities.append(capability)
 
     limitations = self_model.setdefault("limitations", [])
     old_limitation = "No external perception unless observations are supplied."
     if old_limitation in limitations:
         limitations.remove(old_limitation)
-    new_limitation = "Perception is limited to explicitly implemented auditable sensors."
-    if new_limitation not in limitations:
-        limitations.append(new_limitation)
+    for limitation in (
+        "Perception is limited to explicitly implemented auditable sensors.",
+        "Environmental actions are not independently executed.",
+    ):
+        if limitation not in limitations:
+            limitations.append(limitation)
 
     state["schema_version"] = SCHEMA_VERSION
     return state
