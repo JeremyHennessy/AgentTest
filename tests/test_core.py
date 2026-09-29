@@ -1573,9 +1573,13 @@ class AgentCoreTests(unittest.TestCase):
             and item.get("readiness") != "needs_specification"
         ]
         self.assertNotIn(stale["id"], [item["id"] for item in resolvable_pending])
+        resolvable_at_drive_time = [
+            item for item in resolvable_pending
+            if int(item.get("cycle", 0)) < state["cycles"]
+        ]
         self.assertEqual(
             state["drives"]["evidence_hunger"],
-            min(0.8, len(resolvable_pending) / 4.0),
+            min(0.8, len(resolvable_at_drive_time) / 4.0),
         )
         self.assertNotEqual(
             state["intentions"][-1].get("target"),
