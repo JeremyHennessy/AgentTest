@@ -120,6 +120,76 @@ class ExperimentDesignDiagnosticTests(unittest.TestCase):
         self.assertEqual(result["unresolved_experiment_count"], 1)
         self.assertEqual(result["contracted_ratio"], 0.0)
 
+    def test_fully_triaged_blocked_backlog_has_distinct_outcome(self) -> None:
+        state = {
+            "questions": [{"id": "Q000001", "text": "What is blocked?"}],
+            "experiments": [
+                {
+                    "id": "X000001",
+                    "question_id": "Q000001",
+                    "status": "proposed",
+                    "readiness": "needs_specification",
+                    "method": "Name a discriminating observation.",
+                    "specification": {
+                        "version": "experiment-specification-v1",
+                        "actionability": "blocked",
+                        "missing_fields": [
+                            "observable",
+                            "evidence_source",
+                            "resolution_rule",
+                        ],
+                        "grounded_evidence_refs": [],
+                        "blocking_reason": "No grounded source currently supplies the missing fields.",
+                    },
+                }
+            ],
+        }
+
+        result = evaluate_experiment_design(state)
+
+        self.assertEqual(result["diagnostic_version"], "experiment-design-v3")
+        self.assertEqual(result["outcome"], "blocked_specification_backlog")
+        self.assertEqual(result["specification_backlog_count"], 1)
+        self.assertEqual(result["blocked_specification_count"], 1)
+        self.assertEqual(result["actionable_specification_count"], 0)
+        self.assertEqual(result["untriaged_specification_count"], 0)
+        self.assertEqual(result["blocked_specification_ids"], ["X000001"])
+
+    def test_untriaged_backlog_prevents_blocked_outcome(self) -> None:
+        state = {
+            "questions": [
+                {"id": "Q000001", "text": "Blocked?"},
+                {"id": "Q000002", "text": "Untriaged?"},
+            ],
+            "experiments": [
+                {
+                    "id": "X000001",
+                    "question_id": "Q000001",
+                    "status": "proposed",
+                    "readiness": "needs_specification",
+                    "method": "Method A",
+                    "specification": {
+                        "actionability": "blocked",
+                        "missing_fields": ["observable"],
+                    },
+                },
+                {
+                    "id": "X000002",
+                    "question_id": "Q000002",
+                    "status": "proposed",
+                    "readiness": "needs_specification",
+                    "method": "Method B",
+                },
+            ],
+        }
+
+        result = evaluate_experiment_design(state)
+
+        self.assertEqual(result["outcome"], "specification_backlog")
+        self.assertEqual(result["blocked_specification_count"], 1)
+        self.assertEqual(result["untriaged_specification_count"], 1)
+        self.assertEqual(result["untriaged_specification_ids"], ["X000002"])
+
     def test_completed_experiments_are_not_active_design_debt(self) -> None:
         state = {
             "questions": [{"id": "Q000001", "text": "Resolved?"}],
