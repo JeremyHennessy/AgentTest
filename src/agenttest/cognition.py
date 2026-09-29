@@ -249,6 +249,8 @@ def known_evidence_ids(state: dict[str, Any]) -> set[str]:
         "questions",
         "experiments",
         "reflections",
+        "cognition_events",
+        "cognition_candidates",
     ):
         for item in state.get(key, []):
             identifier = item.get("id")

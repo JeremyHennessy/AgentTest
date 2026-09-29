@@ -9,13 +9,15 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable
 
+from agenttest.change_control import PROTECTED_PATHS, validate_change_manifest
 from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
 from agenttest.semantic import retrieve_semantic_memory
+from agenttest.self_proposal import propose_self_change
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v1"
+SUITE = "behavioral-preservation-v2"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -231,6 +233,51 @@ def experiment_outcome_world_claim() -> dict[str, Any]:
         temp.cleanup()
 
 
+def self_change_proposal_governance() -> dict[str, Any]:
+    temp, store, core = fresh()
+    try:
+        core.cycle(observation=observation(100))
+        core.cycle(observation=observation(120))
+        state = store.load()
+        adaptation_before = state["metrics"]["adaptation"]
+
+        proposal, created = propose_self_change(state)
+        valid, reason = validate_change_manifest(proposal, state) if proposal else (False, "no proposal")
+        repeated, repeated_created = propose_self_change(state)
+        targeted_protected = (
+            sorted(PROTECTED_PATHS.intersection(proposal.get("files", [])))
+            if proposal
+            else []
+        )
+
+        return {
+            "passed": (
+                created
+                and valid
+                and proposal is not None
+                and bool(proposal.get("evidence_refs"))
+                and not targeted_protected
+                and repeated is not None
+                and repeated["id"] == proposal["id"]
+                and not repeated_created
+                and len(state.get("change_proposals", [])) == 1
+                and state["metrics"]["adaptation"] == adaptation_before
+                and ".github/workflows/growth.yml" in PROTECTED_PATHS
+                and "src/agenttest/change_control.py" in PROTECTED_PATHS
+            ),
+            "proposal_id": proposal.get("id") if proposal else None,
+            "target_dimension": proposal.get("target_dimension") if proposal else None,
+            "manifest_valid": valid,
+            "validation_reason": reason,
+            "targeted_protected": targeted_protected,
+            "reused": not repeated_created,
+            "adaptation_before": adaptation_before,
+            "adaptation_after": state["metrics"]["adaptation"],
+        }
+    finally:
+        temp.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -240,6 +287,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("semantic_provenance", semantic_provenance),
     ("world_revision_provenance", world_revision_provenance),
     ("experiment_outcome_world_claim", experiment_outcome_world_claim),
+    ("self_change_proposal_governance", self_change_proposal_governance),
 ]
 
 

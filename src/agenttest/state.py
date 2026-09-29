@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 DIMENSIONS = (
     "continuity",
@@ -71,6 +71,7 @@ def initial_state() -> dict[str, Any]:
         "cognition_candidates": [],
         "questions": [],
         "experiments": [],
+        "change_proposals": [],
         "reflections": [],
         "accepted_changes": [],
         "self_model": {
@@ -85,8 +86,11 @@ def initial_state() -> dict[str, Any]:
                 "one-step prediction of measured repository state",
                 "endogenous evidence-driven intention selection",
                 "validated boundary for optional model-generated candidate thoughts",
+                "evidence-backed self-authored change manifests without code execution",
             ],
             "limitations": [
+                "Self-authored change manifests cannot apply or merge code.",
+                "Governance and preservation files are excluded from self-authored changes.",
                 "Semantic memory is lexical and co-occurrence based rather than embedding based.",
                 "The world model currently represents only directly derived repository and evaluation claims.",
                 "Perception is limited to explicitly implemented auditable sensors.",
@@ -118,6 +122,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         ("episodes", []),
         ("questions", []),
         ("experiments", []),
+        ("change_proposals", []),
         ("reflections", []),
         ("accepted_changes", []),
         ("concept_counts", {}),
@@ -149,12 +154,15 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         "one-step prediction of measured repository state",
         "endogenous evidence-driven intention selection",
         "validated boundary for optional model-generated candidate thoughts",
+        "evidence-backed self-authored change manifests without code execution",
     ):
         if capability not in capabilities:
             capabilities.append(capability)
 
     limitations = self_model.setdefault("limitations", [])
     for limitation in (
+        "Self-authored change manifests cannot apply or merge code.",
+        "Governance and preservation files are excluded from self-authored changes.",
         "Semantic memory is lexical and co-occurrence based rather than embedding based.",
         "The world model currently represents only directly derived repository and evaluation claims.",
         "Perception is limited to explicitly implemented auditable sensors.",

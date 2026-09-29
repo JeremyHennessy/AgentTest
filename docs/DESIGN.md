@@ -1,10 +1,10 @@
-# Design: Genesis Phases 0–5
+# Design: Genesis Phases 0–6
 
 ## Premise
 
 AgentTest is an original experiment in persistent adaptive computation. It is not an imported agent framework and it does not use a scalar alive score.
 
-## Current loop
+## Current adaptive loop
 
     auditable perception
           ↓
@@ -24,9 +24,15 @@ AgentTest is an original experiment in persistent adaptive computation. It is no
           ↓
        next heartbeat
 
-Code evolution is deliberately outside that heartbeat:
+## Evolution loop
 
-    evidence-backed change proposal
+    persistent evidence + capability metrics
+          ↓
+    select highest eligible deficit
+          ↓
+    self-authored CHANGE MANIFEST only
+          ↓
+    human / later bounded patch mechanism
           ↓
     isolated candidate branch
           ↓
@@ -34,61 +40,60 @@ Code evolution is deliberately outside that heartbeat:
           ↓
     BASELINE-OWNED preservation evaluator
           ↓
-    baseline vs candidate comparison
+    target evidence + no regressions
           ↓
-    human/verified promotion or rejection
+    verified promotion or rejection
 
-## Episodic versus semantic memory
+Phase 6 stops at the manifest step. AgentTest still cannot write or merge code.
 
-Raw episodes remain immutable evidence. Semantic memory is a derived index over those episodes.
+## Self-authored proposal selection
 
-Each concept records occurrence count, first/last cycle, and source episode IDs. Co-occurring concepts create deterministic association edges with their own source episode IDs.
+The proposal engine selects among evidence dimensions with observable deficits. It excludes:
 
-Consolidation is incremental: each episode is processed once. A semantic summary can therefore be rebuilt or challenged against its source history.
+- saturated dimensions;
+- adaptation itself, because an unaccepted change is a process outcome rather than a code defect;
+- cognition when no cognition provider has produced successful evidence;
+- any target for which the organism cannot cite existing evidence.
 
-## Temporal world model
+The chosen manifest records the current target metric, evidence IDs, files, hypothesis, expected effect, test plan, falsification criterion, and rollback.
 
-The world model is a claim ledger, not an oracle.
+Only one unresolved self-change proposal may exist at a time. Repeated heartbeats reuse it rather than manufacturing proposal volume.
 
-Direct repository observations create claims such as repository.python_source_lines = 1532. Each claim cites the environment episode that supports it.
+Creating a proposal does not raise the adaptation metric.
 
-When an observed value changes, the prior claim is preserved as superseded and linked bidirectionally to the new current claim. This records change instead of silently rewriting history.
+## Governance boundary
 
-Confirmed or violated predictions and completed experiment outcomes also create claims with references to their prediction/experiment and reflection evidence.
+A self-authored manifest may not target:
 
-## Cognition grounding
+- .github/workflows/verify.yml
+- .github/workflows/growth.yml
+- scripts/preservation_eval.py
+- scripts/compare_eval.py
+- src/agenttest/change_control.py
 
-Current world claims may be supplied to the cognition boundary and cited by ID, but the claim itself retains links to raw evidence. Semantic memory is used for retrieval and context, not as unquestionable evidence.
+Changes to the rules governing evolution therefore remain outside self-directed mutation.
 
 ## Evolution gate
 
-A candidate version must not be allowed to redefine success for itself.
+On pull requests, the previous verified BASE commit supplies the behavioral evaluator and comparator used against both baseline and candidate code. A candidate cannot pass by weakening its own judge.
 
-The preservation harness and comparator are therefore part of the verified baseline. On future pull requests, the workflow checks out both the base and candidate commits, then uses the BASE commit's preservation evaluator against both codebases. A candidate that deletes a capability, causes a previously passing behavior to fail, or removes a required behavior is rejected as a regression.
-
-The first protected paths are:
-
-- .github/workflows/verify.yml
-- scripts/preservation_eval.py
-- scripts/compare_eval.py
-
-A future self-authored change manifest may not target those files. It must also state a target dimension, evidence references, expected effect, test plan, falsification condition, and rollback.
-
-Phase 5 establishes the judge before granting the organism authority to author patches.
+The gate has been tested with a deliberate negative control: a one-line regression changed prediction-error handling from explain_change to reduce_uncertainty. The baseline-owned evaluator detected prediction_error_focus as a regression and rejected that PR.
 
 ## Trust ordering
 
-1. Raw sensor observations and explicitly recorded experiment outcomes.
+1. Raw sensor observations and explicit outcomes.
 2. Derived world claims with source references.
 3. Semantic memory used for retrieval.
 4. Model-generated candidate thoughts.
-5. Proposed code changes.
+5. Self-authored change manifests.
+6. Candidate code, once that capability exists.
 
-Lower layers may guide attention but cannot overwrite higher-evidence layers, and code changes cannot redefine the preservation gate that judges them.
+No lower layer may overwrite the evidence or governance that evaluates it.
 
 ## Still missing
 
-- self-authored code proposals and patches;
+- self-authored patch generation;
+- target-specific improvement measurement for generated patches;
 - broader external perception;
 - causal models richer than temporal claim revision;
 - independent environmental action;

@@ -327,6 +327,129 @@ class AgentCoreTests(unittest.TestCase):
         self.assertIn("scripts/preservation_eval.py", manifest["protected_paths"])
         self.assertEqual(manifest["evidence_refs"], ["E000001"])
 
+    def test_self_change_proposal_is_grounded_and_reused(self) -> None:
+        from agenttest.change_control import validate_change_manifest
+        from agenttest.self_proposal import propose_self_change
+
+        self.core.cycle(observation=observation(100))
+        self.core.cycle(observation=observation(120))
+        state = self.store.load()
+        adaptation_before = state["metrics"]["adaptation"]
+
+        proposal, created = propose_self_change(state)
+        self.assertTrue(created)
+        self.assertIsNotNone(proposal)
+        valid, reason = validate_change_manifest(proposal, state)
+        self.assertTrue(valid, reason)
+        self.assertTrue(proposal["evidence_refs"])
+        self.assertNotEqual(proposal["target_dimension"], "cognition")
+        self.assertEqual(state["metrics"]["adaptation"], adaptation_before)
+
+        second, second_created = propose_self_change(state)
+        self.assertFalse(second_created)
+        self.assertEqual(second["id"], proposal["id"])
+        self.assertEqual(len(state["change_proposals"]), 1)
+
+    def test_missing_cognition_provider_is_not_treated_as_code_defect(self) -> None:
+        from agenttest.self_proposal import select_change_target
+
+        self.core.cycle("evidence")
+        state = self.store.load()
+        state["metrics"].update(
+            {
+                "cognition": 0.0,
+                "learning": 0.4,
+                "reflection": 0.4,
+                "self_model": 0.9,
+                "agency": 0.9,
+                "curiosity": 0.9,
+                "reproducibility": 0.9,
+                "perception": 1.0,
+                "semantic_memory": 1.0,
+                "world_model": 1.0,
+                "memory": 1.0,
+                "continuity": 1.0,
+                "open_endedness": 1.0,
+            }
+        )
+        state["cognition_events"] = [
+            {
+                "id": "G000001",
+                "status": "unavailable",
+                "rejection_reason": "no cognition provider configured",
+            }
+        ]
+
+        selected = select_change_target(state)
+        self.assertIsNotNone(selected)
+        self.assertNotEqual(selected["dimension"], "cognition")
+
+    def test_change_manifest_protects_growth_and_change_control(self) -> None:
+        from agenttest.change_control import make_change_manifest
+
+        self.core.cycle("governance evidence")
+        state = self.store.load()
+        for path in (
+            ".github/workflows/growth.yml",
+            "src/agenttest/change_control.py",
+        ):
+            with self.assertRaises(ValueError):
+                make_change_manifest(
+                    state,
+                    title="Governance mutation",
+                    target_dimension="adaptation",
+                    files=[path],
+                    hypothesis="Changing governance might alter behavior.",
+                    expected_effect="Unknown.",
+                    test_plan="Run tests.",
+                    falsification="Any regression.",
+                    rollback="Revert.",
+                    evidence_refs=["E000001"],
+                )
+
+    def test_v5_state_migrates_change_proposals_without_erasing_history(self) -> None:
+        legacy = {
+            "schema_version": 5,
+            "cycles": 4,
+            "generation": 4,
+            "episodes": [{"id": "E000001", "cycle": 1, "concepts": ["alpha"]}],
+            "semantic_memory": {
+                "last_episode_index": 1,
+                "concepts": {},
+                "associations": {},
+            },
+            "environment_snapshots": [],
+            "surprises": [],
+            "predictions": [],
+            "intentions": [],
+            "drives": {},
+            "world_model": {
+                "claims": [],
+                "current": {},
+                "last_snapshot_index": 0,
+                "seen_prediction_status": {},
+                "seen_experiment_status": {},
+            },
+            "cognition_events": [],
+            "cognition_candidates": [],
+            "questions": [],
+            "experiments": [],
+            "reflections": [],
+            "accepted_changes": [],
+            "concept_counts": {"alpha": 1},
+            "metrics": {"continuity": 1.0},
+            "self_model": {"capabilities": [], "limitations": []},
+        }
+        self.state_path.write_text(json.dumps(legacy), encoding="utf-8")
+
+        migrated = self.store.load()
+
+        self.assertEqual(migrated["schema_version"], SCHEMA_VERSION)
+        self.assertEqual(migrated["cycles"], 4)
+        self.assertEqual(migrated["episodes"][0]["id"], "E000001")
+        self.assertIn("change_proposals", migrated)
+        self.assertEqual(migrated["change_proposals"], [])
+
 
 if __name__ == "__main__":
     unittest.main()
