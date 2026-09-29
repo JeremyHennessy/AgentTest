@@ -316,6 +316,26 @@ def classify_proposal(
                 "direct_diagnostic_id": inquiry.get("id"),
             }
 
+        if (
+            inquiry is not None
+            and inquiry.get("outcome") == "diverse"
+            and inquiry.get("result", {}).get("metric_status") == "unknown"
+        ):
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "The verified inquiry-family diagnostic found distinct question "
+                    "families and no paraphrase-churn signal. Metric alignment is not "
+                    "available in this legacy or synthetic context, so no corrective "
+                    "patch is authorized."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": inquiry.get("id"),
+            }
+
         if inquiry is not None and inquiry.get("outcome") == "insufficient_data":
             return {
                 "verdict": "needs_evidence",
