@@ -5,7 +5,8 @@ import re
 from collections import Counter
 from typing import Any
 
-from .perception import changed_fields
+from .drives import choose_intention, compute_drives
+from .perception import COMPARABLE_FIELDS, changed_fields
 from .state import DIMENSIONS, StateStore, utc_now
 
 _STOPWORDS = {
@@ -25,7 +26,7 @@ def _norm(text: str) -> str:
 
 
 class AgentCore:
-    """Persistent loop that can observe, remember, question, choose and reflect."""
+    """Persistent loop with perception, prediction, endogenous drives and reflection."""
 
     def __init__(self, store: StateStore | None = None) -> None:
         self.store = store or StateStore()
@@ -41,8 +42,10 @@ class AgentCore:
         cycle = state["cycles"]
         now = utc_now()
         surprise = None
+        prediction_result = None
 
         if observation is not None:
+            prediction_result = self._evaluate_prediction(state, observation, now)
             previous = (
                 state["environment_snapshots"][-1]
                 if state["environment_snapshots"]
@@ -80,13 +83,23 @@ class AgentCore:
                 _concepts(stimulus),
             )
 
-        question_text = self._generate_question(state, surprise)
+        self._update_metrics(state)
+        drives = compute_drives(state, surprise, prediction_result)
+        state["drives"] = drives
+        intention = choose_intention(state, drives)
+        state["intentions"].append(intention)
+
+        question_text = self._generate_question(state, surprise, intention)
         question = self._upsert_question(state, question_text)
         question["times_selected"] += 1
         question["last_selected_cycle"] = cycle
 
-        experiment = self._propose_experiment(state, question)
-        state["experiments"].append(experiment)
+        experiment = self._select_or_propose_experiment(state, question, intention)
+
+        prediction = None
+        if observation is not None:
+            prediction = self._make_prediction(state, observation, now)
+            state["predictions"].append(prediction)
 
         state["self_model"]["last_updated_cycle"] = cycle
         self._update_metrics(state)
@@ -99,16 +112,26 @@ class AgentCore:
             "stimulus_supplied": bool(stimulus),
             "observation_supplied": observation is not None,
             "surprise_id": surprise["id"] if surprise else None,
+            "prediction_result_id": (
+                prediction_result["id"] if prediction_result else None
+            ),
+            "intention_id": intention["id"],
             "selected_question_id": question["id"],
-            "proposed_experiment_id": experiment["id"],
+            "experiment_id": experiment["id"],
+            "new_prediction_id": prediction["id"] if prediction else None,
+            "drives": drives,
             "metrics": state["metrics"],
         }
         self.store.append_journal(event)
         return {
             "cycle": cycle,
             "surprise": surprise,
+            "prediction_result": prediction_result,
+            "drives": drives,
+            "intention": intention,
             "question": question,
             "experiment": experiment,
+            "prediction": prediction,
             "metrics": state["metrics"],
         }
 
@@ -138,6 +161,7 @@ class AgentCore:
 
         reflection = {
             "id": f"R{len(state['reflections']) + 1:06d}",
+            "source": "experiment",
             "experiment_id": experiment_id,
             "cycle": state["cycles"],
             "outcome": outcome,
@@ -160,6 +184,69 @@ class AgentCore:
             }
         )
         return reflection
+
+    def _evaluate_prediction(
+        self,
+        state: dict[str, Any],
+        observation: dict[str, Any],
+        now: str,
+    ) -> dict[str, Any] | None:
+        pending = [
+            item for item in state.get("predictions", [])
+            if item.get("status") == "pending"
+        ]
+        if not pending:
+            return None
+
+        prediction = pending[-1]
+        expected = prediction["expected"]
+        changes = {}
+        for field in COMPARABLE_FIELDS:
+            before = expected.get(field)
+            after = observation.get(field)
+            if before != after:
+                changes[field] = {"expected": before, "observed": after}
+
+        prediction["status"] = "violated" if changes else "confirmed"
+        prediction["evaluated_at"] = now
+        prediction["errors"] = changes
+        prediction["evidence_strength"] = 1.0
+
+        reflection = {
+            "id": f"R{len(state['reflections']) + 1:06d}",
+            "source": "prediction",
+            "prediction_id": prediction["id"],
+            "cycle": state["cycles"],
+            "outcome": prediction["status"],
+            "evidence_strength": 1.0,
+            "lesson": (
+                "Measured repository stability prediction was "
+                f"{prediction['status']}; use the observed error fields rather than "
+                "inventing a cause."
+            ),
+        }
+        state["reflections"].append(reflection)
+        return prediction
+
+    def _make_prediction(
+        self,
+        state: dict[str, Any],
+        observation: dict[str, Any],
+        now: str,
+    ) -> dict[str, Any]:
+        expected = {field: observation.get(field) for field in COMPARABLE_FIELDS}
+        return {
+            "id": f"P{len(state['predictions']) + 1:06d}",
+            "cycle": state["cycles"],
+            "created_at": now,
+            "status": "pending",
+            "statement": (
+                "Measured repository fields will remain unchanged until the next "
+                "self-observation unless an intervening change occurs."
+            ),
+            "expected": expected,
+            "falsification": "Any change in a measured comparable field violates this prediction.",
+        }
 
     def _remember(
         self,
@@ -188,9 +275,10 @@ class AgentCore:
     def _generate_question(
         self,
         state: dict[str, Any],
-        surprise: dict[str, Any] | None = None,
+        surprise: dict[str, Any] | None,
+        intention: dict[str, Any],
     ) -> str:
-        if surprise and surprise["changes"]:
+        if intention["kind"] == "explain_change" and surprise and surprise["changes"]:
             field = sorted(surprise["changes"])[0]
             change = surprise["changes"][field]
             candidate = (
@@ -200,9 +288,16 @@ class AgentCore:
             if not self._question_exists(state, candidate):
                 return candidate
 
+        if intention["kind"] == "resolve_pending_evidence" and intention.get("target"):
+            candidate = (
+                f"What obtainable evidence would resolve pending experiment "
+                f"{intention['target']} with the least additional assumption?"
+            )
+            if not self._question_exists(state, candidate):
+                return candidate
+
         counts = state.get("concept_counts", {})
         ranked = sorted(counts.items(), key=lambda item: (item[1], item[0]))
-
         if len(ranked) >= 2:
             left, right = ranked[0][0], ranked[1][0]
             candidate = (
@@ -247,14 +342,31 @@ class AgentCore:
         state["questions"].append(question)
         return question
 
-    def _propose_experiment(
-        self, state: dict[str, Any], question: dict[str, Any]
+    def _select_or_propose_experiment(
+        self,
+        state: dict[str, Any],
+        question: dict[str, Any],
+        intention: dict[str, Any],
     ) -> dict[str, Any]:
-        return {
+        if intention["kind"] == "resolve_pending_evidence" and intention.get("target"):
+            match = next(
+                (
+                    item for item in state["experiments"]
+                    if item["id"] == intention["target"]
+                    and item.get("status") == "proposed"
+                ),
+                None,
+            )
+            if match is not None:
+                match["last_selected_cycle"] = state["cycles"]
+                return match
+
+        experiment = {
             "id": f"X{len(state['experiments']) + 1:06d}",
             "cycle": state["cycles"],
             "question_id": question["id"],
             "status": "proposed",
+            "intention_id": intention["id"],
             "hypothesis": (
                 "A deliberately chosen disconfirming observation will reduce more "
                 "uncertainty than collecting another confirming example."
@@ -269,6 +381,8 @@ class AgentCore:
             ),
             "created_at": utc_now(),
         }
+        state["experiments"].append(experiment)
+        return experiment
 
     def _update_metrics(self, state: dict[str, Any]) -> None:
         cycles = state["cycles"]
@@ -276,6 +390,11 @@ class AgentCore:
             experiment
             for experiment in state["experiments"]
             if experiment.get("status") == "completed"
+        ]
+        evaluated_predictions = [
+            prediction
+            for prediction in state.get("predictions", [])
+            if prediction.get("status") in {"confirmed", "violated"}
         ]
         open_questions = [
             question for question in state["questions"] if question["status"] == "open"
@@ -288,13 +407,17 @@ class AgentCore:
                 "memory": min(1.0, len(state["episodes"]) / 4.0),
                 "perception": min(1.0, len(state["environment_snapshots"]) / 3.0),
                 "self_model": (
-                    0.85 if state["environment_snapshots"] else (0.75 if cycles else 0.0)
+                    0.9 if evaluated_predictions else
+                    (0.85 if state["environment_snapshots"] else (0.75 if cycles else 0.0))
                 ),
                 "curiosity": min(1.0, len(open_questions) / 5.0),
-                "agency": min(1.0, len(state["experiments"]) / 5.0),
-                "learning": min(1.0, len(completed) / 3.0),
+                "agency": min(1.0, len(state.get("intentions", [])) / 5.0),
+                "learning": min(
+                    1.0,
+                    (len(completed) + len(evaluated_predictions)) / 5.0,
+                ),
                 "adaptation": min(1.0, len(state["accepted_changes"]) / 3.0),
-                "reflection": min(1.0, len(state["reflections"]) / 3.0),
+                "reflection": min(1.0, len(state["reflections"]) / 5.0),
                 "open_endedness": min(1.0, unique_questions / max(1, cycles)),
                 "reproducibility": 0.8 if cycles else 0.0,
             }
