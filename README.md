@@ -8,26 +8,29 @@ The project investigates whether simple, inspectable mechanisms can accumulate i
 
 - persistent episodic history;
 - auditable repository perception;
-- one-step predictions that are later confirmed or violated;
+- one-step predictions later confirmed or violated;
 - internal evidence-driven intention selection;
-- optional, grounded model cognition with no tools or write authority;
+- optional grounded model cognition with no tools or write authority;
 - deterministic semantic memory with source episode references;
-- a temporal world-claim ledger that preserves superseded observed values;
+- a temporal world-claim ledger preserving superseded observed values;
 - falsifiable experiments and reflections;
 - autonomous heartbeats on a separate growth branch;
-- verified code baselines protected by unit tests and behavioral-preservation checks.
+- a base-owned behavioral preservation gate;
+- evidence-backed self-authored change manifests that cannot apply code.
 
 ## Evidence hierarchy
 
-Raw observations and explicit outcomes outrank derived world claims. World claims outrank semantic summaries. Semantic summaries guide retrieval. Model-generated thoughts are only proposals. Code changes sit below all of them until independently verified.
+Raw observations and explicit outcomes outrank derived world claims. World claims outrank semantic summaries. Semantic summaries guide retrieval. Model thoughts are proposals. Change manifests are lower-authority plans. Candidate code is not improvement until independently verified.
 
 ## Evolution discipline
 
 No version may call itself improved merely because code changed.
 
-Future candidate changes are evaluated against the previous verified baseline. The preservation evaluator is taken from the BASE commit and run against both base and candidate code, so a candidate cannot pass simply by weakening its own judge.
+Future candidates are evaluated with the previous verified BASE commit's preservation evaluator. A deliberate negative-control regression has already demonstrated that this gate rejects a known loss of behavior.
 
-Self-authored change manifests are also forbidden from targeting the preservation workflow or evaluator scripts.
+Self-authored manifests cannot target the verify workflow, autonomous growth workflow, preservation evaluator/comparator, or change-control policy.
+
+AgentTest can now decide what it would like changed. It still cannot implement that change itself.
 
 ## About consciousness
 
