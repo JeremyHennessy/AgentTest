@@ -8,7 +8,7 @@ from typing import Any
 from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
 from .perception import COMPARABLE_FIELDS, changed_fields
-from .semantic import consolidate_semantic_memory
+from .semantic import consolidate_inquiry_families, consolidate_semantic_memory
 from .state import DIMENSIONS, StateStore, utc_now
 from .world import consolidate_world
 
@@ -341,6 +341,7 @@ class AgentCore:
         question = self._upsert_question(state, question_text)
         question["times_selected"] += 1
         question["last_selected_cycle"] = cycle
+        inquiry_update = consolidate_inquiry_families(state)
 
         experiment = self._select_or_propose_experiment(
             state,
@@ -370,6 +371,7 @@ class AgentCore:
                 prediction_result["id"] if prediction_result else None
             ),
             "semantic_update": semantic_update,
+            "inquiry_update": inquiry_update,
             "world_update": world_update,
             "self_model_calibration": self_model_calibration,
             "intention_id": intention["id"],
@@ -387,6 +389,7 @@ class AgentCore:
             "surprise": surprise,
             "prediction_result": prediction_result,
             "semantic_update": semantic_update,
+            "inquiry_update": inquiry_update,
             "world_update": world_update,
             "self_model_calibration": self_model_calibration,
             "drives": drives,
@@ -737,6 +740,8 @@ class AgentCore:
             question for question in state["questions"] if question["status"] == "open"
         ]
         unique_questions = len({_norm(item["text"]) for item in state["questions"]})
+        inquiry_summary = state.get("semantic_memory", {}).get("inquiry_families", {})
+        inquiry_family_count = int(inquiry_summary.get("family_count", unique_questions))
 
         state["metrics"].update(
             {
@@ -762,7 +767,7 @@ class AgentCore:
                 ),
                 "adaptation": min(1.0, len(state["accepted_changes"]) / 3.0),
                 "reflection": min(1.0, len(state["reflections"]) / 5.0),
-                "open_endedness": min(1.0, unique_questions / max(1, cycles)),
+                "open_endedness": min(1.0, inquiry_family_count / max(1, cycles)),
                 "reproducibility": (
                     1.0 if stable_replay else (0.8 if cycles else 0.0)
                 ),
