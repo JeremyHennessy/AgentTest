@@ -1886,6 +1886,13 @@ def empirical_learning_transfers_to_attention_without_ungrounded_action() -> dic
         state = store.load()
         state["cycles"] = 10
         state["generation"] = 10
+        state["metrics"].update(
+            {
+                "continuity": 1.0,
+                "self_model": 1.0,
+                "open_endedness": 1.0,
+            }
+        )
         prior = observation(100)
         prior["cycle"] = 10
         state["environment_snapshots"] = [prior]
