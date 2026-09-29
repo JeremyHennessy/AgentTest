@@ -49,6 +49,7 @@ jobs:
         run: |
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest cycle --self-observe --cognition --stimulus "autonomous heartbeat"
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose-change
 
       - name: Verify invariants
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
