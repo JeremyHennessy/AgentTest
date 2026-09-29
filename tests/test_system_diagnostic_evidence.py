@@ -149,6 +149,212 @@ class SystemDiagnosticEvidenceTests(unittest.TestCase):
         )
         self.assertEqual(proposal["status"], "reviewed_supported_problem")
 
+    def test_same_cycle_new_experiment_backlog_does_not_trigger_self_change(self) -> None:
+        from agenttest.self_proposal import select_change_target
+
+        state = saturated_state()
+        state["cycles"] = 45
+        state["metrics"].update({name: 1.0 for name in state["metrics"]})
+        state["experiments"] = [
+            {
+                "id": "X000020",
+                "cycle": 45,
+                "status": "proposed",
+                "question_id": "Q000009",
+            }
+        ]
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000014",
+                "kind": "experiment_design",
+                "status": "completed",
+                "diagnostic_version": "experiment-design-v3",
+                "outcome": "specification_backlog",
+                "created_cycle": 45,
+                "result": {
+                    "untriaged_specification_ids": ["X000020"],
+                    "specification_backlog_count": 1,
+                },
+            }
+        ]
+
+        selected = select_change_target(state)
+
+        self.assertIsNone(selected)
+
+    def test_older_untriaged_backlog_remains_self_change_evidence(self) -> None:
+        from agenttest.self_proposal import select_change_target
+
+        state = saturated_state()
+        state["cycles"] = 45
+        state["metrics"].update({name: 1.0 for name in state["metrics"]})
+        state["experiments"] = [
+            {
+                "id": "X000020",
+                "cycle": 43,
+                "status": "proposed",
+                "question_id": "Q000009",
+            }
+        ]
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000014",
+                "kind": "experiment_design",
+                "status": "completed",
+                "diagnostic_version": "experiment-design-v3",
+                "outcome": "specification_backlog",
+                "created_cycle": 45,
+                "result": {
+                    "untriaged_specification_ids": ["X000020"],
+                    "specification_backlog_count": 1,
+                },
+            }
+        ]
+
+        selected = select_change_target(state)
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(
+            selected["selection_signal"],
+            "experiment_design_specification_backlog",
+        )
+
+    def test_same_cycle_backlog_proposal_closes_as_expected_latency(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.proposal_review import review_change_proposal
+
+        state = saturated_state()
+        state["cycles"] = 45
+        state["experiments"] = [
+            {
+                "id": "X000020",
+                "cycle": 45,
+                "status": "proposed",
+                "question_id": "Q000009",
+            }
+        ]
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000014",
+                "kind": "experiment_design",
+                "status": "completed",
+                "diagnostic_version": "experiment-design-v3",
+                "outcome": "specification_backlog",
+                "created_cycle": 45,
+                "result": {
+                    "untriaged_specification_ids": ["X000020"],
+                },
+            }
+        ]
+        proposal = make_change_manifest(
+            state,
+            title="Triage experiment specification backlog",
+            target_dimension="learning",
+            files=[
+                "src/agenttest/core.py",
+                "src/agenttest/drives.py",
+                "tests/test_core.py",
+            ],
+            hypothesis="Trace specification fields without invention.",
+            expected_effect="Classify specification work.",
+            test_plan="Review backlog lifecycle.",
+            falsification="Older untriaged work persists.",
+            rollback="Revert.",
+            evidence_refs=["SD000014"],
+        )
+        proposal.update(
+            {
+                "id": "M000012",
+                "source": "test",
+                "created_cycle": 45,
+                "selection_signal": "experiment_design_specification_backlog",
+                "source_diagnostic_id": "SD000014",
+            }
+        )
+        state["change_proposals"].append(proposal)
+
+        review, created = review_change_proposal(state, proposal)
+
+        self.assertTrue(created)
+        self.assertEqual(review["review_version"], "proposal-review-v4")
+        self.assertEqual(review["verdict"], "no_problem_observed")
+        self.assertEqual(review["patch_authority"], "none")
+        self.assertEqual(proposal["status"], "closed_no_problem_observed")
+
+    def test_cached_same_cycle_supported_review_is_rechecked(self) -> None:
+        state = saturated_state()
+        state["cycles"] = 45
+        state["experiments"] = [
+            {
+                "id": "X000020",
+                "cycle": 45,
+                "status": "proposed",
+                "question_id": "Q000009",
+            }
+        ]
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000014",
+                "kind": "experiment_design",
+                "status": "completed",
+                "diagnostic_version": "experiment-design-v3",
+                "outcome": "specification_backlog",
+                "created_cycle": 45,
+                "result": {
+                    "untriaged_specification_ids": ["X000020"],
+                    "specification_backlog_count": 1,
+                },
+            }
+        ]
+        proposal = make_change_manifest(
+            state,
+            title="Triage experiment specification backlog",
+            target_dimension="learning",
+            files=[
+                "src/agenttest/core.py",
+                "src/agenttest/drives.py",
+                "tests/test_core.py",
+            ],
+            hypothesis="Trace specification fields without invention.",
+            expected_effect="Classify specification work.",
+            test_plan="Review backlog lifecycle.",
+            falsification="Older untriaged work persists.",
+            rollback="Revert.",
+            evidence_refs=["SD000014"],
+        )
+        proposal.update(
+            {
+                "id": "M000012",
+                "source": "test",
+                "created_cycle": 45,
+                "selection_signal": "experiment_design_specification_backlog",
+                "source_diagnostic_id": "SD000014",
+                "status": "reviewed_supported_problem",
+            }
+        )
+        state["change_proposals"].append(proposal)
+        state["proposal_reviews"].append(
+            {
+                "id": "V999999",
+                "proposal_id": "M000012",
+                "target_dimension": "learning",
+                "review_version": "proposal-review-v4",
+                "considered_diagnostic_ids": [],
+                "considered_system_diagnostic_ids": ["SD000014"],
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+            }
+        )
+
+        review, created = review_change_proposal(state, proposal)
+
+        self.assertTrue(created)
+        self.assertNotEqual(review["id"], "V999999")
+        self.assertEqual(review["review_version"], "proposal-review-v4")
+        self.assertEqual(review["verdict"], "no_problem_observed")
+        self.assertEqual(review["patch_authority"], "none")
+        self.assertEqual(proposal["status"], "closed_no_problem_observed")
+
     def test_evidence_ready_system_diagnostic_does_not_trigger_self_change(self) -> None:
         state = saturated_state()
         state["system_diagnostics"] = [

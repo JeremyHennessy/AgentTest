@@ -346,6 +346,38 @@ def _active_proposal(state: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def _same_cycle_untriaged_specification_backlog(
+    state: dict[str, Any],
+    diagnostic: dict[str, Any],
+) -> bool:
+    if diagnostic.get("outcome") != "specification_backlog":
+        return False
+    diagnostic_cycle = int(diagnostic.get("created_cycle", 0) or 0)
+    ids = [
+        str(item)
+        for item in diagnostic.get("result", {}).get(
+            "untriaged_specification_ids",
+            [],
+        )
+        if item
+    ]
+    if not ids:
+        return False
+    experiments = {
+        str(item.get("id")): item
+        for item in state.get("experiments", [])
+        if item.get("id")
+    }
+    matched = [experiments.get(identifier) for identifier in ids]
+    if any(item is None for item in matched):
+        return False
+    return all(
+        int(item.get("cycle", 0) or 0) >= diagnostic_cycle
+        for item in matched
+        if item is not None
+    )
+
+
 def _latest_experiment_design_signal(
     state: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -368,6 +400,11 @@ def _latest_experiment_design_signal(
     }
     signal = signal_by_outcome.get(outcome)
     if signal is None:
+        return None
+    if (
+        signal == "experiment_design_specification_backlog"
+        and _same_cycle_untriaged_specification_backlog(state, latest)
+    ):
         return None
 
     identifier = latest.get("id")
