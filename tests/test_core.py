@@ -10,7 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from agenttest.core import AgentCore
 from agenttest.evolution import propose_growth_experiment
-from agenttest.state import StateStore
+from agenttest.perception import changed_fields, repository_snapshot
+from agenttest.state import SCHEMA_VERSION, StateStore
 
 
 class AgentCoreTests(unittest.TestCase):
@@ -59,6 +60,60 @@ class AgentCoreTests(unittest.TestCase):
         self.assertIn("target_dimension", proposal)
         self.assertIn("falsification", proposal)
         self.assertEqual(proposal["status"], "proposed")
+
+    def test_environment_change_becomes_surprise(self) -> None:
+        first = {
+            "sensor": "test",
+            "branch": "main",
+            "tracked_files": 10,
+            "python_files": 4,
+            "python_source_lines": 100,
+            "test_files": 1,
+            "working_tree_clean": True,
+        }
+        second = dict(first)
+        second["python_source_lines"] = 120
+
+        self.core.cycle(observation=first)
+        result = self.core.cycle(observation=second)
+
+        self.assertIsNotNone(result["surprise"])
+        self.assertIn("python_source_lines", result["surprise"]["changes"])
+        self.assertIn("python_source_lines", result["question"]["text"])
+        self.assertGreater(result["metrics"]["perception"], 0.0)
+
+    def test_v1_state_migrates_without_erasing_history(self) -> None:
+        legacy = {
+            "schema_version": 1,
+            "cycles": 2,
+            "generation": 2,
+            "episodes": [{"id": "E000001"}],
+            "questions": [],
+            "experiments": [],
+            "reflections": [],
+            "accepted_changes": [],
+            "concept_counts": {},
+            "metrics": {"continuity": 1.0},
+            "self_model": {
+                "capabilities": [],
+                "limitations": ["No external perception unless observations are supplied."],
+            },
+        }
+        self.state_path.write_text(json.dumps(legacy), encoding="utf-8")
+
+        migrated = self.store.load()
+
+        self.assertEqual(migrated["schema_version"], SCHEMA_VERSION)
+        self.assertEqual(migrated["episodes"][0]["id"], "E000001")
+        self.assertIn("perception", migrated["metrics"])
+        self.assertIn("environment_snapshots", migrated)
+
+    def test_repository_sensor_is_safe_outside_git(self) -> None:
+        snapshot = repository_snapshot(self.tmp.name)
+
+        self.assertEqual(snapshot["sensor"], "repository-v1")
+        self.assertFalse(snapshot["git_available"])
+        self.assertIn("fingerprint", snapshot)
 
 
 if __name__ == "__main__":

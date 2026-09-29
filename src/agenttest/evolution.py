@@ -13,6 +13,10 @@ _TEMPLATES = {
         "Test whether prior experience changes a later choice.",
         "Present two otherwise equal choices where only one has supporting prior evidence.",
     ),
+    "perception": (
+        "Test whether self-observation detects a real environmental change.",
+        "Change one measured repository property and verify the next observation records exactly that surprise.",
+    ),
     "self_model": (
         "Test calibration of a claimed capability.",
         "Predict performance on a capability check before executing it, then compare.",
