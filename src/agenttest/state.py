@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 14
+from .action_lab import initial_action_lab_state
+
+SCHEMA_VERSION = 15
 
 DIMENSIONS = (
     "continuity",
@@ -118,6 +120,7 @@ def initial_state() -> dict[str, Any]:
         "drives": {},
         "world_model": _empty_world_model(),
         "empirical_learning": _empty_empirical_learning(),
+        "action_lab": initial_action_lab_state(),
         "cognition_events": [],
         "cognition_candidates": [],
         "questions": [],
@@ -149,6 +152,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         ("drives", {}),
         ("world_model", _empty_world_model()),
         ("empirical_learning", _empty_empirical_learning()),
+        ("action_lab", initial_action_lab_state()),
         ("cognition_events", []),
         ("cognition_candidates", []),
         ("episodes", []),
@@ -180,6 +184,15 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     empirical.setdefault("version", "empirical-learning-v1")
     empirical.setdefault("updated_cycle", 0)
     empirical.setdefault("families", {})
+
+    action_lab = state["action_lab"]
+    action_lab.setdefault("version", "bounded-action-lab-v1")
+    action_lab.setdefault("bounds", 2)
+    action_lab.setdefault("position", [0, 0])
+    action_lab.setdefault("visit_counts", {"0,0": 1})
+    action_lab.setdefault("history", [])
+    action_lab.setdefault("learned_effects", {})
+    action_lab.setdefault("last_action_cycle", None)
 
     metrics = state.setdefault("metrics", {})
     for dimension in DIMENSIONS:
