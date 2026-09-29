@@ -1531,7 +1531,7 @@ class AgentCoreTests(unittest.TestCase):
         review, created = review_change_proposal(state, proposal)
 
         self.assertTrue(created)
-        self.assertEqual(review["review_version"], "proposal-review-v3")
+        self.assertEqual(review["review_version"], "proposal-review-v4")
         self.assertEqual(review["verdict"], "no_problem_observed")
         self.assertEqual(review["patch_authority"], "none")
         self.assertEqual(proposal["status"], "closed_no_problem_observed")
@@ -1571,7 +1571,7 @@ class AgentCoreTests(unittest.TestCase):
 
         self.assertTrue(created)
         self.assertNotEqual(review["id"], "V999999")
-        self.assertEqual(review["review_version"], "proposal-review-v3")
+        self.assertEqual(review["review_version"], "proposal-review-v4")
 
     def test_aligned_open_endedness_is_not_reproposed_as_defect(self) -> None:
         from agenttest.self_proposal import select_change_target
