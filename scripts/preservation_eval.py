@@ -16,7 +16,7 @@ from agenttest.evidence import known_evidence_ids
 from agenttest.interaction import interact
 from agenttest.intervention import record_verified_intervention
 from agenttest.diagnostics import run_proposal_diagnostic
-from agenttest.proposal_review import review_change_proposal
+from agenttest.proposal_review import REVIEW_VERSION, review_change_proposal
 from agenttest.semantic import retrieve_semantic_memory
 from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
@@ -1209,7 +1209,7 @@ def system_diagnostic_evidence_governance() -> dict[str, Any]:
                 and manifest_valid
                 and review_created
                 and review is not None
-                and review.get("review_version") == "proposal-review-v4"
+                and review.get("review_version") == REVIEW_VERSION
                 and review.get("verdict") == "supported_problem"
                 and review.get("patch_authority") == "candidate_allowed"
                 and review.get("direct_diagnostic_id") == "SD000001"
