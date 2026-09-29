@@ -34,6 +34,11 @@ def main() -> None:
         action="store_true",
         help="Sense the current repository before choosing a question.",
     )
+    cycle.add_argument(
+        "--cognition",
+        action="store_true",
+        help="Allow an optional configured model to propose one validated candidate thought.",
+    )
     cycle.add_argument("--root", default=".", help="Repository root for self-observation.")
 
     sub.add_parser("status", help="Print the current state.")
@@ -52,7 +57,7 @@ def main() -> None:
 
     if args.command == "cycle":
         observation = repository_snapshot(args.root) if args.self_observe else None
-        _print(core.cycle(args.stimulus, observation))
+        _print(core.cycle(args.stimulus, observation, cognition=args.cognition))
     elif args.command == "status":
         _print(store.load())
     elif args.command == "propose":
