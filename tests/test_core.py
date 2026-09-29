@@ -1552,5 +1552,96 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(selected["dimension"], "open_endedness")
 
 
+    def test_stale_underspecified_experiment_is_preserved_but_not_resolvable_pressure(self) -> None:
+        first = self.core.cycle(observation=observation(100))
+        for _ in range(3):
+            self.core.cycle(observation=observation(100))
+
+        state = self.store.load()
+        stale = next(
+            item for item in state["experiments"]
+            if item["id"] == first["experiment"]["id"]
+        )
+
+        self.assertEqual(stale["status"], "proposed")
+        self.assertEqual(stale["readiness"], "needs_specification")
+        self.assertTrue(stale["readiness_evidence_refs"])
+        self.assertEqual(len(stale["readiness_history"]), 1)
+        resolvable_pending = [
+            item for item in state["experiments"]
+            if item.get("status") == "proposed"
+            and item.get("readiness") != "needs_specification"
+        ]
+        self.assertNotIn(stale["id"], [item["id"] for item in resolvable_pending])
+        resolvable_at_drive_time = [
+            item for item in resolvable_pending
+            if int(item.get("cycle", 0)) < state["cycles"]
+        ]
+        self.assertEqual(
+            state["drives"]["evidence_hunger"],
+            min(0.8, len(resolvable_at_drive_time) / 4.0),
+        )
+        self.assertNotEqual(
+            state["intentions"][-1].get("target"),
+            stale["id"],
+        )
+
+    def test_prediction_contract_resolves_only_matching_experiment(self) -> None:
+        first = self.core.cycle(observation=observation(100))
+        state = self.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == first["experiment"]["id"]
+        )
+        experiment["evidence_contract"] = {
+            "kind": "prediction_status",
+            "prediction_id": first["prediction"]["id"],
+            "expected_status": "confirmed",
+        }
+        self.store.save(state)
+
+        second = self.core.cycle(observation=observation(100))
+        after = self.store.load()
+        resolved = next(
+            item for item in after["experiments"]
+            if item["id"] == experiment["id"]
+        )
+
+        self.assertEqual(second["prediction_result"]["status"], "confirmed")
+        self.assertEqual(resolved["status"], "completed")
+        self.assertEqual(resolved["readiness"], "resolved")
+        self.assertEqual(resolved["outcome"], "supported")
+        self.assertIn(first["prediction"]["id"], resolved["evidence_refs"])
+        self.assertIn(
+            resolved["id"],
+            second["prediction_result"]["resolved_experiment_ids"],
+        )
+
+    def test_unrelated_prediction_evidence_does_not_close_contract(self) -> None:
+        first = self.core.cycle(observation=observation(100))
+        state = self.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == first["experiment"]["id"]
+        )
+        experiment["evidence_contract"] = {
+            "kind": "prediction_status",
+            "prediction_id": "P999999",
+            "expected_status": "confirmed",
+        }
+        self.store.save(state)
+
+        self.core.cycle(observation=observation(100))
+        after = self.store.load()
+        unresolved = next(
+            item for item in after["experiments"]
+            if item["id"] == experiment["id"]
+        )
+
+        self.assertEqual(unresolved["status"], "proposed")
+        self.assertEqual(unresolved["readiness"], "evidence_ready")
+        self.assertNotIn("outcome", unresolved)
+
+
 if __name__ == "__main__":
     unittest.main()
