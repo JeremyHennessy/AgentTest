@@ -267,6 +267,66 @@ class AgentCoreTests(unittest.TestCase):
         self.assertFalse(snapshot["git_available"])
         self.assertIn("fingerprint", snapshot)
 
+    def test_change_manifest_rejects_protected_evaluator_path(self) -> None:
+        from agenttest.change_control import make_change_manifest
+
+        self.core.cycle("change evidence")
+        state = self.store.load()
+        with self.assertRaises(ValueError):
+            make_change_manifest(
+                state,
+                title="Weaken evaluator",
+                target_dimension="adaptation",
+                files=["scripts/preservation_eval.py"],
+                hypothesis="Changing the evaluator would raise apparent performance.",
+                expected_effect="Higher apparent score.",
+                test_plan="Run checks.",
+                falsification="No apparent score change.",
+                rollback="Revert the commit.",
+                evidence_refs=["E000001"],
+            )
+
+    def test_change_manifest_requires_existing_evidence(self) -> None:
+        from agenttest.change_control import make_change_manifest
+
+        self.core.cycle("change evidence")
+        state = self.store.load()
+        with self.assertRaises(ValueError):
+            make_change_manifest(
+                state,
+                title="Unsupported change",
+                target_dimension="adaptation",
+                files=["src/agenttest/core.py"],
+                hypothesis="A code change may help.",
+                expected_effect="Improved adaptation.",
+                test_plan="Run preservation checks.",
+                falsification="Adaptation does not improve.",
+                rollback="Revert the commit.",
+                evidence_refs=["E999999"],
+            )
+
+    def test_valid_change_manifest_records_baseline_and_rollback(self) -> None:
+        from agenttest.change_control import make_change_manifest
+
+        self.core.cycle("change evidence")
+        state = self.store.load()
+        manifest = make_change_manifest(
+            state,
+            title="Candidate reversible change",
+            target_dimension="adaptation",
+            files=["src/agenttest/core.py"],
+            hypothesis="A bounded change may improve adaptation.",
+            expected_effect="Increase evidence for adaptation without regression.",
+            test_plan="Run unit tests and the behavioral preservation gate.",
+            falsification="Any preserved capability regresses or adaptation evidence does not improve.",
+            rollback="Revert the candidate commit.",
+            evidence_refs=["E000001"],
+        )
+        self.assertEqual(manifest["status"], "proposed")
+        self.assertEqual(manifest["target_dimension"], "adaptation")
+        self.assertIn("scripts/preservation_eval.py", manifest["protected_paths"])
+        self.assertEqual(manifest["evidence_refs"], ["E000001"])
+
 
 if __name__ == "__main__":
     unittest.main()
