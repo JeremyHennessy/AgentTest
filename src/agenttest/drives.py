@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .learning import empirical_frontier_signal
 from .semantic import actionable_open_questions
 
 DRIVE_ORDER = (
@@ -11,6 +12,7 @@ DRIVE_ORDER = (
     "uncertainty",
     "continuity_repair",
     "calibration_gap",
+    "empirical_frontier",
     "novelty_hunger",
 )
 
@@ -50,6 +52,7 @@ def compute_drives(
         ]
     )
 
+    frontier_signal = empirical_frontier_signal(state)
     status = prediction_result.get("status") if prediction_result else None
     violated = status == "violated"
     intervention = status == "invalidated_by_intervention"
@@ -64,6 +67,11 @@ def compute_drives(
         "uncertainty": min(0.8, len(open_questions) / 6.0),
         "continuity_repair": max(0.0, 1.0 - metrics.get("continuity", 0.0)),
         "calibration_gap": max(0.0, 1.0 - metrics.get("self_model", 0.0)),
+        "empirical_frontier": (
+            float(frontier_signal.get("pressure", 0.0))
+            if frontier_signal is not None
+            else 0.0
+        ),
         "novelty_hunger": max(0.0, 0.5 - metrics.get("open_endedness", 0.0)),
     }
 
@@ -100,6 +108,7 @@ def choose_intention(
         ),
     )
     latest_surprise = state.get("surprises", [])[-1] if state.get("surprises") else None
+    frontier_signal = empirical_frontier_signal(state)
 
     mapping = {
         "prediction_error": "explain_change",
@@ -108,6 +117,7 @@ def choose_intention(
         "uncertainty": "reduce_uncertainty",
         "continuity_repair": "preserve_continuity",
         "calibration_gap": "calibrate_self_model",
+        "empirical_frontier": "explore_empirical_frontier",
         "novelty_hunger": "explore_novelty",
     }
     kind = mapping[dominant]
@@ -118,6 +128,8 @@ def choose_intention(
         target = pending[0]["id"]
     elif dominant == "prediction_error" and latest_surprise:
         target = latest_surprise["id"]
+    elif dominant == "empirical_frontier" and frontier_signal is not None:
+        target = str(frontier_signal["family"])
 
     return {
         "id": f"I{len(state.get('intentions', [])) + 1:06d}",
@@ -127,7 +139,28 @@ def choose_intention(
         "strength": strength,
         "target": target,
         "rationale": (
-            f"{dominant} had the highest current pressure ({strength:.3f}); "
-            "ties use a fixed order so the choice is reproducible."
+            (
+                f"{dominant} had the highest current pressure ({strength:.3f}); "
+                f"empirical family {frontier_signal.get('family')} has "
+                f"{frontier_signal.get('evaluable_trials')} evaluable trials "
+                f"with saturation {frontier_signal.get('saturation'):.3f}. "
+                "Replication continues separately while foreground attention may "
+                "move toward a distinct empirical frontier."
+            )
+            if dominant == "empirical_frontier" and frontier_signal is not None
+            else (
+                f"{dominant} had the highest current pressure ({strength:.3f}); "
+                "ties use a fixed order so the choice is reproducible."
+            )
+        ),
+        "empirical_transfer": (
+            frontier_signal
+            if dominant == "empirical_frontier"
+            else None
+        ),
+        "evidence_refs": (
+            list(frontier_signal.get("evidence_refs", []))
+            if dominant == "empirical_frontier" and frontier_signal is not None
+            else []
         ),
     }
