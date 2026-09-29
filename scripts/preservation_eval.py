@@ -19,7 +19,7 @@ from agenttest.self_proposal import propose_self_change
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v5"
+SUITE = "behavioral-preservation-v6"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -437,6 +437,69 @@ def intervention_aware_prediction_scope() -> dict[str, Any]:
         temp_b.cleanup()
 
 
+def self_model_grounding_review() -> dict[str, Any]:
+    temp, store, core = fresh()
+    try:
+        core.cycle("self model diagnostic evidence")
+        state = store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Calibrate self-model claims against behavioral checks",
+            target_dimension="self_model",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Explicit claim calibration reduces unsupported self-description.",
+            expected_effect="Capabilities distinguish supported and unverified status.",
+            test_plan="Run the verified self-model grounding diagnostic.",
+            falsification="Every capability is already explicitly calibrated.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "preservation-eval", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+
+        first_review, _ = review_change_proposal(state, proposal)
+        diagnostic, diagnostic_created = run_proposal_diagnostic(
+            state,
+            proposal,
+            first_review,
+        )
+        second_review, second_created = review_change_proposal(state, proposal)
+
+        return {
+            "passed": (
+                first_review is not None
+                and first_review["verdict"] == "measurement_gap"
+                and first_review["patch_authority"] == "diagnostic_only"
+                and diagnostic_created
+                and diagnostic is not None
+                and diagnostic["kind"] == "self_model_grounding"
+                and diagnostic["outcome"] == "grounding_gap"
+                and not diagnostic["source_state_mutated"]
+                and second_created
+                and second_review is not None
+                and second_review["verdict"] == "supported_problem"
+                and second_review["patch_authority"] == "candidate_allowed"
+                and "src/agenttest/diagnostic_self_model.py" in PROTECTED_PATHS
+            ),
+            "initial_verdict": first_review.get("verdict") if first_review else None,
+            "diagnostic_id": diagnostic.get("id") if diagnostic else None,
+            "diagnostic_outcome": diagnostic.get("outcome") if diagnostic else None,
+            "missing_claim_count": (
+                len(diagnostic["result"]["missing_claims"])
+                if diagnostic
+                else None
+            ),
+            "final_verdict": second_review.get("verdict") if second_review else None,
+            "patch_authority": (
+                second_review.get("patch_authority")
+                if second_review
+                else None
+            ),
+        }
+    finally:
+        temp.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -450,6 +513,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("proposal_review_requires_direct_problem_evidence", proposal_review_requires_direct_problem_evidence),
     ("verified_diagnostic_resolution", verified_diagnostic_resolution),
     ("intervention_aware_prediction_scope", intervention_aware_prediction_scope),
+    ("self_model_grounding_review", self_model_grounding_review),
 ]
 
 

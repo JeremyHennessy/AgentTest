@@ -781,6 +781,113 @@ class AgentCoreTests(unittest.TestCase):
         third = baseline_content_fingerprint(root, tracked)
         self.assertNotEqual(second, third)
 
+    def test_self_model_grounding_diagnostic_supports_traceability_problem(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.diagnostics import run_proposal_diagnostic
+        from agenttest.proposal_review import review_change_proposal
+
+        self.core.cycle("self model evidence")
+        state = self.store.load()
+        proposal = make_change_manifest(
+            state,
+            title="Calibrate self-model claims against behavioral checks",
+            target_dimension="self_model",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Explicit claim calibration reduces unsupported self-description.",
+            expected_effect="Capabilities distinguish supported and unverified status.",
+            test_plan="Run the verified self-model grounding diagnostic.",
+            falsification="Every capability is already explicitly calibrated.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "test", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+
+        first_review, created = review_change_proposal(state, proposal)
+        self.assertTrue(created)
+        self.assertEqual(first_review["verdict"], "measurement_gap")
+        self.assertEqual(first_review["patch_authority"], "diagnostic_only")
+
+        diagnostic, diagnostic_created = run_proposal_diagnostic(
+            state,
+            proposal,
+            first_review,
+        )
+        self.assertTrue(diagnostic_created)
+        self.assertEqual(diagnostic["kind"], "self_model_grounding")
+        self.assertEqual(diagnostic["outcome"], "grounding_gap")
+        self.assertFalse(diagnostic["source_state_mutated"])
+        self.assertGreater(
+            len(diagnostic["result"]["missing_claims"]),
+            0,
+        )
+
+        second_review, second_created = review_change_proposal(state, proposal)
+        self.assertTrue(second_created)
+        self.assertEqual(second_review["verdict"], "supported_problem")
+        self.assertEqual(second_review["patch_authority"], "candidate_allowed")
+        self.assertEqual(
+            second_review["direct_diagnostic_id"],
+            diagnostic["id"],
+        )
+        self.assertEqual(proposal["status"], "reviewed_supported_problem")
+
+    def test_self_model_grounding_diagnostic_accepts_explicit_uncertainty(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.diagnostics import run_proposal_diagnostic
+        from agenttest.proposal_review import review_change_proposal
+
+        self.core.cycle("self model evidence")
+        state = self.store.load()
+        state["self_model"]["capability_claims"] = {
+            capability: {
+                "status": "unverified",
+                "evidence_refs": [],
+                "reason": "No explicit behavior evidence is attached yet.",
+            }
+            for capability in state["self_model"]["capabilities"]
+        }
+        proposal = make_change_manifest(
+            state,
+            title="Calibrate self-model claims against behavioral checks",
+            target_dimension="self_model",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Explicit claim calibration reduces unsupported self-description.",
+            expected_effect="Capabilities distinguish supported and unverified status.",
+            test_plan="Run the verified self-model grounding diagnostic.",
+            falsification="Every capability is already explicitly calibrated.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update({"id": "M000001", "source": "test", "created_cycle": 1})
+        state["change_proposals"].append(proposal)
+
+        first_review, _ = review_change_proposal(state, proposal)
+        diagnostic, diagnostic_created = run_proposal_diagnostic(
+            state,
+            proposal,
+            first_review,
+        )
+        self.assertTrue(diagnostic_created)
+        self.assertEqual(diagnostic["outcome"], "grounded")
+        self.assertEqual(diagnostic["result"]["coverage"], 1.0)
+        self.assertEqual(diagnostic["result"]["missing_claims"], [])
+        self.assertEqual(diagnostic["result"]["invalid_claims"], [])
+
+        second_review, second_created = review_change_proposal(state, proposal)
+        self.assertTrue(second_created)
+        self.assertEqual(second_review["verdict"], "no_problem_observed")
+        self.assertEqual(second_review["patch_authority"], "none")
+        self.assertEqual(proposal["status"], "closed_no_problem_observed")
+
+    def test_self_model_diagnostic_authority_is_protected(self) -> None:
+        from agenttest.change_control import PROTECTED_PATHS
+
+        self.assertIn(
+            "src/agenttest/diagnostic_self_model.py",
+            PROTECTED_PATHS,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

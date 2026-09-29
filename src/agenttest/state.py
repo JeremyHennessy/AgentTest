@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 DIMENSIONS = (
     "continuity",
@@ -92,8 +92,10 @@ def initial_state() -> dict[str, Any]:
                 "proposal review that distinguishes direct problem evidence from measurement gaps",
         "verified non-mutating diagnostics that can resolve measurement gaps",
         "intervention-aware prediction using a non-state repository baseline fingerprint",
+        "verified read-only self-model grounding diagnostics",
                 "verified non-mutating diagnostics that can resolve measurement gaps",
                 "intervention-aware prediction using a non-state repository baseline fingerprint",
+                "verified read-only self-model grounding diagnostics",
             ],
             "limitations": [
                 "Self-authored change manifests cannot apply or merge code.",
