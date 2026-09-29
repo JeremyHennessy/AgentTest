@@ -1,16 +1,16 @@
 {
   "created": true,
   "proposal": {
-    "baseline_metric": 0.3181818181818182,
-    "created_at": "2026-09-29T14:43:52.850433+00:00",
-    "created_cycle": 22,
+    "baseline_metric": 0.3333333333333333,
+    "created_at": "2026-09-29T14:47:22.003133+00:00",
+    "created_cycle": 24,
     "evidence_refs": [
+      "Q000016",
       "Q000015",
       "Q000014",
       "Q000013",
       "Q000012",
-      "Q000011",
-      "Q000010"
+      "Q000011"
     ],
     "expected_effect": "Open-endedness is supported by distinct evidence-grounded inquiry families rather than raw question count.",
     "falsification": "Reject if paraphrases inflate open-endedness or distinct evidence-grounded questions collapse incorrectly.",
@@ -20,7 +20,7 @@
       "tests/test_core.py"
     ],
     "hypothesis": "Explicit question-family tracking can distinguish genuine branching from paraphrase churn.",
-    "id": "M000006",
+    "id": "M000007",
     "protected_paths": [
       ".github/workflows/growth.yml",
       ".github/workflows/interact.yml",
@@ -37,7 +37,7 @@
     ],
     "rollback": "Revert the candidate change and restore the previous verified baseline.",
     "schema_version": 1,
-    "selection_rationale": "open_endedness was the highest eligible evidence-backed deficit (0.682) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
+    "selection_rationale": "open_endedness was the highest eligible evidence-backed deficit (0.667) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
     "source": "self-proposal-v1",
     "status": "proposed",
     "target_dimension": "open_endedness",
