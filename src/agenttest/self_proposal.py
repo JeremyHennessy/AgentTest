@@ -333,6 +333,47 @@ SYSTEM_DIAGNOSTIC_TARGETS: dict[str, dict[str, Any]] = {
 }
 
 
+def _current_baseline_fingerprint(state: dict[str, Any]) -> str | None:
+    for snapshot in reversed(state.get("environment_snapshots", [])):
+        fingerprint = snapshot.get("baseline_fingerprint")
+        if isinstance(fingerprint, str) and fingerprint:
+            return fingerprint
+    return None
+
+
+def _system_diagnostic_matches_current_baseline(
+    state: dict[str, Any],
+    diagnostic: dict[str, Any],
+) -> bool:
+    current = _current_baseline_fingerprint(state)
+    if current is None:
+        return True
+    diagnostic_fingerprint = diagnostic.get("baseline_fingerprint")
+    return isinstance(diagnostic_fingerprint, str) and diagnostic_fingerprint == current
+
+
+def _proposal_source_diagnostic_is_current(
+    state: dict[str, Any],
+    proposal: dict[str, Any],
+) -> bool:
+    source_id = proposal.get("source_diagnostic_id")
+    if not source_id:
+        return True
+    diagnostic = next(
+        (
+            item
+            for item in state.get("system_diagnostics", [])
+            if str(item.get("id")) == str(source_id)
+            and item.get("status") == "completed"
+        ),
+        None,
+    )
+    return (
+        diagnostic is not None
+        and _system_diagnostic_matches_current_baseline(state, diagnostic)
+    )
+
+
 def _active_proposal(state: dict[str, Any]) -> dict[str, Any] | None:
     unresolved = {
         "proposed",
@@ -341,7 +382,10 @@ def _active_proposal(state: dict[str, Any]) -> dict[str, Any] | None:
         "reviewed_supported_problem",
     }
     for proposal in state.get("change_proposals", []):
-        if proposal.get("status") in unresolved:
+        if (
+            proposal.get("status") in unresolved
+            and _proposal_source_diagnostic_is_current(state, proposal)
+        ):
             return proposal
     return None
 
@@ -387,6 +431,7 @@ def _latest_experiment_design_signal(
             for diagnostic in reversed(state.get("system_diagnostics", []))
             if diagnostic.get("kind") == "experiment_design"
             and diagnostic.get("status") == "completed"
+            and _system_diagnostic_matches_current_baseline(state, diagnostic)
         ),
         None,
     )
@@ -466,6 +511,7 @@ def _latest_attention_control_signal(
             for diagnostic in reversed(state.get("system_diagnostics", []))
             if diagnostic.get("kind") == "attention_control"
             and diagnostic.get("status") == "completed"
+            and _system_diagnostic_matches_current_baseline(state, diagnostic)
         ),
         None,
     )

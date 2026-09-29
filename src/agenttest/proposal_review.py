@@ -54,6 +54,68 @@ def _completed_diagnostic_ids(
     )
 
 
+def _current_baseline_fingerprint(state: dict[str, Any]) -> str | None:
+    for snapshot in reversed(state.get("environment_snapshots", [])):
+        fingerprint = snapshot.get("baseline_fingerprint")
+        if isinstance(fingerprint, str) and fingerprint:
+            return fingerprint
+    return None
+
+
+def _system_diagnostic_matches_current_baseline(
+    state: dict[str, Any],
+    diagnostic: dict[str, Any],
+) -> bool:
+    current = _current_baseline_fingerprint(state)
+    if current is None:
+        return True
+    diagnostic_fingerprint = diagnostic.get("baseline_fingerprint")
+    return isinstance(diagnostic_fingerprint, str) and diagnostic_fingerprint == current
+
+
+def _latest_current_system_diagnostic(
+    state: dict[str, Any],
+    kind: str,
+) -> dict[str, Any] | None:
+    return next(
+        (
+            item
+            for item in reversed(state.get("system_diagnostics", []))
+            if item.get("kind") == kind
+            and item.get("status") == "completed"
+            and _system_diagnostic_matches_current_baseline(state, item)
+        ),
+        None,
+    )
+
+
+def _proposal_source_system_diagnostic(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    proposal = next(
+        (
+            item
+            for item in state.get("change_proposals", [])
+            if str(item.get("id")) == proposal_id
+        ),
+        None,
+    )
+    if proposal is None or not proposal.get("source_diagnostic_id"):
+        return proposal, None
+    source_id = str(proposal.get("source_diagnostic_id"))
+    diagnostic = next(
+        (
+            item
+            for item in state.get("system_diagnostics", [])
+            if str(item.get("id")) == source_id
+            and item.get("status") == "completed"
+        ),
+        None,
+    )
+    return proposal, diagnostic
+
+
 def _existing_review(
     state: dict[str, Any],
     proposal_id: str,
@@ -67,6 +129,8 @@ def _existing_review(
         if review.get("considered_diagnostic_ids", []) != current_diagnostics:
             continue
         if _cached_review_requires_lifecycle_recheck(state, proposal_id, review):
+            continue
+        if _cached_review_requires_baseline_recheck(state, proposal_id):
             continue
         return review
     return None
@@ -185,6 +249,18 @@ def _cached_review_requires_lifecycle_recheck(
         diagnostic is not None
         and _same_cycle_untriaged_specification_backlog(state, diagnostic)
     )
+
+
+def _cached_review_requires_baseline_recheck(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> bool:
+    proposal, diagnostic = _proposal_source_system_diagnostic(state, proposal_id)
+    if proposal is None or not proposal.get("source_diagnostic_id"):
+        return False
+    if diagnostic is None:
+        return True
+    return not _system_diagnostic_matches_current_baseline(state, diagnostic)
 
 
 def _cited_attention_control_diagnostic(
@@ -527,6 +603,59 @@ def classify_proposal(
                     "resolved_evidence_count": len(cited),
                     "evidence_kinds": dict(kinds),
                 }
+            if not _system_diagnostic_matches_current_baseline(state, diagnostic):
+                current = _latest_current_system_diagnostic(
+                    state,
+                    "experiment_design",
+                )
+                if current is None:
+                    return {
+                        "verdict": "needs_evidence",
+                        "patch_authority": "none",
+                        "reason": (
+                            "The cited experiment-design diagnostic was measured on a "
+                            "different code baseline and no current-baseline diagnostic "
+                            "has replaced it yet."
+                        ),
+                        "required_next_evidence": (
+                            "Run the protected experiment-design diagnostic on the "
+                            "current baseline before authorizing a patch."
+                        ),
+                        "resolved_evidence_count": len(cited),
+                        "evidence_kinds": dict(kinds),
+                    }
+                if current.get("outcome") != expected_outcome:
+                    return {
+                        "verdict": "no_problem_observed",
+                        "patch_authority": "none",
+                        "reason": (
+                            "The proposal cites an old-baseline experiment-design "
+                            "diagnostic, while the current-baseline protected diagnostic "
+                            f"{current.get('id')} reports {current.get('outcome')} instead "
+                            f"of {expected_outcome}."
+                        ),
+                        "required_next_evidence": None,
+                        "resolved_evidence_count": len(cited),
+                        "evidence_kinds": dict(kinds),
+                        "direct_diagnostic_id": current.get("id"),
+                    }
+                return {
+                    "verdict": "superseded_evidence",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The cited experiment-design diagnostic belongs to an old code "
+                        "baseline. A current-baseline diagnostic reports the same problem, "
+                        "so this manifest is closed without patch authority and a fresh "
+                        "proposal must cite the current diagnostic."
+                    ),
+                    "required_next_evidence": (
+                        f"Author a fresh proposal from protected diagnostic "
+                        f"{current.get('id')}."
+                    ),
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                    "direct_diagnostic_id": current.get("id"),
+                }
             if (
                 selection_signal == "experiment_design_specification_backlog"
                 and _same_cycle_untriaged_specification_backlog(state, diagnostic)
@@ -611,6 +740,58 @@ def classify_proposal(
                 ),
                 "resolved_evidence_count": len(cited),
                 "evidence_kinds": dict(kinds),
+            }
+        if not _system_diagnostic_matches_current_baseline(state, diagnostic):
+            current = _latest_current_system_diagnostic(
+                state,
+                "attention_control",
+            )
+            if current is None:
+                return {
+                    "verdict": "needs_evidence",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The cited attention-control diagnostic was measured on a "
+                        "different code baseline and no current-baseline diagnostic "
+                        "has replaced it yet."
+                    ),
+                    "required_next_evidence": (
+                        "Run the protected attention-control diagnostic on the current "
+                        "baseline before authorizing a patch."
+                    ),
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                }
+            if current.get("outcome") != "blocked_attention_loop":
+                return {
+                    "verdict": "no_problem_observed",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The proposal cites an old-baseline blocked-attention result, "
+                        "while the current-baseline protected diagnostic "
+                        f"{current.get('id')} reports {current.get('outcome')}."
+                    ),
+                    "required_next_evidence": None,
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                    "direct_diagnostic_id": current.get("id"),
+                }
+            return {
+                "verdict": "superseded_evidence",
+                "patch_authority": "none",
+                "reason": (
+                    "The cited blocked-attention diagnostic belongs to an old code "
+                    "baseline. A current-baseline diagnostic reports the same problem, "
+                    "so this manifest is closed without patch authority and a fresh "
+                    "proposal must cite the current diagnostic."
+                ),
+                "required_next_evidence": (
+                    f"Author a fresh proposal from protected diagnostic "
+                    f"{current.get('id')}."
+                ),
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": current.get("id"),
             }
         return {
             "verdict": "supported_problem",
@@ -725,6 +906,7 @@ def review_change_proposal(
         "measurement_gap": "reviewed_measurement_gap",
         "needs_evidence": "reviewed_needs_evidence",
         "no_problem_observed": "closed_no_problem_observed",
+        "superseded_evidence": "closed_superseded_evidence",
     }
     proposal["status"] = status_by_verdict[verdict]
 
