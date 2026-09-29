@@ -27,11 +27,15 @@ def compute_drives(
         if item.get("status") == "open"
     ]
 
-    violated = bool(
-        prediction_result and prediction_result.get("status") == "violated"
-    )
+    status = prediction_result.get("status") if prediction_result else None
+    violated = status == "violated"
+    intervention = status == "invalidated_by_intervention"
     return {
-        "prediction_error": 1.0 if violated else (0.6 if surprise else 0.0),
+        "prediction_error": (
+            1.0
+            if violated
+            else (0.0 if intervention else (0.6 if surprise else 0.0))
+        ),
         "evidence_hunger": min(0.8, len(pending) / 4.0),
         "uncertainty": min(0.8, len(open_questions) / 6.0),
         "continuity_repair": max(0.0, 1.0 - metrics.get("continuity", 0.0)),
