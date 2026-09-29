@@ -281,7 +281,7 @@ def classify_proposal(
         if (
             inquiry is not None
             and inquiry.get("outcome") == "paraphrase_churn"
-            and inquiry.get("result", {}).get("metric_status") == "inflated"
+            and inquiry.get("result", {}).get("metric_status") in {"inflated", "unknown"}
         ):
             return {
                 "verdict": "supported_problem",
