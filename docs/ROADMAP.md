@@ -2,56 +2,55 @@
 
 This roadmap is hypothesis-driven. A phase advances only when its predecessor produces reproducible evidence.
 
-## Phase 0 — Persistence — implemented baseline
+## Phase 0 — Persistence — verified baseline
 
 Continuity, memory, a self-model, internal question generation, falsifiable experiments, reflection, and immutable history.
 
-**Evidence so far:** invariant tests verify persistence mechanics and outcome-driven reflection. Longer-run behavioral evidence is still required.
+## Phase 1 — Perception and environment — verified baseline
 
-## Phase 1 — Perception and environment — repository sensor implemented
+The first auditable sensor observes repository structure and detects changes without assigning invented meaning.
 
-The first auditable sensor can observe repository structure and detect changes without assigning them invented meaning.
+## Phase 2 — Predictive drives — implemented for verification
 
-**Next evidence:** autonomous runs must demonstrate that real repository changes produce precise surprises while routine timestamps/commit movement do not create fake novelty.
+Each repository observation now predicts the next measured state. The following observation automatically confirms or violates that prediction.
 
-Future sensors may include test outcomes and tightly scoped public information, but only with explicit provenance.
+Internal pressures are explicit and inspectable:
 
-## Phase 2 — Generative cognition
+- prediction error;
+- unresolved evidence;
+- uncertainty;
+- continuity repair;
+- self-model calibration;
+- novelty hunger.
+
+The dominant pressure chooses the next intention using a deterministic tie rule. Evidence hunger reuses an unresolved experiment rather than manufacturing endless new work.
+
+**Required evidence:** repeated autonomous heartbeats must close predictions correctly and change attention when measured state changes.
+
+## Phase 3 — Generative cognition
 
 Attach a model behind a small original interface rather than adopting an agent framework.
 
-The model may suggest hypotheses and interpretations, but structured state and evidence remain authoritative.
+The model may suggest hypotheses and interpretations, but structured state, drives, predictions, and evidence remain authoritative.
 
 **Question:** does model-backed thought create useful novelty that survives falsification?
 
-## Phase 3 — World model
+## Phase 4 — World model
 
 Represent entities, relations, predictions, confidence, contradictions, and unresolved uncertainty.
 
-**Question:** can the system make calibrated predictions and revise them correctly?
+**Question:** can the system make calibrated predictions beyond its own repository state?
 
-## Phase 4 — Reversible self-modification
+## Phase 5 — Reversible self-modification
 
-Allow proposed edits to code, prompts, policies, and evaluation methods on isolated branches.
+Allow proposed edits to code, prompts, policies, and evaluation methods on isolated branches, each with a baseline, measurement, falsification criterion, and rollback.
 
-Every proposal must state:
+## Phase 6 — Open-ended research
 
-- expected improvement;
-- baseline;
-- measurement;
-- falsification criterion;
-- rollback path.
+Maintain a frontier of unanswered questions and choose among them by expected information gain.
 
-**Question:** can the system improve a measured capability without degrading preserved ones?
+## Phase 7 — Emergent identity study
 
-## Phase 5 — Open-ended research
+Only after substantial persistent history exists, test whether identity-like continuity emerges from memory, prediction, drives, and self-modeling.
 
-Maintain a frontier of unanswered questions, select among them by expected information gain, and create new lines of inquiry from surprising observations.
-
-**Question:** does the frontier expand in genuinely new directions rather than cycling through paraphrases?
-
-## Phase 6 — Emergent identity study
-
-Only after substantial persistent history exists, test whether identity-like continuity emerges from memory and self-modeling.
-
-No test in this phase is permitted to assume consciousness in advance.
+No phase is permitted to assume consciousness in advance.
