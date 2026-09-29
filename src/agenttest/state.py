@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 DIMENSIONS = (
     "continuity",
@@ -22,6 +22,44 @@ DIMENSIONS = (
     "reflection",
     "open_endedness",
     "reproducibility",
+)
+
+
+CAPABILITY_CATALOG = (
+    "persistent structured state",
+    "append-only event journal",
+    "deterministic semantic consolidation with source episode references",
+    "temporal world claims that preserve superseded observed values",
+    "question generation from accumulated concepts",
+    "selection of explicit falsifiable experiments",
+    "narrow repository self-perception through auditable sensors",
+    "one-step prediction of measured repository state",
+    "endogenous evidence-driven intention selection",
+    "validated boundary for optional model-generated candidate thoughts",
+    "evidence-backed self-authored change manifests without code execution",
+    "proposal review that distinguishes direct problem evidence from measurement gaps",
+    "verified non-mutating diagnostics that can resolve measurement gaps",
+    "intervention-aware prediction using a non-state repository baseline fingerprint",
+    "verified read-only self-model grounding diagnostics",
+    "evidence-grounded self-model calibration with explicit uncertainty",
+    "baseline-scoped diagnostic re-evaluation after interventions",
+)
+
+LIMITATION_CATALOG = (
+    "Self-authored change manifests cannot apply or merge code.",
+    "Governance and preservation files are excluded from self-authored changes.",
+    "Proposal review can withhold patch authority when evidence does not identify the failing layer.",
+    "Diagnostic authority is limited to verified harnesses running on isolated or read-only state.",
+    "Repository intervention detection identifies changed content but does not infer why it changed.",
+    "Self-model calibration records evidence status but does not prove unverified capabilities.",
+    "Semantic memory is lexical and co-occurrence based rather than embedding based.",
+    "The world model currently represents only directly derived repository and evaluation claims.",
+    "Perception is limited to explicitly implemented auditable sensors.",
+    "Model cognition is optional and its output is untrusted until validated.",
+    "Model cognition cannot directly modify evidence, metrics, tools, or code.",
+    "Environmental actions are not independently executed.",
+    "No evidence currently establishes consciousness or subjective experience.",
+    "Code changes are proposals until independently evaluated.",
 )
 
 
@@ -77,43 +115,8 @@ def initial_state() -> dict[str, Any]:
         "reflections": [],
         "accepted_changes": [],
         "self_model": {
-            "capabilities": [
-                "persistent structured state",
-                "append-only event journal",
-                "deterministic semantic consolidation with source episode references",
-                "temporal world claims that preserve superseded observed values",
-                "question generation from accumulated concepts",
-                "selection of explicit falsifiable experiments",
-                "narrow repository self-perception through auditable sensors",
-                "one-step prediction of measured repository state",
-                "endogenous evidence-driven intention selection",
-                "validated boundary for optional model-generated candidate thoughts",
-                "evidence-backed self-authored change manifests without code execution",
-                "proposal review that distinguishes direct problem evidence from measurement gaps",
-        "verified non-mutating diagnostics that can resolve measurement gaps",
-        "intervention-aware prediction using a non-state repository baseline fingerprint",
-        "verified read-only self-model grounding diagnostics",
-                "verified non-mutating diagnostics that can resolve measurement gaps",
-                "intervention-aware prediction using a non-state repository baseline fingerprint",
-                "verified read-only self-model grounding diagnostics",
-            ],
-            "limitations": [
-                "Self-authored change manifests cannot apply or merge code.",
-                "Governance and preservation files are excluded from self-authored changes.",
-                "Proposal review can withhold patch authority when evidence does not identify the failing layer.",
-        "Diagnostic authority is limited to verified harnesses running on isolated temporary state.",
-        "Repository intervention detection identifies changed content but does not infer why it changed.",
-                "Diagnostic authority is limited to verified harnesses running on isolated temporary state.",
-                "Repository intervention detection identifies changed content but does not infer why it changed.",
-                "Semantic memory is lexical and co-occurrence based rather than embedding based.",
-                "The world model currently represents only directly derived repository and evaluation claims.",
-                "Perception is limited to explicitly implemented auditable sensors.",
-                "Model cognition is optional and its output is untrusted until validated.",
-                "Model cognition cannot directly modify evidence, metrics, tools, or code.",
-                "Environmental actions are not independently executed.",
-                "No evidence currently establishes consciousness or subjective experience.",
-                "Code changes are proposals until independently evaluated.",
-            ],
+            "capabilities": list(CAPABILITY_CATALOG),
+            "limitations": list(LIMITATION_CATALOG),
             "last_updated_cycle": 0,
         },
         "metrics": {dimension: 0.0 for dimension in DIMENSIONS},
@@ -162,34 +165,23 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         metrics.setdefault(dimension, 0.0)
 
     self_model = state.setdefault("self_model", {})
-    capabilities = self_model.setdefault("capabilities", [])
-    for capability in (
-        "deterministic semantic consolidation with source episode references",
-        "temporal world claims that preserve superseded observed values",
-        "narrow repository self-perception through auditable sensors",
-        "one-step prediction of measured repository state",
-        "endogenous evidence-driven intention selection",
-        "validated boundary for optional model-generated candidate thoughts",
-        "evidence-backed self-authored change manifests without code execution",
-        "proposal review that distinguishes direct problem evidence from measurement gaps",
-    ):
-        if capability not in capabilities:
-            capabilities.append(capability)
+    existing_capabilities = [
+        str(capability)
+        for capability in self_model.get("capabilities", [])
+        if str(capability).strip()
+    ]
+    self_model["capabilities"] = list(
+        dict.fromkeys([*existing_capabilities, *CAPABILITY_CATALOG])
+    )
 
-    limitations = self_model.setdefault("limitations", [])
-    for limitation in (
-        "Self-authored change manifests cannot apply or merge code.",
-        "Governance and preservation files are excluded from self-authored changes.",
-        "Proposal review can withhold patch authority when evidence does not identify the failing layer.",
-        "Semantic memory is lexical and co-occurrence based rather than embedding based.",
-        "The world model currently represents only directly derived repository and evaluation claims.",
-        "Perception is limited to explicitly implemented auditable sensors.",
-        "Model cognition is optional and its output is untrusted until validated.",
-        "Model cognition cannot directly modify evidence, metrics, tools, or code.",
-        "Environmental actions are not independently executed.",
-    ):
-        if limitation not in limitations:
-            limitations.append(limitation)
+    existing_limitations = [
+        str(limitation)
+        for limitation in self_model.get("limitations", [])
+        if str(limitation).strip()
+    ]
+    self_model["limitations"] = list(
+        dict.fromkeys([*existing_limitations, *LIMITATION_CATALOG])
+    )
 
     state["schema_version"] = SCHEMA_VERSION
     return state
