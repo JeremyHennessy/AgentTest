@@ -13,6 +13,7 @@ from agenttest.change_control import PROTECTED_PATHS, make_change_manifest, vali
 from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
 from agenttest.evidence import known_evidence_ids
+from agenttest.diagnostic_attention import evaluate_blocked_attention
 from agenttest.interaction import interact
 from agenttest.intervention import record_verified_intervention
 from agenttest.diagnostics import run_proposal_diagnostic
@@ -22,7 +23,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v16"
+SUITE = "behavioral-preservation-v17"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1400,6 +1401,77 @@ def blocked_attention_diagnostic_governance() -> dict[str, Any]:
 
 
 
+def post_intervention_attention_measurement_scope() -> dict[str, Any]:
+    state = {
+        "questions": [
+            {
+                "id": "Q000012",
+                "text": "Which assumption remains untested?",
+                "times_selected": 24,
+            }
+        ],
+        "experiments": [
+            {
+                "id": "X000011",
+                "question_id": "Q000012",
+                "status": "proposed",
+                "times_selected": 6,
+                "last_selected_cycle": 43,
+                "specification": {
+                    "actionability": "blocked",
+                    "evaluated_cycle": 41,
+                },
+            }
+        ],
+        "change_proposals": [
+            {
+                "id": "M000011",
+                "status": "closed_verified_intervention",
+                "selection_signal": "attention_control_blocked_attention_loop",
+                "accepted_change_id": "A000003",
+            }
+        ],
+        "accepted_changes": [
+            {
+                "id": "A000003",
+                "proposal_id": "M000011",
+                "accepted_cycle": 44,
+            }
+        ],
+    }
+
+    historical = evaluate_blocked_attention(state)
+    newer = json.loads(json.dumps(state))
+    newer["experiments"][0]["last_selected_cycle"] = 45
+    current = evaluate_blocked_attention(newer)
+
+    return {
+        "passed": (
+            historical.get("diagnostic_version") == "blocked-attention-v2"
+            and historical.get("latest_relevant_intervention_cycle") == 44
+            and historical.get("historical_reselected_after_block_count") == 1
+            and historical.get("reselected_after_block_count") == 0
+            and historical.get("loop_count") == 0
+            and historical.get("outcome") == "attention_redirected"
+            and not historical.get("source_state_mutated")
+            and current.get("reselected_after_block_count") == 1
+            and current.get("loop_experiment_ids") == ["X000011"]
+            and current.get("outcome") == "blocked_attention_loop"
+            and not current.get("source_state_mutated")
+        ),
+        "historical_outcome": historical.get("outcome"),
+        "historical_raw_reselection_count": historical.get(
+            "historical_reselected_after_block_count"
+        ),
+        "historical_current_reselection_count": historical.get(
+            "reselected_after_block_count"
+        ),
+        "current_outcome": current.get("outcome"),
+        "current_reselection_count": current.get("reselected_after_block_count"),
+        "intervention_cycle": historical.get("latest_relevant_intervention_cycle"),
+    }
+
+
 def specification_backlog_lifecycle_scope() -> dict[str, Any]:
     temp_transient, store_transient, _ = fresh()
     temp_stale, store_stale, _ = fresh()
@@ -1498,6 +1570,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("verified_intervention_reconciliation", verified_intervention_reconciliation),
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
+    ("post_intervention_attention_measurement_scope", post_intervention_attention_measurement_scope),
     ("specification_backlog_lifecycle_scope", specification_backlog_lifecycle_scope),
 ]
 
