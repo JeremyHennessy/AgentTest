@@ -1,19 +1,14 @@
-# Design: Genesis Phases 0–9
+# Design: Genesis Phases 0–11
 
 ## Premise
 
-AgentTest is an original experiment in persistent adaptive computation. It does not use a scalar alive score and does not equate model fluency with evidence.
+AgentTest is an original experiment in persistent adaptive computation. It does not use a scalar alive score and does not treat fluent language or code volume as evidence of improvement.
 
 ## Adaptive loop
 
     auditable perception
           ↓
-    prediction scope check
-          ↓
-    ┌───────────────────────┬──────────────────────────┐
-    │same baseline          │baseline intervention     │
-    │evaluate prediction    │invalidate old prediction │
-    └───────────────────────┴──────────────────────────┘
+    prediction scope / intervention check
           ↓
     episodic + semantic memory
           ↓
@@ -25,72 +20,74 @@ AgentTest is an original experiment in persistent adaptive computation. It does 
           ↓
     optional grounded cognition
           ↓
-    question → experiment → next prediction
+    question → experiment → prediction
+          ↓
+       next heartbeat
 
-## Why intervention awareness matters
+## Evolution evidence loop
 
-A prediction is meaningful only inside the conditions under which it was made.
+    observed deficit
+          ↓
+    self-authored manifest
+          ↓
+    evidence-relevance review
+          ↓
+    verified read-only diagnostic when needed
+          ↓
+    ┌─────────────────────┬─────────────────────┐
+    │no problem observed  │supported problem    │
+    │close proposal       │candidate allowed    │
+    └─────────────────────┴─────────────────────┘
+                                  ↓
+                         isolated candidate
+                                  ↓
+                    BASE-owned preservation gate
+                                  ↓
+                       live post-merge diagnostic
 
-The repository-stability prediction says measured repository state should remain stable unless an intervening change occurs. Earlier versions recorded the caveat in prose but did not implement it: every verified code merge changed file counts/source lines and was scored as a prediction error.
+Historical failure evidence is preserved, but diagnostics are scoped to the repository baseline that produced them. A repaired baseline can therefore be re-tested and close an old problem without erasing the prior failure.
 
-Phase 9 makes the scope explicit.
+## Self-model discipline
 
-## Baseline fingerprint
+Capability claims are explicitly calibrated:
 
-The repository sensor computes baseline_fingerprint from the ordered path and bytes of every tracked non-state file.
+- observed: citable runtime evidence exists;
+- verified: reserved for stronger verified evidence;
+- unverified: no adequate citable evidence exists, with a reason.
 
-Excluded:
+Explicit uncertainty counts as a grounded self-description. It does not count as evidence that the capability works.
 
-- state/ and all descendants.
+The capability catalog is canonical, migration-safe, and deduplicated.
 
-Included:
+## Inquiry-family diagnostic
 
-- runtime code;
-- tests;
-- workflows;
-- documentation;
-- configuration;
-- other tracked repository files.
+Open-endedness must measure genuinely distinct inquiry, not string variation.
 
-This fingerprint answers a narrow question: did the non-persistent repository baseline change?
+The Phase 11 diagnostic is read-only and deterministic. It normalizes volatile numbers/IDs and groups questions by lexical token overlap. It reports:
 
-It does not infer who changed it, why it changed, whether the change was good, or whether it was verified.
+- question count;
+- inquiry-family count;
+- repeated-question count;
+- duplicate pressure;
+- largest family size/ratio;
+- provenance via question IDs.
 
-## Prediction outcomes
+A large repeated family can support paraphrase_churn. Distinct controlled questions must remain separate. The diagnostic code is protected governance and cannot be modified by self-authored candidates.
 
-### confirmed
-The baseline fingerprint is unchanged and all comparable measurements match.
+## Trust ordering
 
-### violated
-The baseline fingerprint is unchanged but one or more comparable measurements differ.
+1. Raw observations and explicit outcomes.
+2. Verified diagnostics and provenance-backed world claims.
+3. Semantic summaries used for retrieval.
+4. Model-generated thoughts.
+5. Change manifests and candidate code.
 
-This creates prediction-error pressure.
-
-### invalidated_by_intervention
-The non-state baseline fingerprint changed.
-
-The old stability prediction is no longer treated as a fair test of the new baseline. The intervention and reflection are preserved, but prediction_error is zero for that result.
-
-## Surprises versus errors
-
-A repository intervention can still create a surprise record. Surprise means an observed state changed.
-
-Prediction error is narrower: an expectation failed inside an unchanged prediction scope.
-
-The drive system no longer automatically treats an intervention surprise as prediction failure.
-
-## Evidence and world model
-
-invalidated_by_intervention is retained as a prediction-evaluation world claim, preserving the fact that the prediction became inapplicable rather than silently discarding it.
-
-## Governance
-
-Intervention awareness does not weaken the preservation gate. Candidate code must still pass every behavior that the previous verified base could demonstrate.
+Lower-authority layers may guide attention but cannot rewrite higher-authority evidence.
 
 ## Still missing
 
-- isolated self-authored candidate patches;
-- target-specific candidate improvement evidence;
-- broader external perception and action;
-- live successful model cognition;
+- live successful model cognition, because no provider key is configured;
+- conversational interaction surface over persistent state;
+- broader external perception/actions;
+- causal models beyond current temporal/evidence structures;
 - evidence of subjective experience.

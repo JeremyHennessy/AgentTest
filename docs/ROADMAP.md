@@ -2,69 +2,63 @@
 
 This roadmap is hypothesis-driven. A phase advances only when its predecessor produces reproducible evidence.
 
-## Phase 0 — Persistence — verified
-Persistent state, episodic memory, questions, experiments, reflection, and immutable history.
+## Phases 0–5 — verified foundations
 
-## Phase 1 — Perception — verified
-Auditable repository sensing and explicit surprise detection.
-
-## Phase 2 — Predictive drives — verified
-Predictions are tested against later observations and prediction error changes attention.
-
-## Phase 3 — Grounded generative cognition — verified boundary
-Optional model cognition is structurally gated, tool-less, provenance-recorded, and fail-closed. Live cognition remains unavailable until a provider is configured.
-
-## Phase 4 — Semantic memory and temporal world model — verified
-Semantic memory preserves source episode references. Temporal world claims preserve superseded facts and link derived claims to raw evidence.
-
-## Phase 5 — Evolution preservation gate — verified
-The previous verified base supplies the evaluator used against both baseline and candidate code. A deliberate negative-control regression was correctly rejected.
+- Phase 0: persistent state, episodic memory, experiments, reflection.
+- Phase 1: auditable repository perception.
+- Phase 2: predictions, endogenous drives, intention selection.
+- Phase 3: grounded optional model cognition with no tools or write authority.
+- Phase 4: semantic memory and temporal provenance-backed world claims.
+- Phase 5: baseline-owned behavioral preservation gate. A deliberate regression was correctly rejected.
 
 ## Phase 6 — Self-authored change manifests — verified
-The live organism generated M000001 from accumulated evidence without code authority.
 
-## Phase 7 — Proposal evidence review — verified
-M000001 was correctly classified as a measurement gap rather than a demonstrated reproducibility defect.
+AgentTest can propose evidence-backed changes but cannot apply code.
 
-## Phase 8 — Verified non-mutating diagnostics — code verified
-The verified replay harness can resolve M000001 without letting candidate code grade itself.
+## Phase 7 — Evidence relevance review — verified
 
-A stable replay closes the proposal with no patch authority; divergence can support a problem. The diagnostic and review authority are protected governance code.
+Proposals distinguish supported problems from measurement gaps and insufficient evidence.
 
-Live autonomous execution of the new diagnostic is the remaining operational observation.
+## Phase 8 — Verified non-mutating diagnostics — verified
 
-## Phase 9 — Intervention-aware prediction — implementation under verification
+Verified diagnostics can resolve measurement gaps without allowing proposed code to grade itself.
 
-The live organism has repeatedly treated intentional repository evolution as prediction failure because structural fields changed after verified merges.
+M000001 requested deterministic replay evidence. D000001 found stable replay, so the proposal closed with no patch.
 
-Phase 9 introduces a non-state repository baseline fingerprint.
+## Phase 9 — Intervention-aware prediction — verified
 
-Prediction semantics become:
+Predictions are confirmed or violated only inside the baseline in which they were made. A changed non-state repository fingerprint produces invalidated_by_intervention rather than false prediction-error pressure.
 
-- same baseline + same measured state → confirmed;
-- same baseline + unexpected measured change → violated;
-- changed non-state baseline → invalidated_by_intervention.
+## Phase 10 — Evidence-grounded self-model calibration — verified
 
-An intervention-invalidated prediction is retained as evidence but contributes zero prediction-error drive. This allows evidence debt and uncertainty to compete for attention instead of every code upgrade monopolizing the organism's internal drives.
+M000002 was the first live supported corrective problem.
 
-Persistent state files are excluded from the baseline fingerprint so autonomous journal commits do not masquerade as code interventions.
+The verified self-model diagnostic found 0/12 capability claims explicitly grounded. The first candidate was rejected, exposing an improvement-hostile preservation check. Governance was repaired, candidate v2 passed, and the live self-model now records observed or unverified status with provenance/rationale.
 
-Required evidence:
-- old prediction-error behavior remains preserved for genuine same-baseline changes;
-- intervention invalidation is deterministic;
-- state-only file mutation does not change the baseline fingerprint;
-- the previous verified base evaluator reports no regression.
+A post-intervention diagnostic re-ran on the repaired baseline and closed M000002 with no remaining problem observed.
 
-## Phase 10 — Isolated self-authored patches
-Only proposals with supported_problem may become bounded candidate patches. Candidate code cannot alter governance or evidence authority.
+The capability catalog is canonicalized and migrations preserve custom entries while adding newly implemented capabilities.
 
-## Phase 11 — Broader world interaction
-Add narrowly scoped external sensors and actions with explicit permissions, provenance, rate limits, and outcome verification.
+## Phase 11 — Inquiry-family diagnostic — implementation under verification
 
-## Phase 12 — Open-ended research
-Maintain a frontier of unresolved questions and select among them using expected information gain and evidence debt.
+Live proposal M000003 targets open-endedness.
 
-## Phase 13 — Emergent identity study
-Only after substantial persistent history exists, test whether identity-like continuity emerges from memory, prediction, self-modeling, and internally selected goals.
+Current exact-string counting treats repeated variants such as repository-field-change questions as distinct inquiry. Before changing question generation or the metric, Phase 11 adds a protected read-only diagnostic that:
+
+- normalizes volatile numeric and identifier tokens;
+- groups questions by deterministic lexical overlap;
+- reports family count, repeated-question pressure, and largest family;
+- classifies the evidence as paraphrase_churn, diverse, or insufficient_data;
+- cannot mutate the live state.
+
+If the live diagnostic finds paraphrase churn, M000003 may receive candidate authority. If it finds diversity, the proposal closes without a patch.
+
+## Next phases — evidence dependent
+
+- Bounded M000003 candidate only if direct churn evidence supports it.
+- Persistent human interaction surface grounded in the same state/evidence hierarchy.
+- Broader external perception/actions with explicit permissions and provenance.
+- Open-ended research frontier selected by information gain and evidence debt.
+- Identity-continuity studies only after substantial history exists.
 
 No phase is permitted to assume consciousness in advance.

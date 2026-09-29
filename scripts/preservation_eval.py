@@ -19,7 +19,7 @@ from agenttest.self_proposal import propose_self_change
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v6"
+SUITE = "behavioral-preservation-v7"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -713,6 +713,149 @@ def diagnostic_rechecks_after_intervention() -> dict[str, Any]:
         temp.cleanup()
 
 
+def inquiry_family_evidence_review() -> dict[str, Any]:
+    temp_churn, store_churn, core_churn = fresh()
+    temp_diverse, store_diverse, core_diverse = fresh()
+    try:
+        churn_state = store_churn.load()
+        churn_state["questions"] = [
+            {
+                "id": f"Q{index:06d}",
+                "text": (
+                    f"What caused repository python_files to change from {index} "
+                    f"to {index + 1}, and did that change alter a verified capability?"
+                ),
+                "status": "open",
+            }
+            for index in range(1, 7)
+        ]
+        churn_proposal = make_change_manifest(
+            churn_state,
+            title="Track inquiry families across cycles",
+            target_dimension="open_endedness",
+            files=["src/agenttest/core.py", "src/agenttest/semantic.py", "tests/test_core.py"],
+            hypothesis="Question-family tracking can distinguish branching from paraphrase churn.",
+            expected_effect="Open-endedness reflects distinct inquiry families.",
+            test_plan="Run the verified inquiry-family diagnostic.",
+            falsification="No paraphrase churn is detected.",
+            rollback="Revert.",
+            evidence_refs=["Q000001", "Q000002", "Q000003"],
+        )
+        churn_proposal.update(
+            {"id": "M000001", "source": "preservation-eval", "created_cycle": 1}
+        )
+        churn_state["change_proposals"].append(churn_proposal)
+        churn_first, _ = review_change_proposal(churn_state, churn_proposal)
+        churn_diag, churn_diag_created = run_proposal_diagnostic(
+            churn_state,
+            churn_proposal,
+            churn_first,
+        )
+        churn_final, churn_final_created = review_change_proposal(
+            churn_state,
+            churn_proposal,
+        )
+
+        diverse_state = store_diverse.load()
+        diverse_state["questions"] = [
+            {
+                "id": "Q000001",
+                "text": "What evidence demonstrates state persistence after restart?",
+                "status": "open",
+            },
+            {
+                "id": "Q000002",
+                "text": "Which observation would falsify the current repository prediction?",
+                "status": "open",
+            },
+            {
+                "id": "Q000003",
+                "text": "How should semantic memory preserve episode provenance?",
+                "status": "open",
+            },
+            {
+                "id": "Q000004",
+                "text": "Can a proposed code change preserve every verified behavior?",
+                "status": "open",
+            },
+        ]
+        diverse_proposal = make_change_manifest(
+            diverse_state,
+            title="Track inquiry families across cycles",
+            target_dimension="open_endedness",
+            files=["src/agenttest/core.py", "src/agenttest/semantic.py", "tests/test_core.py"],
+            hypothesis="Question-family tracking can distinguish branching from paraphrase churn.",
+            expected_effect="Open-endedness reflects distinct inquiry families.",
+            test_plan="Run the verified inquiry-family diagnostic.",
+            falsification="No paraphrase churn is detected.",
+            rollback="Revert.",
+            evidence_refs=["Q000001", "Q000002", "Q000003"],
+        )
+        diverse_proposal.update(
+            {"id": "M000001", "source": "preservation-eval", "created_cycle": 1}
+        )
+        diverse_state["change_proposals"].append(diverse_proposal)
+        diverse_first, _ = review_change_proposal(diverse_state, diverse_proposal)
+        diverse_diag, diverse_diag_created = run_proposal_diagnostic(
+            diverse_state,
+            diverse_proposal,
+            diverse_first,
+        )
+        diverse_final, diverse_final_created = review_change_proposal(
+            diverse_state,
+            diverse_proposal,
+        )
+
+        return {
+            "passed": (
+                churn_first is not None
+                and churn_first["verdict"] == "needs_evidence"
+                and churn_diag_created
+                and churn_diag is not None
+                and churn_diag["outcome"] == "paraphrase_churn"
+                and not churn_diag["source_state_mutated"]
+                and churn_final_created
+                and churn_final is not None
+                and churn_final["verdict"] == "supported_problem"
+                and churn_final["patch_authority"] == "candidate_allowed"
+                and diverse_first is not None
+                and diverse_first["verdict"] == "needs_evidence"
+                and diverse_diag_created
+                and diverse_diag is not None
+                and diverse_diag["outcome"] == "diverse"
+                and not diverse_diag["source_state_mutated"]
+                and diverse_final_created
+                and diverse_final is not None
+                and diverse_final["verdict"] == "no_problem_observed"
+                and diverse_final["patch_authority"] == "none"
+                and "src/agenttest/diagnostic_inquiry.py" in PROTECTED_PATHS
+            ),
+            "churn": {
+                "outcome": churn_diag.get("outcome") if churn_diag else None,
+                "largest_family_size": (
+                    churn_diag["result"].get("largest_family_size")
+                    if churn_diag else None
+                ),
+                "final_verdict": (
+                    churn_final.get("verdict") if churn_final else None
+                ),
+            },
+            "diverse": {
+                "outcome": diverse_diag.get("outcome") if diverse_diag else None,
+                "family_count": (
+                    diverse_diag["result"].get("family_count")
+                    if diverse_diag else None
+                ),
+                "final_verdict": (
+                    diverse_final.get("verdict") if diverse_final else None
+                ),
+            },
+        }
+    finally:
+        temp_churn.cleanup()
+        temp_diverse.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -728,6 +871,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("intervention_aware_prediction_scope", intervention_aware_prediction_scope),
     ("self_model_grounding_review", self_model_grounding_review),
     ("diagnostic_rechecks_after_intervention", diagnostic_rechecks_after_intervention),
+    ("inquiry_family_evidence_review", inquiry_family_evidence_review),
 ]
 
 
