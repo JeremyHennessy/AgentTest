@@ -5,12 +5,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 DIMENSIONS = (
     "continuity",
     "memory",
     "perception",
+    "cognition",
     "self_model",
     "curiosity",
     "agency",
@@ -44,6 +45,8 @@ def initial_state() -> dict[str, Any]:
         "predictions": [],
         "intentions": [],
         "drives": {},
+        "cognition_events": [],
+        "cognition_candidates": [],
         "questions": [],
         "experiments": [],
         "reflections": [],
@@ -57,10 +60,12 @@ def initial_state() -> dict[str, Any]:
                 "narrow repository self-perception through auditable sensors",
                 "one-step prediction of measured repository state",
                 "endogenous evidence-driven intention selection",
+                "validated boundary for optional model-generated candidate thoughts",
             ],
             "limitations": [
                 "Perception is limited to explicitly implemented auditable sensors.",
-                "No model-backed generative cognition is configured.",
+                "Model cognition is optional and its output is untrusted until validated.",
+                "Model cognition cannot directly modify evidence, metrics, tools, or code.",
                 "Environmental actions are not independently executed.",
                 "No evidence currently establishes consciousness or subjective experience.",
                 "Code changes are proposals until independently evaluated.",
@@ -80,6 +85,8 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         ("predictions", []),
         ("intentions", []),
         ("drives", {}),
+        ("cognition_events", []),
+        ("cognition_candidates", []),
         ("episodes", []),
         ("questions", []),
         ("experiments", []),
@@ -99,16 +106,21 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         "narrow repository self-perception through auditable sensors",
         "one-step prediction of measured repository state",
         "endogenous evidence-driven intention selection",
+        "validated boundary for optional model-generated candidate thoughts",
     ):
         if capability not in capabilities:
             capabilities.append(capability)
 
     limitations = self_model.setdefault("limitations", [])
-    old_limitation = "No external perception unless observations are supplied."
-    if old_limitation in limitations:
-        limitations.remove(old_limitation)
+    obsolete = {
+        "No external perception unless observations are supplied.",
+        "No model-backed generative cognition is configured.",
+    }
+    limitations[:] = [item for item in limitations if item not in obsolete]
     for limitation in (
         "Perception is limited to explicitly implemented auditable sensors.",
+        "Model cognition is optional and its output is untrusted until validated.",
+        "Model cognition cannot directly modify evidence, metrics, tools, or code.",
         "Environmental actions are not independently executed.",
     ):
         if limitation not in limitations:

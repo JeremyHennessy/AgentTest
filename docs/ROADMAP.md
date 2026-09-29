@@ -10,40 +10,32 @@ Continuity, memory, a self-model, internal question generation, falsifiable expe
 
 The first auditable sensor observes repository structure and detects changes without assigning invented meaning.
 
-## Phase 2 — Predictive drives — implemented for verification
+## Phase 2 — Predictive drives — verified behavior
 
-Each repository observation now predicts the next measured state. The following observation automatically confirms or violates that prediction.
+Autonomous cycles have now closed a real prediction loop: a measured prediction was violated, exact error fields were recorded, and prediction error changed the next intention from continuity preservation to change explanation.
 
-Internal pressures are explicit and inspectable:
+## Phase 3 — Generative cognition — implementation under verification
 
-- prediction error;
-- unresolved evidence;
-- uncertainty;
-- continuity repair;
-- self-model calibration;
-- novelty hunger.
+A small optional model boundary may propose one structured candidate thought. It has no tools or write authority.
 
-The dominant pressure chooses the next intention using a deterministic tie rule. Evidence hunger reuses an unresolved experiment rather than manufacturing endless new work.
+Hard gates:
+- only existing evidence IDs may be cited;
+- malformed or unsupported candidates are rejected;
+- provider absence or error cannot halt the deterministic loop;
+- model output cannot directly alter evidence or metrics;
+- evidence-hunger still takes priority over generating more work.
 
-**Required evidence:** repeated autonomous heartbeats must close predictions correctly and change attention when measured state changes.
+Required evidence: first prove the validation boundary with tests. Then, when a provider is configured, compare model-backed candidate quality and resolution rate against deterministic questions rather than assuming the model improved the organism.
 
-## Phase 3 — Generative cognition
+## Phase 4 — World model and semantic memory
 
-Attach a model behind a small original interface rather than adopting an agent framework.
+Represent entities, relations, claims, confidence, contradictions, and unresolved uncertainty. Consolidate episodic observations into durable concepts without deleting source evidence.
 
-The model may suggest hypotheses and interpretations, but structured state, drives, predictions, and evidence remain authoritative.
-
-**Question:** does model-backed thought create useful novelty that survives falsification?
-
-## Phase 4 — World model
-
-Represent entities, relations, predictions, confidence, contradictions, and unresolved uncertainty.
-
-**Question:** can the system make calibrated predictions beyond its own repository state?
+Question: can the system make calibrated predictions beyond its own repository state and retrieve relevant past experience?
 
 ## Phase 5 — Reversible self-modification
 
-Allow proposed edits to code, prompts, policies, and evaluation methods on isolated branches, each with a baseline, measurement, falsification criterion, and rollback.
+Allow self-authored edit proposals on isolated branches, each with a baseline, measurement, falsification criterion, and rollback.
 
 ## Phase 6 — Open-ended research
 

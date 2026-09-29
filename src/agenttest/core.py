@@ -5,6 +5,7 @@ import re
 from collections import Counter
 from typing import Any
 
+from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
 from .perception import COMPARABLE_FIELDS, changed_fields
 from .state import DIMENSIONS, StateStore, utc_now
@@ -26,7 +27,7 @@ def _norm(text: str) -> str:
 
 
 class AgentCore:
-    """Persistent loop with perception, prediction, endogenous drives and reflection."""
+    """Persistent loop with perception, prediction, drives, cognition and reflection."""
 
     def __init__(self, store: StateStore | None = None) -> None:
         self.store = store or StateStore()
@@ -35,6 +36,8 @@ class AgentCore:
         self,
         stimulus: str | None = None,
         observation: dict[str, Any] | None = None,
+        cognition: bool = False,
+        cognition_provider: CognitionProvider | None = None,
     ) -> dict[str, Any]:
         state = self.store.load()
         state["cycles"] += 1
@@ -89,12 +92,26 @@ class AgentCore:
         intention = choose_intention(state, drives)
         state["intentions"].append(intention)
 
-        question_text = self._generate_question(state, surprise, intention)
+        cognition_event = None
+        thought = None
+        if cognition:
+            cognition_event, thought = run_cognition(
+                state,
+                intention,
+                cognition_provider,
+            )
+
+        question_text = self._generate_question(state, surprise, intention, thought)
         question = self._upsert_question(state, question_text)
         question["times_selected"] += 1
         question["last_selected_cycle"] = cycle
 
-        experiment = self._select_or_propose_experiment(state, question, intention)
+        experiment = self._select_or_propose_experiment(
+            state,
+            question,
+            intention,
+            thought,
+        )
 
         prediction = None
         if observation is not None:
@@ -116,6 +133,8 @@ class AgentCore:
                 prediction_result["id"] if prediction_result else None
             ),
             "intention_id": intention["id"],
+            "cognition_event_id": cognition_event["id"] if cognition_event else None,
+            "cognition_candidate_id": thought["id"] if thought else None,
             "selected_question_id": question["id"],
             "experiment_id": experiment["id"],
             "new_prediction_id": prediction["id"] if prediction else None,
@@ -129,6 +148,8 @@ class AgentCore:
             "prediction_result": prediction_result,
             "drives": drives,
             "intention": intention,
+            "cognition_event": cognition_event,
+            "thought": thought,
             "question": question,
             "experiment": experiment,
             "prediction": prediction,
@@ -277,21 +298,27 @@ class AgentCore:
         state: dict[str, Any],
         surprise: dict[str, Any] | None,
         intention: dict[str, Any],
+        thought: dict[str, Any] | None,
     ) -> str:
+        if intention["kind"] == "resolve_pending_evidence" and intention.get("target"):
+            candidate = (
+                f"What obtainable evidence would resolve pending experiment "
+                f"{intention['target']} with the least additional assumption?"
+            )
+            if not self._question_exists(state, candidate):
+                return candidate
+
+        if thought is not None:
+            candidate = thought["question"].strip()
+            if not self._question_exists(state, candidate):
+                return candidate
+
         if intention["kind"] == "explain_change" and surprise and surprise["changes"]:
             field = sorted(surprise["changes"])[0]
             change = surprise["changes"][field]
             candidate = (
                 f"What caused repository {field} to change from {change['before']!r} "
                 f"to {change['after']!r}, and did that change alter a verified capability?"
-            )
-            if not self._question_exists(state, candidate):
-                return candidate
-
-        if intention["kind"] == "resolve_pending_evidence" and intention.get("target"):
-            candidate = (
-                f"What obtainable evidence would resolve pending experiment "
-                f"{intention['target']} with the least additional assumption?"
             )
             if not self._question_exists(state, candidate):
                 return candidate
@@ -347,6 +374,7 @@ class AgentCore:
         state: dict[str, Any],
         question: dict[str, Any],
         intention: dict[str, Any],
+        thought: dict[str, Any] | None,
     ) -> dict[str, Any]:
         if intention["kind"] == "resolve_pending_evidence" and intention.get("target"):
             match = next(
@@ -361,24 +389,39 @@ class AgentCore:
                 match["last_selected_cycle"] = state["cycles"]
                 return match
 
+        if thought is not None and _norm(question["text"]) == _norm(thought["question"]):
+            hypothesis = thought["hypothesis"]
+            method = thought["experiment"]
+            falsification = thought["falsification"]
+            predicted_observation = thought["predicted_observation"]
+            cognition_candidate_id = thought["id"]
+        else:
+            hypothesis = (
+                "A deliberately chosen disconfirming observation will reduce more "
+                "uncertainty than collecting another confirming example."
+            )
+            method = (
+                "Seek one observation that would make the current working idea less "
+                "likely, and record the result before changing behavior."
+            )
+            falsification = (
+                "The experiment fails if it cannot name a possible observation that "
+                "would count against the hypothesis."
+            )
+            predicted_observation = None
+            cognition_candidate_id = None
+
         experiment = {
             "id": f"X{len(state['experiments']) + 1:06d}",
             "cycle": state["cycles"],
             "question_id": question["id"],
             "status": "proposed",
             "intention_id": intention["id"],
-            "hypothesis": (
-                "A deliberately chosen disconfirming observation will reduce more "
-                "uncertainty than collecting another confirming example."
-            ),
-            "method": (
-                "Seek one observation that would make the current working idea less "
-                "likely, and record the result before changing behavior."
-            ),
-            "falsification": (
-                "The experiment fails if it cannot name a possible observation that "
-                "would count against the hypothesis."
-            ),
+            "cognition_candidate_id": cognition_candidate_id,
+            "hypothesis": hypothesis,
+            "method": method,
+            "falsification": falsification,
+            "predicted_observation": predicted_observation,
             "created_at": utc_now(),
         }
         state["experiments"].append(experiment)
@@ -396,6 +439,11 @@ class AgentCore:
             for prediction in state.get("predictions", [])
             if prediction.get("status") in {"confirmed", "violated"}
         ]
+        accepted_cognition = [
+            item
+            for item in state.get("cognition_candidates", [])
+            if item.get("status") == "proposed"
+        ]
         open_questions = [
             question for question in state["questions"] if question["status"] == "open"
         ]
@@ -406,6 +454,7 @@ class AgentCore:
                 "continuity": 1.0 if cycles >= 2 else (0.5 if cycles == 1 else 0.0),
                 "memory": min(1.0, len(state["episodes"]) / 4.0),
                 "perception": min(1.0, len(state["environment_snapshots"]) / 3.0),
+                "cognition": min(1.0, len(accepted_cognition) / 3.0),
                 "self_model": (
                     0.9 if evaluated_predictions else
                     (0.85 if state["environment_snapshots"] else (0.75 if cycles else 0.0))

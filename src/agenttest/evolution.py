@@ -17,6 +17,10 @@ _TEMPLATES = {
         "Test whether self-observation detects a real environmental change.",
         "Change one measured repository property and verify the next observation records exactly that surprise.",
     ),
+    "cognition": (
+        "Test grounded generative cognition.",
+        "Supply an evidence-grounded candidate thought and verify invalid evidence references are rejected while a valid falsifiable candidate may influence inquiry without changing evidence.",
+    ),
     "self_model": (
         "Test calibration of a claimed capability.",
         "Make a one-step prediction before observation, then compare expected and observed fields.",
