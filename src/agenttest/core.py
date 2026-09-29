@@ -1076,9 +1076,67 @@ class AgentCore:
         if not self._question_exists(state, candidate):
             return candidate
 
-        return (
+        fallback = (
             "Which assumption in my current decision process has gone longest "
             "without an attempt to falsify it?"
+        )
+        blocked_question_ids = self._blocked_question_ids(state)
+        fallback_match = next(
+            (
+                item
+                for item in state.get("questions", [])
+                if _norm(str(item.get("text", ""))) == _norm(fallback)
+            ),
+            None,
+        )
+        if (
+            intention.get("kind") == "reduce_uncertainty"
+            and fallback_match is not None
+            and str(fallback_match.get("id")) in blocked_question_ids
+        ):
+            eligible = self._least_selected_eligible_open_question(
+                state,
+                blocked_question_ids,
+            )
+            if eligible is not None:
+                return str(eligible["text"])
+        return fallback
+
+    def _blocked_question_ids(self, state: dict[str, Any]) -> set[str]:
+        return {
+            str(experiment.get("question_id"))
+            for experiment in state.get("experiments", [])
+            if (
+                experiment.get("status") == "proposed"
+                and experiment.get("question_id")
+                and experiment.get("specification", {}).get("actionability")
+                == "blocked"
+            )
+        }
+
+    def _least_selected_eligible_open_question(
+        self,
+        state: dict[str, Any],
+        blocked_question_ids: set[str],
+    ) -> dict[str, Any] | None:
+        eligible = [
+            question
+            for question in state.get("questions", [])
+            if (
+                question.get("status") == "open"
+                and str(question.get("id")) not in blocked_question_ids
+            )
+        ]
+        if not eligible:
+            return None
+        return min(
+            eligible,
+            key=lambda question: (
+                int(question.get("times_selected", 0) or 0),
+                int(question.get("last_selected_cycle", -1) or -1),
+                int(question.get("created_cycle", 0) or 0),
+                str(question.get("id", "")),
+            ),
         )
 
     def _question_exists(self, state: dict[str, Any], text: str) -> bool:
