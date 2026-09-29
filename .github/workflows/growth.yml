@@ -44,7 +44,7 @@ jobs:
       - name: Observe and run one autonomous cycle
         shell: bash
         run: |
-          PYTHONPATH=src python -m agenttest cycle --self-observe --stimulus "autonomous heartbeat"
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest cycle --self-observe --stimulus "autonomous heartbeat"
           PYTHONPATH=src python -m agenttest propose
 
       - name: Verify invariants
