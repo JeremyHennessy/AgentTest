@@ -272,6 +272,74 @@ def classify_proposal(
             "evidence_kinds": dict(kinds),
         }
 
+    if target == "open_endedness":
+        inquiry = _latest_completed_diagnostic(
+            state,
+            str(proposal.get("id")),
+            "inquiry_family",
+        )
+        if inquiry is not None and inquiry.get("outcome") == "paraphrase_churn":
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "The latest verified read-only inquiry-family diagnostic found "
+                    "multiple question strings collapsing into a repeated semantic "
+                    "family. This directly supports paraphrase churn in the current "
+                    "open-endedness measurement."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": inquiry.get("id"),
+            }
+
+        if inquiry is not None and inquiry.get("outcome") == "diverse":
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "The latest verified inquiry-family diagnostic found sufficient "
+                    "family diversity and no material paraphrase-churn signal."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": inquiry.get("id"),
+            }
+
+        if inquiry is not None and inquiry.get("outcome") == "insufficient_data":
+            return {
+                "verdict": "needs_evidence",
+                "patch_authority": "none",
+                "reason": (
+                    "The verified inquiry-family diagnostic does not yet have enough "
+                    "questions to classify open-endedness."
+                ),
+                "required_next_evidence": (
+                    "Accumulate at least four evidence-backed questions, then rerun "
+                    "the inquiry-family diagnostic."
+                ),
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": inquiry.get("id"),
+            }
+
+        return {
+            "verdict": "needs_evidence",
+            "patch_authority": "none",
+            "reason": (
+                "The cited questions are real, but exact-string uniqueness does not "
+                "show whether they represent distinct inquiry families."
+            ),
+            "required_next_evidence": (
+                "Run the verified read-only inquiry-family diagnostic to measure "
+                "paraphrase churn versus distinct evidence-grounded question families."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
     if target == "learning":
         gap, direct_refs = _learning_loop_gap(state)
         if gap:
