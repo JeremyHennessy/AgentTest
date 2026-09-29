@@ -597,6 +597,122 @@ def self_model_grounding_review() -> dict[str, Any]:
         temp_grounded.cleanup()
 
 
+def diagnostic_rechecks_after_intervention() -> dict[str, Any]:
+    temp, store, core = fresh()
+    try:
+        baseline_a = observation(100)
+        baseline_a["baseline_fingerprint"] = "baseline-a"
+        core.cycle(observation=baseline_a)
+        state = store.load()
+        state["self_model"]["capability_claims"] = {}
+
+        proposal = make_change_manifest(
+            state,
+            title="Calibrate self-model claims against behavioral checks",
+            target_dimension="self_model",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Explicit claim calibration reduces unsupported self-description.",
+            expected_effect="Capabilities distinguish supported and unverified status.",
+            test_plan="Run the verified self-model grounding diagnostic.",
+            falsification="Every capability is already explicitly calibrated.",
+            rollback="Revert.",
+            evidence_refs=["E000001"],
+        )
+        proposal.update(
+            {"id": "M000001", "source": "preservation-eval", "created_cycle": 1}
+        )
+        state["change_proposals"].append(proposal)
+
+        gap_review, _ = review_change_proposal(state, proposal)
+        first_diagnostic, first_created = run_proposal_diagnostic(
+            state,
+            proposal,
+            gap_review,
+        )
+        supported_review, supported_created = review_change_proposal(
+            state,
+            proposal,
+        )
+        store.save(state)
+
+        baseline_b = observation(100)
+        baseline_b["baseline_fingerprint"] = "baseline-b"
+        core.cycle(observation=baseline_b)
+        post = store.load()
+        post_proposal = next(
+            item
+            for item in post["change_proposals"]
+            if item.get("id") == "M000001"
+        )
+        original_gap_review = next(
+            item
+            for item in post["proposal_reviews"]
+            if item.get("proposal_id") == "M000001"
+            and item.get("verdict") == "measurement_gap"
+        )
+        second_diagnostic, second_created = run_proposal_diagnostic(
+            post,
+            post_proposal,
+            original_gap_review,
+        )
+        final_review, final_created = review_change_proposal(
+            post,
+            post_proposal,
+        )
+
+        return {
+            "passed": (
+                first_created
+                and first_diagnostic is not None
+                and first_diagnostic["outcome"] == "grounding_gap"
+                and first_diagnostic.get("baseline_fingerprint") == "baseline-a"
+                and supported_created
+                and supported_review is not None
+                and supported_review["verdict"] == "supported_problem"
+                and second_created
+                and second_diagnostic is not None
+                and second_diagnostic["id"] != first_diagnostic["id"]
+                and second_diagnostic.get("baseline_fingerprint") == "baseline-b"
+                and second_diagnostic["outcome"] == "grounded"
+                and final_created
+                and final_review is not None
+                and final_review["verdict"] == "no_problem_observed"
+                and final_review["patch_authority"] == "none"
+                and post_proposal["status"] == "closed_no_problem_observed"
+            ),
+            "first_diagnostic": (
+                {
+                    "id": first_diagnostic.get("id"),
+                    "baseline": first_diagnostic.get("baseline_fingerprint"),
+                    "outcome": first_diagnostic.get("outcome"),
+                }
+                if first_diagnostic
+                else None
+            ),
+            "second_diagnostic": (
+                {
+                    "id": second_diagnostic.get("id"),
+                    "baseline": second_diagnostic.get("baseline_fingerprint"),
+                    "outcome": second_diagnostic.get("outcome"),
+                }
+                if second_diagnostic
+                else None
+            ),
+            "intermediate_verdict": (
+                supported_review.get("verdict")
+                if supported_review
+                else None
+            ),
+            "final_verdict": (
+                final_review.get("verdict")
+                if final_review
+                else None
+            ),
+        }
+    finally:
+        temp.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -611,6 +727,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("verified_diagnostic_resolution", verified_diagnostic_resolution),
     ("intervention_aware_prediction_scope", intervention_aware_prediction_scope),
     ("self_model_grounding_review", self_model_grounding_review),
+    ("diagnostic_rechecks_after_intervention", diagnostic_rechecks_after_intervention),
 ]
 
 
