@@ -112,6 +112,24 @@ def _cited_experiment_design_diagnostic(
     return None
 
 
+def _cited_attention_control_diagnostic(
+    cited: list[tuple[str, dict[str, Any]]],
+    proposal: dict[str, Any],
+) -> dict[str, Any] | None:
+    expected_id = proposal.get("source_diagnostic_id")
+    for kind, item in cited:
+        if kind != "system_diagnostics":
+            continue
+        if item.get("kind") != "attention_control":
+            continue
+        if item.get("status") != "completed":
+            continue
+        if expected_id is not None and str(item.get("id")) != str(expected_id):
+            continue
+        return item
+    return None
+
+
 def _learning_loop_gap(state: dict[str, Any]) -> tuple[bool, list[str]]:
     predictions = {
         str(prediction.get("id")): prediction
@@ -478,6 +496,41 @@ def classify_proposal(
                 "evidence_kinds": dict(kinds),
                 "direct_evidence_refs": underspecified_refs,
             }
+
+    if (
+        target == "agency"
+        and proposal.get("selection_signal")
+        == "attention_control_blocked_attention_loop"
+    ):
+        diagnostic = _cited_attention_control_diagnostic(cited, proposal)
+        if diagnostic is None or diagnostic.get("outcome") != "blocked_attention_loop":
+            return {
+                "verdict": "needs_evidence",
+                "patch_authority": "none",
+                "reason": (
+                    "The attention-control proposal does not cite a completed protected "
+                    "diagnostic reporting blocked_attention_loop."
+                ),
+                "required_next_evidence": (
+                    "Cite a completed attention-control diagnostic reporting "
+                    "blocked_attention_loop."
+                ),
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+            }
+        return {
+            "verdict": "supported_problem",
+            "patch_authority": "candidate_allowed",
+            "reason": (
+                f"Protected attention-control diagnostic {diagnostic.get('id')} reports "
+                "blocked_attention_loop, directly showing attention returned to work "
+                "after that work was explicitly classified as blocked."
+            ),
+            "required_next_evidence": None,
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+            "direct_diagnostic_id": diagnostic.get("id"),
+        }
 
     if target == "reflection":
         repeated, direct_refs = _repeated_reflection_pattern(state)

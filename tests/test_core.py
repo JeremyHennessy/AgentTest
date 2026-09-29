@@ -1573,6 +1573,87 @@ class AgentCoreTests(unittest.TestCase):
         self.assertNotEqual(review["id"], "V999999")
         self.assertEqual(review["review_version"], "proposal-review-v4")
 
+    def test_blocked_attention_diagnostic_can_author_agency_proposal(self) -> None:
+        from agenttest.self_proposal import propose_self_change
+
+        state = self.store.load()
+        state["cycles"] = 20
+        state["metrics"]["agency"] = 1.0
+        state["drives"] = {"uncertainty": 0.8}
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000009",
+                "kind": "attention_control",
+                "status": "completed",
+                "outcome": "blocked_attention_loop",
+                "result": {
+                    "loop_count": 1,
+                    "loop_experiment_ids": ["X000011"],
+                },
+            }
+        ]
+
+        proposal, created = propose_self_change(state)
+
+        self.assertTrue(created)
+        self.assertIsNotNone(proposal)
+        self.assertEqual(proposal["target_dimension"], "agency")
+        self.assertEqual(
+            proposal["selection_signal"],
+            "attention_control_blocked_attention_loop",
+        )
+        self.assertEqual(proposal["source_diagnostic_id"], "SD000009")
+        self.assertEqual(proposal["evidence_refs"], ["SD000009"])
+        self.assertEqual(
+            proposal["title"],
+            "Redirect inquiry away from blocked experiments",
+        )
+
+    def test_blocked_attention_proposal_requires_matching_protected_diagnostic(self) -> None:
+        from agenttest.change_control import make_change_manifest
+        from agenttest.proposal_review import review_change_proposal
+
+        state = self.store.load()
+        state["cycles"] = 20
+        state["system_diagnostics"] = [
+            {
+                "id": "SD000009",
+                "kind": "attention_control",
+                "status": "completed",
+                "outcome": "blocked_attention_loop",
+                "result": {"loop_count": 1},
+            }
+        ]
+        proposal = make_change_manifest(
+            state,
+            title="Redirect inquiry away from blocked experiments",
+            target_dimension="agency",
+            files=["src/agenttest/core.py", "tests/test_core.py"],
+            hypothesis="Blocked questions should not monopolize uncertainty-driven inquiry.",
+            expected_effect="Attention moves to eligible unresolved inquiry.",
+            test_plan="Compare blocked and eligible question selection.",
+            falsification="Blocked attention still loops.",
+            rollback="Revert.",
+            evidence_refs=["SD000009"],
+        )
+        proposal.update(
+            {
+                "id": "M999997",
+                "source": "test",
+                "created_cycle": 20,
+                "selection_signal": "attention_control_blocked_attention_loop",
+                "source_diagnostic_id": "SD000009",
+            }
+        )
+        state["change_proposals"].append(proposal)
+
+        review, created = review_change_proposal(state, proposal)
+
+        self.assertTrue(created)
+        self.assertEqual(review["verdict"], "supported_problem")
+        self.assertEqual(review["patch_authority"], "candidate_allowed")
+        self.assertEqual(review["direct_diagnostic_id"], "SD000009")
+
     def test_aligned_open_endedness_is_not_reproposed_as_defect(self) -> None:
         from agenttest.self_proposal import select_change_target
 

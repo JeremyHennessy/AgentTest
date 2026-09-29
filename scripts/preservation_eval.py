@@ -22,7 +22,7 @@ from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore
 from agenttest.world import current_world_claims
 
-SUITE = "behavioral-preservation-v13"
+SUITE = "behavioral-preservation-v14"
 
 
 def observation(lines: int = 100) -> dict[str, object]:
@@ -1242,6 +1242,111 @@ def system_diagnostic_evidence_governance() -> dict[str, Any]:
         temp_ready.cleanup()
 
 
+
+
+def blocked_attention_diagnostic_governance() -> dict[str, Any]:
+    temp_loop, store_loop, _ = fresh()
+    temp_clean, store_clean, _ = fresh()
+    try:
+        loop = store_loop.load()
+        loop["cycles"] = 30
+        loop["metrics"].update({name: 1.0 for name in loop.get("metrics", {})})
+        loop["drives"] = {
+            "prediction_error": 0.0,
+            "specification_pressure": 0.0,
+            "evidence_hunger": 0.0,
+            "uncertainty": 0.8,
+            "continuity_repair": 0.0,
+            "calibration_gap": 0.0,
+            "novelty_hunger": 0.0,
+        }
+        loop["system_diagnostics"] = [
+            {
+                "id": "SD000009",
+                "kind": "attention_control",
+                "status": "completed",
+                "diagnostic_version": "blocked-attention-v1",
+                "outcome": "blocked_attention_loop",
+                "created_cycle": 30,
+                "source_state_mutated": False,
+                "result": {
+                    "loop_count": 1,
+                    "loop_experiment_ids": ["X000011"],
+                    "reselected_after_block_count": 1,
+                },
+            }
+        ]
+
+        proposal, proposal_created = propose_self_change(loop)
+        review, review_created = review_change_proposal(loop, proposal)
+        manifest_valid, validation_reason = (
+            validate_change_manifest(proposal, loop)
+            if proposal is not None
+            else (False, "no proposal")
+        )
+
+        clean = store_clean.load()
+        clean["cycles"] = 30
+        clean["metrics"].update({name: 1.0 for name in clean.get("metrics", {})})
+        clean["drives"] = {"uncertainty": 0.8}
+        clean["system_diagnostics"] = [
+            {
+                "id": "SD000010",
+                "kind": "attention_control",
+                "status": "completed",
+                "diagnostic_version": "blocked-attention-v1",
+                "outcome": "attention_redirected",
+                "created_cycle": 30,
+                "source_state_mutated": False,
+                "result": {
+                    "loop_count": 0,
+                    "reselected_after_block_count": 0,
+                },
+            }
+        ]
+        clean_selected = select_change_target(clean)
+
+        return {
+            "passed": (
+                "SD000009" in known_evidence_ids(loop)
+                and proposal_created
+                and proposal is not None
+                and proposal.get("target_dimension") == "agency"
+                and proposal.get("selection_signal")
+                == "attention_control_blocked_attention_loop"
+                and proposal.get("source_diagnostic_id") == "SD000009"
+                and proposal.get("evidence_refs") == ["SD000009"]
+                and manifest_valid
+                and review_created
+                and review is not None
+                and review.get("verdict") == "supported_problem"
+                and review.get("patch_authority") == "candidate_allowed"
+                and review.get("direct_diagnostic_id") == "SD000009"
+                and clean_selected is None
+            ),
+            "proposal_id": proposal.get("id") if proposal else None,
+            "target_dimension": (
+                proposal.get("target_dimension") if proposal else None
+            ),
+            "selection_signal": (
+                proposal.get("selection_signal") if proposal else None
+            ),
+            "source_diagnostic_id": (
+                proposal.get("source_diagnostic_id") if proposal else None
+            ),
+            "manifest_valid": manifest_valid,
+            "validation_reason": validation_reason,
+            "verdict": review.get("verdict") if review else None,
+            "patch_authority": review.get("patch_authority") if review else None,
+            "clean_target": (
+                clean_selected.get("dimension") if clean_selected else None
+            ),
+        }
+    finally:
+        temp_loop.cleanup()
+        temp_clean.cleanup()
+
+
 CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("persistence_reload", persistence_reload),
     ("prediction_confirmation", prediction_confirmation),
@@ -1262,6 +1367,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("evidence_debt_evolution_governor", evidence_debt_evolution_governor),
     ("verified_intervention_reconciliation", verified_intervention_reconciliation),
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
+    ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
 ]
 
 
