@@ -454,6 +454,12 @@ class AgentCore:
             for item in state.get("cognition_candidates", [])
             if item.get("status") == "proposed"
         ]
+        stable_replay = any(
+            diagnostic.get("kind") == "deterministic_replay"
+            and diagnostic.get("status") == "completed"
+            and diagnostic.get("outcome") == "stable"
+            for diagnostic in state.get("proposal_diagnostics", [])
+        )
         semantic = state.get("semantic_memory", {})
         semantic_concepts = len(semantic.get("concepts", {}))
         world = state.get("world_model", {})
@@ -484,6 +490,8 @@ class AgentCore:
                 "adaptation": min(1.0, len(state["accepted_changes"]) / 3.0),
                 "reflection": min(1.0, len(state["reflections"]) / 5.0),
                 "open_endedness": min(1.0, unique_questions / max(1, cycles)),
-                "reproducibility": 0.8 if cycles else 0.0,
+                "reproducibility": (
+                    1.0 if stable_replay else (0.8 if cycles else 0.0)
+                ),
             }
         )

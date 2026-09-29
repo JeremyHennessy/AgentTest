@@ -1,10 +1,10 @@
-# Design: Genesis Phases 0–7
+# Design: Genesis Phases 0–8
 
 ## Premise
 
 AgentTest is an original experiment in persistent adaptive computation. It is not an imported agent framework and it does not use a scalar alive score.
 
-## Current adaptive loop
+## Adaptive loop
 
     auditable perception
           ↓
@@ -24,7 +24,7 @@ AgentTest is an original experiment in persistent adaptive computation. It is no
           ↓
        next heartbeat
 
-## Evolution loop
+## Evolution evidence loop
 
     evidence + capability metrics
           ↓
@@ -32,89 +32,94 @@ AgentTest is an original experiment in persistent adaptive computation. It is no
           ↓
     proposal evidence review
           ↓
-    ┌───────────────┬────────────────────┬─────────────────┐
-    │supported      │measurement gap     │needs evidence   │
-    │problem        │diagnostic only     │no patch         │
-    └───────────────┴────────────────────┴─────────────────┘
-          ↓
-    future isolated candidate work
-          ↓
-    BASELINE-OWNED preservation evaluator
-          ↓
-    target evidence + no regressions
-          ↓
-    verified promotion or rejection
+    ┌──────────────────┬──────────────────┬─────────────────┐
+    │supported_problem │measurement_gap   │needs_evidence   │
+    │candidate possible│diagnostic only   │no authority     │
+    └──────────────────┴──────────────────┴─────────────────┘
+                              ↓
+                     VERIFIED diagnostic
+                              ↓
+                  ┌───────────┴───────────┐
+                  │                       │
+             divergence                stable
+                  │                       │
+          supported_problem       no_problem_observed
+                  │                       │
+       future candidate patch          close proposal
 
-Phase 7 still stops before code generation.
+## Diagnostics are part of the judge
 
-## Why valid evidence is not enough
+A self-authored candidate must never be able to write the diagnostic that proves its own problem exists.
 
-A change manifest can cite real evidence while still targeting the wrong layer.
-
-For example, the first live self-authored manifest M000001 proposed deterministic replay checks because reproducibility was 0.8. Its evidence references were genuine prediction evaluations, but those observations did not demonstrate replay divergence.
-
-Phase 7 therefore separates:
-
-- evidence existence;
-- evidence relevance;
-- evidence that identifies a behavioral defect;
-- evidence that only identifies a measurement gap.
-
-## Proposal review verdicts
-
-### supported_problem
-
-Direct evidence connects the observed problem to the proposed capability layer.
-
-This may eventually permit an isolated candidate patch, but still does not prove the proposed implementation is correct.
-
-### measurement_gap
-
-The proposal would add measurement, diagnostics, or traceability, but current evidence does not establish that underlying behavior is wrong.
-
-Future authority is limited to diagnostic work.
-
-### needs_evidence
-
-The evidence is real, but it does not identify the proposed code surface as the first incorrect layer.
-
-No patch authority is granted.
-
-## Current direct-evidence rules
-
-The initial conservative rules intentionally cover only cases that can be justified from current evidence:
-
-- reproducibility requires a completed deterministic-replay diagnostic reporting divergence before it becomes a supported defect;
-- learning can be supported when a pending experiment remains unresolved despite later prediction-evaluation evidence;
-- reflection can be supported when the same evidence-backed lesson repeats;
-- cognition cannot be diagnosed as a code problem without a successful provider attempt;
-- selected measurement-oriented capabilities remain diagnostic-only without direct failure evidence.
-
-Unknown cases default to needs_evidence.
-
-## Anti-proliferation
-
-A proposal remains active after review while unresolved. Heartbeats cannot evade an inconvenient review by generating another proposal.
-
-Reviews are idempotent: re-reviewing an unchanged proposal reuses the existing review.
-
-## Governance and preservation
-
-Self-authored manifests still cannot target:
+The following are therefore governance-protected:
 
 - .github/workflows/verify.yml
 - .github/workflows/growth.yml
 - scripts/preservation_eval.py
 - scripts/compare_eval.py
 - src/agenttest/change_control.py
+- src/agenttest/proposal_review.py
+- src/agenttest/self_proposal.py
+- src/agenttest/diagnostics.py
+- src/agenttest/diagnostic_replay.py
 
-The base-owned preservation gate remains authoritative for candidate code.
+Future changes to those files are governance changes and require separately reviewed development.
+
+## Deterministic replay diagnostic
+
+The first verified diagnostic addresses M000001's reproducibility measurement gap.
+
+It runs an identical controlled sequence twice against separate temporary StateStore instances. The sequence exercises:
+
+- repeated and changed repository observations;
+- prediction confirmation and violation;
+- intention selection;
+- episodic and semantic memory;
+- world-model updates;
+- experiment selection;
+- explicit experiment outcome recording;
+- journal persistence.
+
+Only volatile timestamp fields are replaced during normalization. Identifiers, ordering, evidence relationships, metrics, questions, experiments, world claims, semantic memory, and journal structure remain compared.
+
+The result contains two normalized digests and the first exact structural difference, if one exists.
+
+## Review refresh
+
+Proposal reviews are evidence-versioned.
+
+An existing review is reused while its set of completed diagnostics is unchanged. Once a new completed diagnostic exists, review_change_proposal performs a new classification and records which diagnostic IDs were considered.
+
+This prevents both review churn and stale conclusions.
+
+## New verdict: no_problem_observed
+
+A clean diagnostic does not prove perfection. It says the requested controlled test found no evidence for the proposed defect.
+
+That verdict:
+
+- grants no patch authority;
+- closes the current proposal;
+- preserves the diagnostic as evidence;
+- can raise an evidence-derived capability metric when appropriate.
+
+## Trust ordering
+
+1. Raw sensor observations and explicit outcomes.
+2. Verified diagnostic results.
+3. Derived world claims with provenance.
+4. Semantic summaries used for retrieval.
+5. Model-generated candidate thoughts.
+6. Self-authored change manifests.
+7. Candidate code.
+
+Lower-authority layers cannot rewrite the evidence or judges above them.
 
 ## Still missing
 
-- non-mutating diagnostics generated from measurement-gap reviews;
-- self-authored patch generation;
-- target-specific improvement evaluation for generated patches;
+- self-authored bounded patch generation;
+- target-specific evidence comparison for candidate patches;
 - broader external perception;
 - independent environmental action;
+- successful live model-backed cognition evidence;
 - evidence of subjective experience.
