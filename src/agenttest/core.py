@@ -277,6 +277,10 @@ def _calibrate_self_model(state: dict[str, Any]) -> dict[str, Any]:
 
 
 PREDICTION_CONTRACT_KIND = "prediction_status"
+PREDICTION_EXPERIMENT_QUESTION = (
+    "Will measured repository fields remain unchanged until the next "
+    "self-observation unless an intervening code change alters the baseline?"
+)
 EXPERIMENT_STALE_AFTER_CYCLES = 3
 
 
@@ -639,7 +643,11 @@ def _resolve_experiments_from_prediction(
     completed_at: str,
 ) -> list[str]:
     status = prediction.get("status")
-    if status not in {"confirmed", "violated"}:
+    if status not in {
+        "confirmed",
+        "violated",
+        "invalidated_by_intervention",
+    }:
         return []
 
     prediction_id = str(prediction.get("id", ""))
@@ -657,7 +665,15 @@ def _resolve_experiments_from_prediction(
             continue
 
         expected = contract.get("expected_status")
-        outcome = "supported" if status == expected else "falsified"
+        if status == "invalidated_by_intervention":
+            outcome = "inconclusive"
+            completion_source = "prediction_contract_invalidated_by_intervention"
+            completion_reason = "prediction_invalidated_by_intervention"
+        else:
+            outcome = "supported" if status == expected else "falsified"
+            completion_source = "prediction_status_contract"
+            completion_reason = "prediction_status_contract_resolved"
+
         evidence_refs = [
             identifier
             for identifier in (prediction_id, reflection_id)
@@ -670,7 +686,7 @@ def _resolve_experiments_from_prediction(
         experiment["observed_prediction_status"] = status
         experiment["evidence_strength"] = 1.0
         experiment["evidence_refs"] = evidence_refs
-        experiment["completion_source"] = "prediction_status_contract"
+        experiment["completion_source"] = completion_source
         experiment["completed_at"] = completed_at
         history = experiment.setdefault("status_history", [])
         history.append(
@@ -678,7 +694,7 @@ def _resolve_experiments_from_prediction(
                 "cycle": state.get("cycles", 0),
                 "from": "proposed",
                 "to": "completed",
-                "reason": "prediction_status_contract_resolved",
+                "reason": completion_reason,
                 "evidence_refs": evidence_refs,
                 "outcome": outcome,
             }
@@ -708,6 +724,7 @@ class AgentCore:
         now = utc_now()
         surprise = None
         prediction_result = None
+        prediction_experiment = None
         experiment_dedup_update = _reconcile_duplicate_experiments(state)
         experiment_readiness_update = _review_experiment_readiness(state)
         experiment_specification_update = _trace_experiment_specifications(state)
@@ -786,6 +803,11 @@ class AgentCore:
         if observation is not None:
             prediction = self._make_prediction(state, observation, now)
             state["predictions"].append(prediction)
+            prediction_experiment = self._create_prediction_experiment(
+                state,
+                prediction,
+                now,
+            )
 
         self_model_calibration = _calibrate_self_model(state)
         state["self_model"]["last_updated_cycle"] = cycle
@@ -815,6 +837,9 @@ class AgentCore:
             "selected_question_id": question["id"],
             "experiment_id": experiment["id"],
             "new_prediction_id": prediction["id"] if prediction else None,
+            "prediction_experiment_id": (
+                prediction_experiment["id"] if prediction_experiment else None
+            ),
             "drives": drives,
             "metrics": state["metrics"],
         }
@@ -837,6 +862,7 @@ class AgentCore:
             "question": question,
             "experiment": experiment,
             "prediction": prediction,
+            "prediction_experiment": prediction_experiment,
             "metrics": state["metrics"],
         }
 
@@ -939,7 +965,12 @@ class AgentCore:
                 ),
             }
             state["reflections"].append(reflection)
-            prediction["resolved_experiment_ids"] = []
+            prediction["resolved_experiment_ids"] = _resolve_experiments_from_prediction(
+                state,
+                prediction,
+                reflection,
+                completed_at=now,
+            )
             return prediction
 
         changes = {}
@@ -995,6 +1026,56 @@ class AgentCore:
             "expected": expected,
             "falsification": "Any change in a measured comparable field violates this prediction.",
         }
+
+    def _create_prediction_experiment(
+        self,
+        state: dict[str, Any],
+        prediction: dict[str, Any],
+        now: str,
+    ) -> dict[str, Any]:
+        """Bind the next repository self-observation to a falsifiable experiment."""
+
+        question = self._upsert_question(state, PREDICTION_EXPERIMENT_QUESTION)
+        question["times_selected"] = int(question.get("times_selected", 0) or 0) + 1
+        question["last_selected_cycle"] = state["cycles"]
+        question.setdefault("source", "repository_stability_prediction")
+
+        experiment = {
+            "id": f"X{len(state['experiments']) + 1:06d}",
+            "cycle": state["cycles"],
+            "question_id": question["id"],
+            "status": "proposed",
+            "readiness": "evidence_ready",
+            "readiness_reason": (
+                "A pending repository-state prediction supplies a structured "
+                "prediction-status evidence contract."
+            ),
+            "source": "repository_stability_prediction",
+            "intention_id": None,
+            "cognition_candidate_id": None,
+            "hypothesis": prediction["statement"],
+            "method": (
+                "Compare the next repository self-observation with the pending "
+                "prediction. A changed baseline invalidates the test rather than "
+                "counting as support or falsification."
+            ),
+            "falsification": prediction["falsification"],
+            "predicted_observation": (
+                "The next comparable repository self-observation matches the "
+                "prediction's measured fields."
+            ),
+            "evidence_contract": {
+                "kind": PREDICTION_CONTRACT_KIND,
+                "prediction_id": prediction["id"],
+                "expected_status": "confirmed",
+            },
+            "created_at": now,
+            "times_selected": 1,
+            "last_selected_cycle": state["cycles"],
+        }
+        state["experiments"].append(experiment)
+        return experiment
+
 
     def _remember(
         self,
