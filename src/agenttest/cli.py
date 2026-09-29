@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .core import AgentCore
 from .evolution import propose_growth_experiment
+from .perception import repository_snapshot
 from .state import StateStore
 
 
@@ -28,6 +29,12 @@ def main() -> None:
 
     cycle = sub.add_parser("cycle", help="Run one observe-question-experiment cycle.")
     cycle.add_argument("--stimulus", default=None)
+    cycle.add_argument(
+        "--self-observe",
+        action="store_true",
+        help="Sense the current repository before choosing a question.",
+    )
+    cycle.add_argument("--root", default=".", help="Repository root for self-observation.")
 
     sub.add_parser("status", help="Print the current state.")
 
@@ -44,7 +51,8 @@ def main() -> None:
     core = AgentCore(store)
 
     if args.command == "cycle":
-        _print(core.cycle(args.stimulus))
+        observation = repository_snapshot(args.root) if args.self_observe else None
+        _print(core.cycle(args.stimulus, observation))
     elif args.command == "status":
         _print(store.load())
     elif args.command == "propose":
