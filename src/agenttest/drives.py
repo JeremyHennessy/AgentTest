@@ -4,6 +4,7 @@ from typing import Any
 
 DRIVE_ORDER = (
     "prediction_error",
+    "specification_pressure",
     "evidence_hunger",
     "uncertainty",
     "continuity_repair",
@@ -23,6 +24,16 @@ def compute_drives(
         if item.get("status") == "proposed"
         and item.get("readiness") != "needs_specification"
     ]
+    specification_backlog = [
+        item for item in state.get("experiments", [])
+        if (
+            item.get("status") == "needs_specification"
+            or (
+                item.get("status") == "proposed"
+                and item.get("readiness") == "needs_specification"
+            )
+        )
+    ]
     open_questions = [
         item for item in state.get("questions", [])
         if item.get("status") == "open"
@@ -37,6 +48,7 @@ def compute_drives(
             if violated
             else (0.0 if intervention else (0.6 if surprise else 0.0))
         ),
+        "specification_pressure": min(0.9, len(specification_backlog) / 4.0),
         "evidence_hunger": min(0.8, len(pending) / 4.0),
         "uncertainty": min(0.8, len(open_questions) / 6.0),
         "continuity_repair": max(0.0, 1.0 - metrics.get("continuity", 0.0)),
@@ -57,10 +69,27 @@ def choose_intention(
         if item.get("status") == "proposed"
         and item.get("readiness") != "needs_specification"
     ]
+    specification_backlog = sorted(
+        [
+            item for item in state.get("experiments", [])
+            if (
+                item.get("status") == "needs_specification"
+                or (
+                    item.get("status") == "proposed"
+                    and item.get("readiness") == "needs_specification"
+                )
+            )
+        ],
+        key=lambda item: (
+            int(item.get("cycle", 0)),
+            str(item.get("id", "")),
+        ),
+    )
     latest_surprise = state.get("surprises", [])[-1] if state.get("surprises") else None
 
     mapping = {
         "prediction_error": "explain_change",
+        "specification_pressure": "specify_experiment",
         "evidence_hunger": "resolve_pending_evidence",
         "uncertainty": "reduce_uncertainty",
         "continuity_repair": "preserve_continuity",
@@ -69,7 +98,9 @@ def choose_intention(
     }
     kind = mapping[dominant]
     target = None
-    if dominant == "evidence_hunger" and pending:
+    if dominant == "specification_pressure" and specification_backlog:
+        target = specification_backlog[0]["id"]
+    elif dominant == "evidence_hunger" and pending:
         target = pending[0]["id"]
     elif dominant == "prediction_error" and latest_surprise:
         target = latest_surprise["id"]
