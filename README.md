@@ -15,17 +15,19 @@ The project investigates whether simple, inspectable mechanisms can accumulate i
 - a temporal world-claim ledger that preserves superseded observed values;
 - falsifiable experiments and reflections;
 - autonomous heartbeats on a separate growth branch;
-- verified code baselines protected by tests and pull requests.
+- verified code baselines protected by unit tests and behavioral-preservation checks.
 
 ## Evidence hierarchy
 
-Raw observations and explicit outcomes outrank derived world claims. World claims outrank semantic summaries. Semantic summaries guide retrieval. Model-generated thoughts are only proposals.
+Raw observations and explicit outcomes outrank derived world claims. World claims outrank semantic summaries. Semantic summaries guide retrieval. Model-generated thoughts are only proposals. Code changes sit below all of them until independently verified.
 
-## Core rule
+## Evolution discipline
 
 No version may call itself improved merely because code changed.
 
-Improvement requires evidence against a preserved baseline. Failed experiments and superseded beliefs remain part of the record.
+Future candidate changes are evaluated against the previous verified baseline. The preservation evaluator is taken from the BASE commit and run against both base and candidate code, so a candidate cannot pass simply by weakening its own judge.
+
+Self-authored change manifests are also forbidden from targeting the preservation workflow or evaluator scripts.
 
 ## About consciousness
 
