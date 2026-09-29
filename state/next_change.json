@@ -1,16 +1,16 @@
 {
-  "created": false,
+  "created": true,
   "proposal": {
-    "baseline_metric": 0.8571428571428571,
-    "created_at": "2026-09-29T12:35:51.144542+00:00",
-    "created_cycle": 14,
+    "baseline_metric": 0.3157894736842105,
+    "created_at": "2026-09-29T14:32:48.181313+00:00",
+    "created_cycle": 19,
     "evidence_refs": [
+      "Q000013",
       "Q000012",
       "Q000011",
       "Q000010",
       "Q000009",
-      "Q000008",
-      "Q000007"
+      "Q000008"
     ],
     "expected_effect": "Open-endedness is supported by distinct evidence-grounded inquiry families rather than raw question count.",
     "falsification": "Reject if paraphrases inflate open-endedness or distinct evidence-grounded questions collapse incorrectly.",
@@ -20,13 +20,14 @@
       "tests/test_core.py"
     ],
     "hypothesis": "Explicit question-family tracking can distinguish genuine branching from paraphrase churn.",
-    "id": "M000003",
+    "id": "M000004",
     "protected_paths": [
       ".github/workflows/growth.yml",
       ".github/workflows/verify.yml",
       "scripts/compare_eval.py",
       "scripts/preservation_eval.py",
       "src/agenttest/change_control.py",
+      "src/agenttest/diagnostic_inquiry.py",
       "src/agenttest/diagnostic_replay.py",
       "src/agenttest/diagnostic_self_model.py",
       "src/agenttest/diagnostics.py",
@@ -35,9 +36,9 @@
     ],
     "rollback": "Revert the candidate change and restore the previous verified baseline.",
     "schema_version": 1,
-    "selection_rationale": "open_endedness was the highest eligible evidence-backed deficit (0.143) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
+    "selection_rationale": "open_endedness was the highest eligible evidence-backed deficit (0.684) after excluding saturated dimensions, process-only adaptation, and externally blocked cognition.",
     "source": "self-proposal-v1",
-    "status": "reviewed_supported_problem",
+    "status": "proposed",
     "target_dimension": "open_endedness",
     "test_plan": "Generate paraphrases and distinct evidence-driven questions, then verify family counts distinguish them.",
     "title": "Track inquiry families across cycles"
