@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from agenttest.cognition import StaticCognitionProvider
 from agenttest.core import AgentCore
 from agenttest.evolution import propose_growth_experiment
 from agenttest.perception import repository_snapshot
@@ -23,6 +24,19 @@ def observation(lines: int = 100) -> dict[str, object]:
         "python_source_lines": lines,
         "test_files": 1,
         "working_tree_clean": True,
+    }
+
+
+def candidate(evidence_ref: str) -> dict[str, object]:
+    return {
+        "question": "Can the observed repository state distinguish stability from change?",
+        "hypothesis": "A second identical observation will support short-horizon stability.",
+        "experiment": "Observe the same measured repository fields on the next cycle.",
+        "falsification": "Any comparable field changing falsifies short-horizon stability.",
+        "predicted_observation": "The comparable repository fields remain unchanged.",
+        "evidence_refs": [evidence_ref],
+        "confidence": 0.6,
+        "novelty_note": "This converts an observation into an explicit falsifiable candidate.",
     }
 
 
@@ -111,14 +125,58 @@ class AgentCoreTests(unittest.TestCase):
         self.assertEqual(len(state["experiments"]), 1)
         self.assertEqual(second["intention"]["kind"], "resolve_pending_evidence")
 
-    def test_v2_state_migrates_without_erasing_history(self) -> None:
+    def test_valid_cognition_can_drive_question_and_experiment(self) -> None:
+        provider = StaticCognitionProvider(candidate("E000001"))
+        result = self.core.cycle(
+            "grounded stimulus",
+            cognition=True,
+            cognition_provider=provider,
+        )
+        state = self.store.load()
+
+        self.assertEqual(result["cognition_event"]["status"], "accepted")
+        self.assertEqual(result["question"]["text"], candidate("E000001")["question"])
+        self.assertEqual(
+            result["experiment"]["cognition_candidate_id"],
+            result["thought"]["id"],
+        )
+        self.assertEqual(
+            result["experiment"]["hypothesis"],
+            candidate("E000001")["hypothesis"],
+        )
+        self.assertGreater(state["metrics"]["cognition"], 0.0)
+
+    def test_unknown_cognition_evidence_is_rejected(self) -> None:
+        provider = StaticCognitionProvider(candidate("E999999"))
+        result = self.core.cycle(
+            "grounded stimulus",
+            cognition=True,
+            cognition_provider=provider,
+        )
+        state = self.store.load()
+
+        self.assertEqual(result["cognition_event"]["status"], "rejected")
+        self.assertIsNone(result["thought"])
+        self.assertEqual(len(state["cognition_candidates"]), 0)
+        self.assertNotEqual(result["question"]["text"], candidate("E999999")["question"])
+
+    def test_missing_cognition_provider_fails_closed(self) -> None:
+        result = self.core.cycle("stimulus", cognition=True, cognition_provider=None)
+
+        self.assertEqual(result["cognition_event"]["status"], "unavailable")
+        self.assertIsNone(result["thought"])
+
+    def test_v3_state_migrates_without_erasing_history(self) -> None:
         legacy = {
-            "schema_version": 2,
+            "schema_version": 3,
             "cycles": 2,
             "generation": 2,
             "episodes": [{"id": "E000001"}],
             "environment_snapshots": [],
             "surprises": [],
+            "predictions": [],
+            "intentions": [],
+            "drives": {},
             "questions": [],
             "experiments": [],
             "reflections": [],
@@ -133,9 +191,9 @@ class AgentCoreTests(unittest.TestCase):
 
         self.assertEqual(migrated["schema_version"], SCHEMA_VERSION)
         self.assertEqual(migrated["episodes"][0]["id"], "E000001")
-        self.assertIn("predictions", migrated)
-        self.assertIn("intentions", migrated)
-        self.assertIn("drives", migrated)
+        self.assertIn("cognition", migrated["metrics"])
+        self.assertIn("cognition_events", migrated)
+        self.assertIn("cognition_candidates", migrated)
 
     def test_repository_sensor_is_safe_outside_git(self) -> None:
         snapshot = repository_snapshot(self.tmp.name)
