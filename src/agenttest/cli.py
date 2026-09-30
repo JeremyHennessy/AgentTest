@@ -59,6 +59,14 @@ def main() -> None:
             "micro-world. This grants no filesystem, network, shell, or external authority."
         ),
     )
+    cycle.add_argument(
+        "--planning-lab",
+        action="store_true",
+        help=(
+            "Execute one persisted model-planned action toward a bounded internal goal. "
+            "This grants no filesystem, network, shell, or external authority."
+        ),
+    )
     cycle.add_argument("--root", default=".", help="Repository root for self-observation.")
 
     interact = sub.add_parser(
@@ -122,6 +130,7 @@ def main() -> None:
                 cognition=args.cognition,
                 strict_experiment_admission=args.grounded_experiments_only,
                 action_lab=args.action_lab,
+                planning_lab=args.planning_lab,
             )
         )
     elif args.command == "interact":

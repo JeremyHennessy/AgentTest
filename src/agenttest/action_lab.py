@@ -51,6 +51,33 @@ def _in_bounds(position: tuple[int, int], bounds: int) -> bool:
     return all(-bounds <= value <= bounds for value in position)
 
 
+def apply_bounded_action(
+    position: list[int] | tuple[int, int],
+    action: str,
+    *,
+    bounds: int = BOUNDS,
+) -> dict[str, Any]:
+    """Apply one protected internal-world action without exposing hidden dynamics."""
+
+    if action not in ACTION_ORDER:
+        raise ValueError(f"action is not permitted: {action}")
+    before = [int(position[0]), int(position[1])]
+    hidden_delta = _HIDDEN_ACTION_DELTAS[action]
+    proposed = (
+        before[0] + hidden_delta[0],
+        before[1] + hidden_delta[1],
+    )
+    blocked = not _in_bounds(proposed, bounds)
+    after = before if blocked else [int(proposed[0]), int(proposed[1])]
+    return {
+        "action": action,
+        "before": before,
+        "after": after,
+        "delta": [after[0] - before[0], after[1] - before[1]],
+        "blocked": blocked,
+    }
+
+
 def validate_action_lab_history(lab: dict[str, Any]) -> tuple[bool, str | None]:
     """Replay persisted action history against the protected environment dynamics."""
 

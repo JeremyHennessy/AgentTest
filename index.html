@@ -39,7 +39,7 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 
 <section class="grid">
 <article class="card s8">
-<div class="head"><div><h2>Bounded Action Lab · exploration space</h2><div class="sub">Path, visited cells, current location, and the latest observed consequence.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
+<div class="head"><div><h2>Bounded Action Lab → Phase 33 planning world</h2><div class="sub">Phase 32 causal history remains visible; Phase 33 adds persistent goals and multi-step plans.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
 <div class="world-layout">
 <div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g></svg><div class="board" id="worldGrid"></div></div></div>
 <div><div class="rows">
@@ -55,6 +55,22 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 </article>
 
 <aside class="card s4"><div class="head"><div><h2>Learned causal model</h2><div class="sub">Effects are learned from outcomes, not inferred from action names.</div></div></div><div class="models" id="causalModel"></div></aside>
+
+<article class="card s12">
+<div class="head"><div><h2>Phase 33 · persistent planning</h2><div class="sub">Goal, persisted multi-step plan, predicted intermediate states, and execution evidence across heartbeats.</div></div><span class="pill blue" id="planningStatus">not started</span></div>
+<div class="evidence">
+<div class="ebox"><div class="n" id="planningGoal">—</div><div class="t">Active goal</div></div>
+<div class="ebox"><div class="n" id="planningStep">—</div><div class="t">Plan step</div></div>
+<div class="ebox"><div class="n" id="planningCompleted">0</div><div class="t">Goals completed</div></div>
+</div>
+<div class="rows" style="margin-top:10px">
+<div class="row"><span class="label">Plan</span><span class="value" id="planningPlan">—</span></div>
+<div class="row"><span class="label">Latest prediction</span><span class="value" id="planningPrediction">—</span></div>
+<div class="row"><span class="label">Observed result</span><span class="value" id="planningObserved">—</span></div>
+<div class="row"><span class="label">Model source</span><span class="value" id="planningSource">—</span></div>
+</div>
+<div class="preds" id="planningSequence"></div>
+</article>
 
 <article class="card s5">
 <div class="head"><div><h2>Current attention</h2><div class="sub">What currently has the strongest claim on foreground behavior.</div></div><span class="pill" id="drivePressure">—</span></div>
@@ -113,6 +129,24 @@ function renderActionLab(o){
  if(learned){el("gatePill").textContent="passed";el("gatePill").className="pill good";el("gateCopy").textContent="A learned transition has been used to choose future behavior."}else if(h.length>=9){el("gatePill").textContent="due";el("gatePill").className="pill warn";el("gateCopy").textContent="Nine decisions are available; waiting for learned-transition use."}else{el("gatePill").textContent=h.length+" / 9";el("gatePill").className="pill blue";el("gateCopy").textContent="Causal experience is accumulating before the learned-choice test."}
  const eff=lab.learned_effects||{};el("causalModel").innerHTML=["north","east","south","west"].map(a=>{const e=eff[a]||{},s=+e.unblocked_samples||0,bl=+e.blocked_samples||0,cf=+e.confidence||0;return'<div class="model'+(s?' learned':'')+'"><div class="model-top"><span class="name">'+esc(a)+'</span><span class="pill '+(s?'good':'')+'">'+(s?'observed':'unknown')+'</span></div><div class="effect">'+esc(arrow(e.modal_delta))+'</div><div class="micro">delta '+esc(vec(e.modal_delta))+'</div><div class="micro">'+s+' usable · '+bl+' blocked · '+cf.toFixed(2)+' confidence</div></div>'}).join("");
 }
+function renderPlanning(o){
+ const lab=o.planning_lab||{},goals=lab.goals||[],plans=lab.plans||[],execs=lab.executions||[];
+ const goal=goals.find(g=>g.id===lab.active_goal_id)||goals[goals.length-1]||{};
+ const plan=plans.find(p=>p.id===lab.active_plan_id)||plans[plans.length-1]||{};
+ const last=execs[execs.length-1]||{},status=lab.status||"uninitialized";
+ el("planningStatus").textContent=pretty(status);
+ el("planningStatus").className="pill "+(["executing_plan","goal_reached","plan_active"].includes(status)?"good":["needs_replan","blocked_no_plan","waiting_for_model"].includes(status)?"warn":"blue");
+ el("planningGoal").textContent=vec(goal.target);
+ const idx=last.plan_id===plan.id?(+last.step_index||0)+1:(+plan.next_step_index||0);
+ const len=Array.isArray(plan.actions)?plan.actions.length:0;
+ el("planningStep").textContent=len?idx+" / "+len:"—";
+ el("planningCompleted").textContent=goals.filter(g=>g.status==="completed").length;
+ el("planningPlan").textContent=plan.id?plan.id+" · "+pretty(plan.status||"—")+" · "+vec(plan.start)+" → "+vec(plan.goal):"—";
+ el("planningPrediction").textContent=last.predicted_after?vec(last.predicted_after)+(last.matched_prediction===false?" · mismatch":" · matched"):"—";
+ el("planningObserved").textContent=last.after?vec(last.after)+" via "+(last.action||"—"):"—";
+ el("planningSource").textContent=lab.bootstrapped_from_action_count?lab.bootstrapped_from_action_count+" Phase 32 actions":"—";
+ el("planningSequence").innerHTML=(plan.actions||[]).map((a,i)=>'<span class="pred '+(i<(+plan.next_step_index||0)?'confirmed':i===(+plan.next_step_index||0)?'pending':'')+'">'+(i+1)+'. '+esc(a)+' → '+esc(vec((plan.predicted_states||[])[i]))+'</span>').join("");
+}
 function renderAttention(o){const i=tail(o.intentions,1)[0]||{},d=i.dominant_drive||"—",pressure=Number((o.drives||{})[d]);el("dominantDrive").textContent=pretty(d);el("intentionKind").textContent=pretty(i.kind);el("intentionTarget").textContent=i.target||"—";el("intentionRationale").textContent=i.rationale||"—";el("drivePressure").textContent=Number.isFinite(pressure)?pressure.toFixed(2)+" pressure":"—";
  const q=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0];el("currentQuestion").textContent=q?.text||"—";
  const active=(o.experiments||[]).filter(x=>!["completed","closed","rejected"].includes(x.status)).slice(-1)[0];el("activeExperiment").textContent=active?active.id+" · "+pretty(active.readiness||active.status):"—";
@@ -121,7 +155,7 @@ function renderEvidence(o){const fs=Object.values(o.empirical_learning?.families
  el("predictionList").innerHTML=tail(o.predictions,6).map(p=>'<span class="pred '+esc(p.status||"")+'">'+esc(p.id)+" · "+esc(pretty(p.status))+'</span>').join("");
 }
 function bars(id,obj){el(id).innerHTML=Object.entries(obj||{}).sort((a,b)=>+b[1]-+a[1]).map(([n,v])=>{const x=Math.max(0,Math.min(1,+v||0));return'<div class="bar"><span class="barname">'+esc(pretty(n))+'</span><span class="barval">'+x.toFixed(2)+'</span><div class="track"><div class="fill" style="width:'+Math.round(x*100)+'%"></div></div></div>'}).join("")}
-function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind==="action_lab").forEach(e=>at[e.cycle]=e.time);tail(o.action_lab?.history,7).forEach(a=>out.push({c:+a.cycle||0,k:"action",t:at[a.cycle],b:"<strong>"+esc(a.action)+"</strong> produced "+esc(vec(a.delta))+". Decision: "+esc(pretty(a.decision?.kind))+"."}));
+function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind==="action_lab").forEach(e=>at[e.cycle]=e.time);tail(o.action_lab?.history,7).forEach(a=>out.push({c:+a.cycle||0,k:"action",t:at[a.cycle],b:"<strong>"+esc(a.action)+"</strong> produced "+esc(vec(a.delta))+". Decision: "+esc(pretty(a.decision?.kind))+"."}));tail(o.planning_lab?.executions,7).forEach(x=>out.push({c:+x.cycle||0,k:"plan step",b:"<strong>"+esc(x.action)+"</strong> predicted "+esc(vec(x.predicted_after))+" and observed "+esc(vec(x.after))+(x.matched_prediction?" · matched.":" · mismatch; replan required.")}));
  tail(o.intentions,6).forEach((i,n,a)=>{const p=n?a[n-1]:null;if(!p||p.dominant_drive!==i.dominant_drive||p.kind!==i.kind)out.push({c:+i.cycle||0,k:"attention",b:"Selected <strong>"+esc(pretty(i.dominant_drive))+"</strong> via "+esc(pretty(i.kind))+"."})});
  tail(eps.filter(e=>e.kind==="stimulus"&&e.source==="human_interaction"),2).forEach(e=>out.push({c:+e.cycle||0,k:"interaction",t:e.time,b:"Human input: “"+esc(String(e.content||"").slice(0,130))+"”"}));
  tail(o.surprises,2).forEach(s=>out.push({c:+s.cycle||0,k:"surprise",t:s.time,b:"Observed changes across <strong>"+Object.keys(s.changes||{}).length+"</strong> measured repository fields."}));
@@ -129,7 +163,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderPlanning(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function resolveGrowthSha(){
  const now=Date.now();
  if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
