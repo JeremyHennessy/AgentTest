@@ -16,6 +16,7 @@ from .learning import (
     expected_prediction_status,
 )
 from .perception import COMPARABLE_FIELDS, changed_fields
+from .planning_lab import step_planning_lab
 from .semantic import (
     actionable_open_questions,
     consolidate_inquiry_families,
@@ -801,7 +802,10 @@ class AgentCore:
         cognition_provider: CognitionProvider | None = None,
         strict_experiment_admission: bool = False,
         action_lab: bool = False,
+        planning_lab: bool = False,
     ) -> dict[str, Any]:
+        if action_lab and planning_lab:
+            raise ValueError("action_lab and planning_lab are mutually exclusive")
         state = self.store.load()
         state["cycles"] += 1
         state["generation"] = state["cycles"]
@@ -881,6 +885,37 @@ class AgentCore:
                     str(action_lab_result["action"]),
                     "causal_action",
                     "movement",
+                ],
+            )
+
+        planning_lab_result = None
+        if planning_lab:
+            planning_lab_result = step_planning_lab(state)
+            self._remember(
+                state,
+                cycle,
+                now,
+                "planning_lab",
+                json.dumps(
+                    {
+                        "action": planning_lab_result.get("action"),
+                        "before": planning_lab_result.get("before"),
+                        "predicted_after": planning_lab_result.get("predicted_after"),
+                        "after": planning_lab_result.get("after"),
+                        "goal": planning_lab_result.get("goal"),
+                        "goal_reached": planning_lab_result.get("goal_reached"),
+                        "matched_prediction": planning_lab_result.get(
+                            "matched_prediction"
+                        ),
+                        "plan_id": planning_lab_result.get("plan_id"),
+                    },
+                    sort_keys=True,
+                ),
+                [
+                    "planning_lab",
+                    "goal_directed_action",
+                    "persistent_plan",
+                    "model_based_planning",
                 ],
             )
 
@@ -969,6 +1004,7 @@ class AgentCore:
             "experiment_specification_update": experiment_specification_update,
             "experiment_parking_update": experiment_parking_update,
             "action_lab_result": action_lab_result,
+            "planning_lab_result": planning_lab_result,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
@@ -1004,6 +1040,7 @@ class AgentCore:
             "experiment_specification_update": experiment_specification_update,
             "experiment_parking_update": experiment_parking_update,
             "action_lab_result": action_lab_result,
+            "planning_lab_result": planning_lab_result,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,

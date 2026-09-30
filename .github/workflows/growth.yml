@@ -42,7 +42,7 @@ jobs:
           AGENTTEST_MODEL: gpt-6-luna
         shell: bash
         run: |
-          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest cycle --self-observe --cognition --grounded-experiments-only --action-lab --stimulus "autonomous heartbeat"
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest cycle --self-observe --cognition --grounded-experiments-only --planning-lab --stimulus "autonomous heartbeat"
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose-change
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
