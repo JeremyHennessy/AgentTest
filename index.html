@@ -86,10 +86,12 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 </main>
 
 <script>
-const ORGANISM_SOURCE="autonomous/growth/state/organism.json",ORGANISM_URL="./state/organism.json";
-const STATE_SOURCE="autonomous/growth/state/last_interaction.json",STATE_URL="./state/last_interaction.json";
-const ISSUE_BASE="https://github.com/JeremyHennessy/AgentTest/issues/new",REFRESH_MS=15000,el=id=>document.getElementById(id);
-let organism=null;
+const ORGANISM_SOURCE="autonomous/growth/state/organism.json";
+const STATE_SOURCE="autonomous/growth/state/last_interaction.json";
+const GROWTH_REF_URL="https://api.github.com/repos/JeremyHennessy/AgentTest/git/ref/heads/autonomous/growth";
+const RAW_BASE="https://raw.githubusercontent.com/JeremyHennessy/AgentTest";
+const ISSUE_BASE="https://github.com/JeremyHennessy/AgentTest/issues/new",REFRESH_MS=15000,REF_POLL_MS=75000,el=id=>document.getElementById(id);
+let organism=null,resolvedGrowthSha=null,lastRefCheck=0,lastLoadedSha=null;
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
 const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.isArray(v)?v.slice(-n):[],vec=v=>Array.isArray(v)?"["+v.join(", ")+"]":"—";
 function age(iso){if(!iso)return"—";const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000));return s<60?s+"s":s<3600?Math.floor(s/60)+"m":(s/3600).toFixed(1)+"h"}
@@ -128,7 +130,34 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
 function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
-async function load(){el("liveStatus").textContent="Refreshing…";try{const q="?t="+Date.now(),r=await Promise.all([fetch(ORGANISM_URL+q,{cache:"no-store"}),fetch(STATE_URL+q,{cache:"no-store"})]);if(!r[0].ok||!r[1].ok)throw new Error("state fetch failed");const d=await Promise.all([r[0].json(),r[1].json()]);render(d[0],d[1])}catch(e){el("liveStatus").innerHTML='<span class="error">Live state unavailable</span>';el("refreshFoot").textContent=e.message}}
+async function resolveGrowthSha(){
+ const now=Date.now();
+ if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
+ const r=await fetch(GROWTH_REF_URL+"?t="+now,{cache:"no-store"});
+ if(!r.ok)throw new Error("growth ref HTTP "+r.status);
+ const data=await r.json(),sha=data&&data.object&&data.object.sha;
+ if(!sha)throw new Error("growth ref missing SHA");
+ resolvedGrowthSha=sha;lastRefCheck=now;return sha
+}
+async function load(){
+ el("liveStatus").textContent="Refreshing…";
+ try{
+  const sha=await resolveGrowthSha();
+  if(sha===lastLoadedSha&&organism){el("liveStatus").textContent="Live · generation "+(organism.generation??"—");return}
+  const base=RAW_BASE+"/"+sha+"/state";
+  const r=await Promise.all([
+   fetch(base+"/organism.json",{cache:"no-store"}),
+   fetch(base+"/last_interaction.json",{cache:"no-store"})
+  ]);
+  if(!r[0].ok||!r[1].ok)throw new Error("immutable state fetch failed");
+  const d=await Promise.all([r[0].json(),r[1].json()]);
+  lastLoadedSha=sha;
+  render(d[0],d[1])
+ }catch(e){
+  el("liveStatus").innerHTML='<span class="error">Live state unavailable</span>';
+  el("refreshFoot").textContent=e.message
+ }
+}
 function handoff(){const message=el("message").value.trim();if(!message){el("pending").textContent="Enter a message first.";return}localStorage.setItem("agenttest.pendingMessage",message);const p=new URLSearchParams({title: "AgentTest interaction", body: "/agent " + message});el("pending").textContent="GitHub opened in a new tab. Submit the pre-filled issue as repository owner.";window.open(ISSUE_BASE+"?"+p,"_blank","noopener")}
 el("send").addEventListener("click",handoff);el("refresh").addEventListener("click",load);load();setInterval(load,REFRESH_MS);setInterval(()=>{if(organism)el("stateAge").textContent=age(organism.updated_at)},1000);
 </script>
