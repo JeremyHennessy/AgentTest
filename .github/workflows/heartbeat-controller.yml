@@ -1,0 +1,61 @@
+name: autonomous-heartbeat-controller
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/heartbeat-controller.yml"
+  workflow_dispatch:
+    inputs:
+      delay_seconds:
+        description: "Delay before dispatching the next growth heartbeat"
+        required: false
+        default: "0"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: agenttest-heartbeat-controller
+  cancel-in-progress: false
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Wait for requested interval
+        env:
+          DELAY_SECONDS: ${{ github.event.inputs.delay_seconds || '0' }}
+        shell: bash
+        run: |
+          case "$DELAY_SECONDS" in
+            ''|*[!0-9]*)
+              echo "Invalid delay_seconds: $DELAY_SECONDS"
+              exit 1
+              ;;
+          esac
+          if [ "$DELAY_SECONDS" -gt 0 ]; then
+            sleep "$DELAY_SECONDS"
+          fi
+
+      - name: Queue successor controller
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh workflow run heartbeat-controller.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f delay_seconds=1800
+
+      - name: Dispatch autonomous growth
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh workflow run growth.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main
