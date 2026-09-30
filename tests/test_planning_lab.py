@@ -135,6 +135,16 @@ class PlanningLabTests(unittest.TestCase):
         self.assertEqual(plan["status"], "invalidated")
         self.assertEqual(plan["invalidation_reason"], "prediction_mismatch")
 
+        state["cycles"] = 11
+        state["generation"] = 11
+        third = step_planning_lab(state)
+        replacement = next(
+            item
+            for item in lab["plans"]
+            if item["id"] == third["plan_id"]
+        )
+        self.assertEqual(replacement["reason"], "replan_after_invalidation")
+
     def test_planner_does_not_reference_hidden_environment_transition_map(self) -> None:
         source = inspect.getsource(planning_lab)
         self.assertNotIn("_HIDDEN_ACTION_DELTAS", source)
