@@ -8,6 +8,8 @@ ACTION_LAB_VERSION = "bounded-action-lab-v1"
 ACTION_ORDER = ("north", "east", "south", "west")
 MIN_EFFECT_SAMPLES = 2
 BOUNDS = 2
+BASE_WORLD_VERSION = "bounded-world-v1"
+STATEFUL_WORLD_VERSION = "bounded-stateful-world-v1"
 
 # The labels are intentionally not their ordinary spatial meanings. AgentTest is
 # given only action outcomes and must learn the transition mapping empirically.
@@ -16,6 +18,13 @@ _HIDDEN_ACTION_DELTAS: dict[str, tuple[int, int]] = {
     "east": (0, -1),
     "south": (-1, 0),
     "west": (0, 1),
+}
+
+# Phase 34 adds one deterministic internal-world constraint. The planning model
+# is never given this map directly; it must discover the changed transition from
+# execution evidence.
+_HIDDEN_STATEFUL_BLOCKS: set[tuple[tuple[int, int], str]] = {
+    ((0, 2), "south"),
 }
 
 
@@ -56,18 +65,30 @@ def apply_bounded_action(
     action: str,
     *,
     bounds: int = BOUNDS,
+    world_version: str = BASE_WORLD_VERSION,
 ) -> dict[str, Any]:
     """Apply one protected internal-world action without exposing hidden dynamics."""
 
     if action not in ACTION_ORDER:
         raise ValueError(f"action is not permitted: {action}")
+    if world_version not in {BASE_WORLD_VERSION, STATEFUL_WORLD_VERSION}:
+        raise ValueError(f"unsupported bounded-world version: {world_version}")
+
     before = [int(position[0]), int(position[1])]
-    hidden_delta = _HIDDEN_ACTION_DELTAS[action]
-    proposed = (
-        before[0] + hidden_delta[0],
-        before[1] + hidden_delta[1],
+    stateful_blocked = (
+        world_version == STATEFUL_WORLD_VERSION
+        and ((before[0], before[1]), action) in _HIDDEN_STATEFUL_BLOCKS
     )
-    blocked = not _in_bounds(proposed, bounds)
+    if stateful_blocked:
+        proposed = (before[0], before[1])
+        blocked = True
+    else:
+        hidden_delta = _HIDDEN_ACTION_DELTAS[action]
+        proposed = (
+            before[0] + hidden_delta[0],
+            before[1] + hidden_delta[1],
+        )
+        blocked = not _in_bounds(proposed, bounds)
     after = before if blocked else [int(proposed[0]), int(proposed[1])]
     return {
         "action": action,

@@ -5,12 +5,14 @@ from typing import Any
 
 from .action_lab import (
     ACTION_ORDER,
+    BASE_WORLD_VERSION,
     BOUNDS,
+    STATEFUL_WORLD_VERSION,
     apply_bounded_action,
     validate_action_lab_history,
 )
 
-PLANNING_LAB_VERSION = "persistent-planning-lab-v1"
+PLANNING_LAB_VERSION = "persistent-planning-lab-v2"
 MIN_MODEL_SAMPLES = 2
 PREFERRED_MIN_PLAN_STEPS = 3
 PREFERRED_MAX_PLAN_STEPS = 4
@@ -25,6 +27,9 @@ def initial_planning_lab_state() -> dict[str, Any]:
         "visit_counts": {"0,0": 1},
         "transition_observations": [],
         "learned_effects": {},
+        "state_effects": {},
+        "model_revisions": [],
+        "world_version": STATEFUL_WORLD_VERSION,
         "goals": [],
         "plans": [],
         "executions": [],
@@ -41,11 +46,21 @@ def ensure_planning_lab_state(state: dict[str, Any]) -> dict[str, Any]:
     defaults = initial_planning_lab_state()
     for key, value in defaults.items():
         lab.setdefault(key, value)
+    lab["version"] = PLANNING_LAB_VERSION
+    if lab.get("world_version") in {None, BASE_WORLD_VERSION}:
+        lab["world_version"] = STATEFUL_WORLD_VERSION
     return lab
 
 
 def _position_key(position: list[int] | tuple[int, int]) -> str:
     return f"{int(position[0])},{int(position[1])}"
+
+
+def _state_action_key(
+    position: list[int] | tuple[int, int],
+    action: str,
+) -> str:
+    return f"{_position_key(position)}|{action}"
 
 
 def _in_bounds(position: tuple[int, int], bounds: int) -> bool:
@@ -55,21 +70,39 @@ def _in_bounds(position: tuple[int, int], bounds: int) -> bool:
 def _rebuild_model(lab: dict[str, Any]) -> dict[str, Any]:
     samples: dict[str, list[tuple[int, int]]] = defaultdict(list)
     blocked_counts: Counter[str] = Counter()
+    state_samples: dict[str, list[tuple[int, int]]] = defaultdict(list)
+    state_blocked_counts: Counter[str] = Counter()
+    world_version = str(lab.get("world_version") or STATEFUL_WORLD_VERSION)
 
     for record in lab.get("transition_observations", []):
         action = str(record.get("action") or "")
         if action not in ACTION_ORDER:
             continue
-        if record.get("blocked"):
-            blocked_counts[action] += 1
-            continue
+        blocked = bool(record.get("blocked"))
         delta = record.get("delta")
-        if (
+        valid_delta = (
             isinstance(delta, list)
             and len(delta) == 2
             and all(isinstance(value, int) for value in delta)
-        ):
+        )
+        if blocked:
+            blocked_counts[action] += 1
+        elif valid_delta:
             samples[action].append((int(delta[0]), int(delta[1])))
+
+        before = record.get("before")
+        same_world = record.get("world_version") == world_version
+        valid_before = (
+            isinstance(before, list)
+            and len(before) == 2
+            and all(isinstance(value, int) for value in before)
+        )
+        if same_world and valid_before:
+            key = _state_action_key(before, action)
+            if blocked:
+                state_blocked_counts[key] += 1
+            elif valid_delta:
+                state_samples[key].append((int(delta[0]), int(delta[1])))
 
     learned: dict[str, Any] = {}
     for action in ACTION_ORDER:
@@ -92,7 +125,44 @@ def _rebuild_model(lab: dict[str, Any]) -> dict[str, Any]:
             "confidence": round(confidence, 6),
         }
 
+    state_effects: dict[str, Any] = {}
+    state_keys = sorted(set(state_samples) | set(state_blocked_counts))
+    for key in state_keys:
+        action_samples = state_samples[key]
+        blocked_samples = int(state_blocked_counts[key])
+        if blocked_samples > len(action_samples):
+            state_effects[key] = {
+                "samples": blocked_samples + len(action_samples),
+                "blocked_samples": blocked_samples,
+                "unblocked_samples": len(action_samples),
+                "blocked": True,
+                "modal_delta": None,
+                "confidence": round(
+                    blocked_samples / (blocked_samples + len(action_samples)),
+                    6,
+                ),
+            }
+            continue
+
+        effect_counts = Counter(action_samples)
+        effect, count = sorted(
+            effect_counts.items(),
+            key=lambda item: (-item[1], item[0]),
+        )[0]
+        state_effects[key] = {
+            "samples": blocked_samples + len(action_samples),
+            "blocked_samples": blocked_samples,
+            "unblocked_samples": len(action_samples),
+            "blocked": False,
+            "modal_delta": [int(effect[0]), int(effect[1])],
+            "confidence": round(
+                count / (blocked_samples + len(action_samples)),
+                6,
+            ),
+        }
+
     lab["learned_effects"] = learned
+    lab["state_effects"] = state_effects
     return learned
 
 
@@ -129,8 +199,11 @@ def _bootstrap_from_action_lab(
                 "source_id": record.get("id"),
                 "cycle": int(record.get("cycle", 0) or 0),
                 "action": action,
+                "before": list(record.get("before", [0, 0])),
+                "after": list(record.get("after", [0, 0])),
                 "delta": list(record.get("delta", [0, 0])),
                 "blocked": bool(record.get("blocked")),
+                "world_version": BASE_WORLD_VERSION,
             }
         )
 
@@ -166,6 +239,7 @@ def _shortest_plan(
     start: tuple[int, int],
     goal: tuple[int, int],
     learned: dict[str, Any],
+    state_effects: dict[str, Any],
     bounds: int,
 ) -> tuple[list[str], list[list[int]]] | None:
     if start == goal:
@@ -176,7 +250,15 @@ def _shortest_plan(
     while queue:
         position, actions, predicted_states = queue.popleft()
         for action in ACTION_ORDER:
-            delta = learned.get(action, {}).get("modal_delta")
+            state_effect = state_effects.get(
+                _state_action_key(position, action),
+                {},
+            )
+            if state_effect.get("blocked"):
+                continue
+            delta = state_effect.get("modal_delta")
+            if not isinstance(delta, list) or len(delta) != 2:
+                delta = learned.get(action, {}).get("modal_delta")
             if not isinstance(delta, list) or len(delta) != 2:
                 continue
             target = (
@@ -228,7 +310,13 @@ def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
             target = (x, y)
             if target == start:
                 continue
-            planned = _shortest_plan(start, target, learned, bounds)
+            planned = _shortest_plan(
+                start,
+                target,
+                learned,
+                lab.get("state_effects", {}),
+                bounds,
+            )
             if planned is None:
                 continue
             actions, predicted_states = planned
@@ -299,6 +387,7 @@ def _create_plan(
         start,
         target,
         learned,
+        lab.get("state_effects", {}),
         int(lab.get("bounds", BOUNDS)),
     )
     if planned is None:
@@ -317,6 +406,9 @@ def _create_plan(
         "next_step_index": 0,
         "status": "active",
         "reason": reason,
+        "world_version": str(
+            lab.get("world_version") or STATEFUL_WORLD_VERSION
+        ),
         "model_samples": {
             action: int(
                 learned.get(action, {}).get("unblocked_samples", 0) or 0
@@ -398,10 +490,14 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
     predicted_after = [
         int(value) for value in predicted_states[step_index]
     ]
+    world_version = str(
+        lab.get("world_version") or STATEFUL_WORLD_VERSION
+    )
     outcome = apply_bounded_action(
         before,
         action,
         bounds=int(lab.get("bounds", BOUNDS)),
+        world_version=world_version,
     )
     after = list(outcome["after"])
     matched_prediction = after == predicted_after
@@ -420,6 +516,7 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
         "delta": list(outcome["delta"]),
         "blocked": bool(outcome["blocked"]),
         "matched_prediction": matched_prediction,
+        "world_version": world_version,
     }
     lab.setdefault("executions", []).append(execution)
     lab["position"] = after
@@ -434,8 +531,11 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
             "source_id": execution["id"],
             "cycle": cycle,
             "action": action,
+            "before": before,
+            "after": after,
             "delta": list(outcome["delta"]),
             "blocked": bool(outcome["blocked"]),
+            "world_version": world_version,
         }
     )
     learned = _rebuild_model(lab)
@@ -459,6 +559,23 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
         plan["invalidated_cycle"] = cycle
         plan["invalidation_reason"] = "prediction_mismatch"
         plan["mismatch_execution_id"] = execution["id"]
+        revision = {
+            "id": f"MR{len(lab.get('model_revisions', [])) + 1:06d}",
+            "cycle": cycle,
+            "trigger_execution_id": execution["id"],
+            "goal_id": goal["id"],
+            "plan_id": plan["id"],
+            "state_action_key": _state_action_key(before, action),
+            "before": before,
+            "action": action,
+            "predicted_after": predicted_after,
+            "observed_after": after,
+            "observed_delta": list(outcome["delta"]),
+            "observed_blocked": bool(outcome["blocked"]),
+            "world_version": world_version,
+            "status": "state_evidence_recorded",
+        }
+        lab.setdefault("model_revisions", []).append(revision)
         lab["active_plan_id"] = None
         lab["status"] = "needs_replan"
 
@@ -469,6 +586,11 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
         "goal": list(goal.get("target", [])),
         "goal_reached": goal_reached,
         "replan_required": not matched_prediction,
+        "model_revision_id": (
+            None
+            if matched_prediction
+            else lab.get("model_revisions", [{}])[-1].get("id")
+        ),
         "remaining_plan_steps": (
             0
             if goal_reached or not matched_prediction
