@@ -892,6 +892,12 @@ class AgentCore:
         question = self._upsert_question(state, question_text)
         question["times_selected"] += 1
         question["last_selected_cycle"] = cycle
+        if intention.get("kind") == "explore_empirical_frontier":
+            question.setdefault("source", "empirical_frontier_transfer")
+            question["source_learning_family"] = intention.get("target")
+            question["source_evidence_refs"] = list(
+                intention.get("evidence_refs", [])
+            )
         inquiry_update = consolidate_inquiry_families(state)
 
         experiment = self._select_or_propose_experiment(
@@ -1296,6 +1302,17 @@ class AgentCore:
             candidate = (
                 f"What obtainable evidence would resolve pending experiment "
                 f"{intention['target']} with the least additional assumption?"
+            )
+            if not self._question_exists(state, candidate):
+                return candidate
+
+        if (
+            intention["kind"] == "explore_empirical_frontier"
+            and intention.get("target")
+        ):
+            candidate = (
+                "Which distinct measurable relationship should be tested next to "
+                f"challenge or extend the learned {intention['target']} pattern?"
             )
             if not self._question_exists(state, candidate):
                 return candidate
