@@ -360,7 +360,11 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
             lab,
             goal,
             cycle,
-            reason="initial_goal_plan" if plan is None else "replan_after_invalidation",
+            reason=(
+                "replan_after_invalidation"
+                if lab.get("status") == "needs_replan"
+                else "initial_goal_plan"
+            ),
         )
     if plan is None:
         return {
