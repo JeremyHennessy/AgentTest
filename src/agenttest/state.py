@@ -6,8 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from .action_lab import initial_action_lab_state
+from .planning_lab import initial_planning_lab_state
 
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 
 DIMENSIONS = (
     "continuity",
@@ -121,6 +122,7 @@ def initial_state() -> dict[str, Any]:
         "world_model": _empty_world_model(),
         "empirical_learning": _empty_empirical_learning(),
         "action_lab": initial_action_lab_state(),
+        "planning_lab": initial_planning_lab_state(),
         "cognition_events": [],
         "cognition_candidates": [],
         "questions": [],
@@ -153,6 +155,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         ("world_model", _empty_world_model()),
         ("empirical_learning", _empty_empirical_learning()),
         ("action_lab", initial_action_lab_state()),
+        ("planning_lab", initial_planning_lab_state()),
         ("cognition_events", []),
         ("cognition_candidates", []),
         ("episodes", []),
@@ -193,6 +196,10 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     action_lab.setdefault("history", [])
     action_lab.setdefault("learned_effects", {})
     action_lab.setdefault("last_action_cycle", None)
+
+    planning_lab = state["planning_lab"]
+    for key, value in initial_planning_lab_state().items():
+        planning_lab.setdefault(key, value)
 
     metrics = state.setdefault("metrics", {})
     for dimension in DIMENSIONS:
