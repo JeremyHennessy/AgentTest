@@ -7,6 +7,11 @@ on:
     paths:
       - index.html
       - .github/workflows/pages.yml
+  workflow_run:
+    workflows:
+      - autonomous-growth-cycle
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -20,24 +25,48 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
+      - name: Checkout observer source
         uses: actions/checkout@v6
+        with:
+          ref: main
+          path: observer
+
+      - name: Checkout latest persistent organism state
+        uses: actions/checkout@v6
+        with:
+          ref: autonomous/growth
+          path: growth
+          sparse-checkout: |
+            state/organism.json
+            state/last_interaction.json
+          sparse-checkout-cone-mode: false
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+
       - name: Prepare static observer artifact
         shell: bash
         run: |
-          mkdir -p _site
-          cp index.html _site/index.html
+          set -euo pipefail
+          mkdir -p _site/state
+          cp observer/index.html _site/index.html
+          cp growth/state/organism.json _site/state/organism.json
+          cp growth/state/last_interaction.json _site/state/last_interaction.json
+          growth_sha="$(git -C growth rev-parse HEAD)"
+          published_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          printf '{"growth_sha":"%s","published_at":"%s"}\n' "$growth_sha" "$published_at" > _site/state/meta.json
+
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: _site
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
