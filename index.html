@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark">
-<title>AgentTest · Live Observer</title>
+<title>AgentTest · Persistent Growth Console</title>
 <style>
 :root{--bg:#06101a;--panel:#0d1d2b;--panel2:#102536;--line:#1d3b52;--text:#eef8ff;--muted:#8ba8bd;--cyan:#5fe0c9;--blue:#7ab9ff;--gold:#f2c978;--green:#7ae3aa;--red:#ff9696}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 8% 0,rgba(95,224,201,.12),transparent 30rem),radial-gradient(circle at 92% 0,rgba(122,185,255,.10),transparent 28rem),var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -39,7 +39,7 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 
 <section class="grid">
 <article class="card s8">
-<div class="head"><div><h2>Exploration space</h2><div class="sub">Path, visited cells, current location, and the latest observed consequence.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
+<div class="head"><div><h2>Bounded Action Lab · exploration space</h2><div class="sub">Path, visited cells, current location, and the latest observed consequence.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
 <div class="world-layout">
 <div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g></svg><div class="board" id="worldGrid"></div></div></div>
 <div><div class="rows">
@@ -94,7 +94,7 @@ const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;"
 const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.isArray(v)?v.slice(-n):[],vec=v=>Array.isArray(v)?"["+v.join(", ")+"]":"—";
 function age(iso){if(!iso)return"—";const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000));return s<60?s+"s":s<3600?Math.floor(s/60)+"m":(s/3600).toFixed(1)+"h"}
 function arrow(d){if(!Array.isArray(d))return"·";const x=+d[0],y=+d[1];return x===1&&y===0?"→":x===-1&&y===0?"←":x===0&&y===1?"↑":x===0&&y===-1?"↓":x===0&&y===0?"•":vec(d)}
-function renderWorld(o){
+function renderActionLab(o){
  const lab=o.action_lab||{},b=+(lab.bounds??2),pos=lab.position||[0,0],vis=lab.visit_counts||{},h=lab.history||[],cells=[],side=b*2+1;
  el("worldGrid").style.gridTemplateColumns="repeat("+side+",1fr)";el("worldGrid").style.gridTemplateRows="repeat("+side+",1fr)";
  for(let y=b;y>=-b;y--)for(let x=-b;x<=b;x++){const k=x+","+y,c=+vis[k]||0,a=+pos[0]===x&&+pos[1]===y;cells.push('<div class="cell'+(c?' visited':'')+(a?' active':'')+'"><span class="coord">'+x+','+y+'</span>'+(a?'<span class="agent"></span>':'')+(c?'<span class="visits">×'+c+'</span>':'')+'</div>')}
@@ -127,9 +127,9 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderWorld(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function load(){el("liveStatus").textContent="Refreshing…";try{const q="?t="+Date.now(),r=await Promise.all([fetch(ORGANISM_URL+q,{cache:"no-store"}),fetch(STATE_URL+q,{cache:"no-store"})]);if(!r[0].ok||!r[1].ok)throw new Error("state fetch failed");const d=await Promise.all([r[0].json(),r[1].json()]);render(d[0],d[1])}catch(e){el("liveStatus").innerHTML='<span class="error">Live state unavailable</span>';el("refreshFoot").textContent=e.message}}
-function handoff(){const m=el("message").value.trim();if(!m){el("pending").textContent="Enter a message first.";return}localStorage.setItem("agenttest.pendingMessage",m);const p=new URLSearchParams({title:"AgentTest interaction",body:"/agent "+m});el("pending").textContent="GitHub opened in a new tab. Submit the pre-filled issue as repository owner.";window.open(ISSUE_BASE+"?"+p,"_blank","noopener")}
+function handoff(){const message=el("message").value.trim();if(!message){el("pending").textContent="Enter a message first.";return}localStorage.setItem("agenttest.pendingMessage",message);const p=new URLSearchParams({title: "AgentTest interaction", body: "/agent " + message});el("pending").textContent="GitHub opened in a new tab. Submit the pre-filled issue as repository owner.";window.open(ISSUE_BASE+"?"+p,"_blank","noopener")}
 el("send").addEventListener("click",handoff);el("refresh").addEventListener("click",load);load();setInterval(load,REFRESH_MS);setInterval(()=>{if(organism)el("stateAge").textContent=age(organism.updated_at)},1000);
 </script>
 </body></html>
