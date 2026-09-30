@@ -14,7 +14,7 @@ on:
       delay_seconds:
         description: "Delay before dispatching the next growth heartbeat"
         required: false
-        default: "300"
+        default: "150"
 
 permissions:
   actions: write
@@ -80,7 +80,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh workflow run heartbeat-controller.yml             --repo "$GITHUB_REPOSITORY"             --ref main             -f controller_token=controller-v2             -f delay_seconds=300
+          gh workflow run heartbeat-controller.yml             --repo "$GITHUB_REPOSITORY"             --ref main             -f controller_token=controller-v2
 
       - name: Dispatch and verify autonomous growth
         env:
