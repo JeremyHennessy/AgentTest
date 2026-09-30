@@ -25,6 +25,24 @@ class PlanningLabTests(unittest.TestCase):
             step_action_lab(state)
         return state
 
+    def test_insufficient_phase32_model_stays_fail_closed(self) -> None:
+        state = initial_state()
+        for cycle in range(1, 4):
+            state["cycles"] = cycle
+            state["generation"] = cycle
+            step_action_lab(state)
+
+        state["cycles"] = 4
+        first = step_planning_lab(state)
+        state["cycles"] = 5
+        second = step_planning_lab(state)
+
+        self.assertEqual(first["status"], "waiting_for_model")
+        self.assertEqual(second["status"], "waiting_for_model")
+        self.assertIsNone(first["action"])
+        self.assertIsNone(second["action"])
+        self.assertEqual(state["planning_lab"]["executions"], [])
+
     def test_first_planning_turn_bootstraps_from_phase32_and_creates_multistep_plan(self) -> None:
         state = self._phase32_ready_state()
         state["cycles"] = 9
