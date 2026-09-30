@@ -86,8 +86,8 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 </main>
 
 <script>
-const ORGANISM_URL="https://raw.githubusercontent.com/JeremyHennessy/AgentTest/refs/heads/autonomous/growth/state/organism.json";
-const STATE_URL="https://raw.githubusercontent.com/JeremyHennessy/AgentTest/refs/heads/autonomous/growth/state/last_interaction.json";
+const ORGANISM_SOURCE="autonomous/growth/state/organism.json",ORGANISM_URL="./state/organism.json";
+const STATE_SOURCE="autonomous/growth/state/last_interaction.json",STATE_URL="./state/last_interaction.json";
 const ISSUE_BASE="https://github.com/JeremyHennessy/AgentTest/issues/new",REFRESH_MS=15000,el=id=>document.getElementById(id);
 let organism=null;
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
