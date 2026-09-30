@@ -26,6 +26,7 @@ PROTECTED_PATHS = {
     "src/agenttest/diagnostic_inquiry.py",
     "src/agenttest/diagnostic_experiments.py",
     "src/agenttest/diagnostic_attention.py",
+    "src/agenttest/action_lab.py",
 }
 
 

@@ -51,6 +51,14 @@ def main() -> None:
             "question; evidence-backed and explicitly targeted experiments remain eligible."
         ),
     )
+    cycle.add_argument(
+        "--action-lab",
+        action="store_true",
+        help=(
+            "Execute one whitelisted action inside the bounded persistent internal "
+            "micro-world. This grants no filesystem, network, shell, or external authority."
+        ),
+    )
     cycle.add_argument("--root", default=".", help="Repository root for self-observation.")
 
     interact = sub.add_parser(
@@ -113,6 +121,7 @@ def main() -> None:
                 observation,
                 cognition=args.cognition,
                 strict_experiment_admission=args.grounded_experiments_only,
+                action_lab=args.action_lab,
             )
         )
     elif args.command == "interact":

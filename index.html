@@ -84,11 +84,21 @@
     .track{grid-column:1/-1;height:5px;border-radius:99px;background:#071421;overflow:hidden}
     .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px}
     .pending{margin-top:12px;color:var(--warn);font-size:13px;min-height:20px}
+    .lab-layout{display:grid;grid-template-columns:minmax(260px,.8fr) 1.2fr;gap:18px;margin-top:18px;align-items:start}
+    .lab-board{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:360px}
+    .lab-cell{aspect-ratio:1;border:1px solid var(--line);border-radius:10px;background:#071421;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;position:relative}
+    .lab-cell.visited{background:rgba(127,184,255,.09)}
+    .lab-cell.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(86,216,194,.12),0 0 20px rgba(86,216,194,.12);color:var(--accent);font-weight:900}
+    .lab-cell .count{position:absolute;right:5px;bottom:3px;font-size:9px;color:var(--muted)}
+    .lab-effects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+    .lab-effect{border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(5,17,29,.42)}
+    .lab-effect strong{display:block;margin-bottom:3px}
     .error{color:var(--danger)}
     footer{margin-top:22px;color:var(--muted);font-size:12px;display:flex;gap:14px;flex-wrap:wrap}
     @media(max-width:820px){
       header{flex-direction:column}
       .grid{grid-template-columns:1fr}
+      .lab-layout{grid-template-columns:1fr}
       .shell{width:min(100% - 20px,1180px);padding-top:22px}
     }
   </style>
@@ -146,6 +156,25 @@
       </aside>
     </div>
 
+    <section class="card" style="margin-top:18px">
+      <h2>Bounded Action Lab</h2>
+      <p class="sub">A protected internal micro-world for reversible action→outcome experiments. No network, shell, filesystem, or external-system authority.</p>
+      <div class="lab-layout">
+        <div>
+          <div class="section-title">Persistent position</div>
+          <div class="lab-board" id="labBoard"></div>
+          <div class="pending" id="labStatus">Loading action state…</div>
+        </div>
+        <div>
+          <div class="row"><span class="label">Latest action</span><span class="value" id="labAction">—</span></div>
+          <div class="row"><span class="label">Decision mode</span><span class="value" id="labDecision">—</span></div>
+          <div class="row"><span class="label">Recorded actions</span><span class="value" id="labHistory">—</span></div>
+          <div class="section-title">Learned action effects</div>
+          <div class="lab-effects" id="labEffects"></div>
+        </div>
+      </div>
+    </section>
+
     <footer>
       <span>Source: <a href="https://github.com/JeremyHennessy/AgentTest" target="_blank" rel="noopener">AgentTest repository</a></span>
       <span>Persistent branch: <a href="https://github.com/JeremyHennessy/AgentTest/tree/autonomous/growth" target="_blank" rel="noopener">autonomous/growth</a></span>
@@ -155,8 +184,9 @@
 
   <script>
     const STATE_URL = "https://raw.githubusercontent.com/JeremyHennessy/AgentTest/refs/heads/autonomous/growth/state/last_interaction.json";
+    const ORGANISM_URL = "https://raw.githubusercontent.com/JeremyHennessy/AgentTest/refs/heads/autonomous/growth/state/organism.json";
     const ISSUE_BASE = "https://github.com/JeremyHennessy/AgentTest/issues/new";
-    const els = Object.fromEntries(["liveStatus","message","send","refresh","pending","response","current","cycle","interaction","unverified","worldClaims","metrics"].map(id => [id, document.getElementById(id)]));
+    const els = Object.fromEntries(["liveStatus","message","send","refresh","pending","response","current","cycle","interaction","unverified","worldClaims","metrics","labBoard","labStatus","labAction","labDecision","labHistory","labEffects"].map(id => [id, document.getElementById(id)]));
     let latest = null;
 
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[ch]));
@@ -201,13 +231,74 @@
       }
     }
 
+    function renderActionLab(organism) {
+      const lab = organism?.action_lab;
+      if (!lab) {
+        els.labStatus.textContent = "Action lab is not enabled on the current live baseline.";
+        els.labBoard.innerHTML = "";
+        els.labAction.textContent = "—";
+        els.labDecision.textContent = "—";
+        els.labHistory.textContent = "0";
+        els.labEffects.innerHTML = "";
+        return;
+      }
+
+      const bounds = Number(lab.bounds ?? 2);
+      const position = Array.isArray(lab.position) ? lab.position : [0,0];
+      const visits = lab.visit_counts || {};
+      const cells = [];
+      for (let y = bounds; y >= -bounds; y--) {
+        for (let x = -bounds; x <= bounds; x++) {
+          const key = x + "," + y;
+          const count = Number(visits[key] || 0);
+          const active = Number(position[0]) === x && Number(position[1]) === y;
+          cells.push(
+            `<div class="lab-cell${count ? " visited" : ""}${active ? " active" : ""}" title="(${x}, ${y}) · visits ${count}">` +
+            (active ? "●" : "") +
+            (count ? `<span class="count">${count}</span>` : "") +
+            `</div>`
+          );
+        }
+      }
+      els.labBoard.innerHTML = cells.join("");
+
+      const history = Array.isArray(lab.history) ? lab.history : [];
+      const last = history[history.length - 1] || {};
+      els.labStatus.textContent = history.length
+        ? `${history.length} persisted actions · ${Object.keys(visits).length} visited locations`
+        : "Action lab is initialized but has not acted yet.";
+      els.labAction.textContent = last.action
+        ? `${last.action} · [${(last.before || []).join(", ")}] → [${(last.after || []).join(", ")}]`
+        : "—";
+      els.labDecision.textContent = last.decision?.kind || "—";
+      els.labHistory.textContent = String(history.length);
+
+      const effects = lab.learned_effects || {};
+      els.labEffects.innerHTML = ["north","east","south","west"].map(action => {
+        const effect = effects[action] || {};
+        const delta = Array.isArray(effect.modal_delta) ? "[" + effect.modal_delta.join(", ") + "]" : "unknown";
+        const samples = Number(effect.unblocked_samples || 0);
+        const confidence = Number(effect.confidence || 0);
+        return `<div class="lab-effect"><strong>${escapeHtml(action)}</strong><span class="micro">effect ${escapeHtml(delta)} · ${samples} samples · ${confidence.toFixed(2)} confidence</span></div>`;
+      }).join("");
+    }
+
     async function loadState() {
       els.liveStatus.textContent = "Refreshing…";
       try {
-        const res = await fetch(STATE_URL + "?t=" + Date.now(), {cache:"no-store"});
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
+        const stamp = "?t=" + Date.now();
+        const [interactionRes, organismRes] = await Promise.all([
+          fetch(STATE_URL + stamp, {cache:"no-store"}),
+          fetch(ORGANISM_URL + stamp, {cache:"no-store"})
+        ]);
+        if (!interactionRes.ok) throw new Error("interaction HTTP " + interactionRes.status);
+        if (!organismRes.ok) throw new Error("organism HTTP " + organismRes.status);
+        const [data, organism] = await Promise.all([
+          interactionRes.json(),
+          organismRes.json()
+        ]);
         render(data);
+        renderActionLab(organism);
       } catch (err) {
         els.liveStatus.textContent = "Live state unavailable";
         els.pending.innerHTML = `<span class="error">Could not load the persistent branch: ${escapeHtml(err.message)}</span>`;
