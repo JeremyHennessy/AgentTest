@@ -5,6 +5,7 @@ import re
 from collections import Counter
 from typing import Any
 
+from .action_lab import step_action_lab
 from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
 from .evidence import known_evidence_ids
@@ -799,6 +800,7 @@ class AgentCore:
         cognition: bool = False,
         cognition_provider: CognitionProvider | None = None,
         strict_experiment_admission: bool = False,
+        action_lab: bool = False,
     ) -> dict[str, Any]:
         state = self.store.load()
         state["cycles"] += 1
@@ -853,6 +855,33 @@ class AgentCore:
                 "stimulus",
                 stimulus,
                 _concepts(stimulus),
+            )
+
+        action_lab_result = None
+        if action_lab:
+            action_lab_result = step_action_lab(state)
+            self._remember(
+                state,
+                cycle,
+                now,
+                "action_lab",
+                json.dumps(
+                    {
+                        "action": action_lab_result["action"],
+                        "before": action_lab_result["before"],
+                        "after": action_lab_result["after"],
+                        "delta": action_lab_result["delta"],
+                        "blocked": action_lab_result["blocked"],
+                        "decision": action_lab_result["decision"],
+                    },
+                    sort_keys=True,
+                ),
+                [
+                    "action_lab",
+                    str(action_lab_result["action"]),
+                    "causal_action",
+                    "movement",
+                ],
             )
 
         semantic_update = consolidate_semantic_memory(state)
@@ -939,6 +968,7 @@ class AgentCore:
             "experiment_readiness_update": experiment_readiness_update,
             "experiment_specification_update": experiment_specification_update,
             "experiment_parking_update": experiment_parking_update,
+            "action_lab_result": action_lab_result,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
@@ -973,6 +1003,7 @@ class AgentCore:
             "experiment_readiness_update": experiment_readiness_update,
             "experiment_specification_update": experiment_specification_update,
             "experiment_parking_update": experiment_parking_update,
+            "action_lab_result": action_lab_result,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
             "world_update": world_update,
