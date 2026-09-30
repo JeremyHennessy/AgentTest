@@ -72,6 +72,21 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="preds" id="planningSequence"></div>
 </article>
 
+<article class="card s12">
+<div class="head"><div><h2>Phase 34 · model revision</h2><div class="sub">Live evidence for prediction failures, state-specific effects, invalidated plans, and recovery routes.</div></div><span class="pill blue" id="revisionStatus">waiting for surprise</span></div>
+<div class="evidence">
+<div class="ebox"><div class="n" id="revisionCount">0</div><div class="t">Model revisions</div></div>
+<div class="ebox"><div class="n" id="stateEffectCount">0</div><div class="t">State-specific observations</div></div>
+<div class="ebox"><div class="n" id="latestRevision">—</div><div class="t">Latest revision</div></div>
+</div>
+<div class="rows" style="margin-top:10px">
+<div class="row"><span class="label">Latest mismatch</span><span class="value" id="revisionMismatch">No mismatch observed yet.</span></div>
+<div class="row"><span class="label">Learned exception</span><span class="value" id="revisionException">—</span></div>
+<div class="row"><span class="label">Recovery route</span><span class="value" id="revisionRecovery">—</span></div>
+</div>
+<div class="preds" id="revisionHistory"></div>
+</article>
+
 <article class="card s5">
 <div class="head"><div><h2>Current attention</h2><div class="sub">What currently has the strongest claim on foreground behavior.</div></div><span class="pill" id="drivePressure">—</span></div>
 <div class="attention"><div class="micro">Dominant drive</div><div class="main" id="dominantDrive">—</div><div class="micro" id="intentionRationale">—</div></div>
@@ -150,6 +165,21 @@ function renderPlanning(o){
  el("planningSource").textContent=lab.bootstrapped_from_action_count?lab.bootstrapped_from_action_count+" Phase 32 actions":"—";
  el("planningSequence").innerHTML=(plan.actions||[]).map((a,i)=>'<span class="pred '+(i<(+plan.next_step_index||0)?'confirmed':i===(+plan.next_step_index||0)?'pending':'')+'">'+(i+1)+'. '+esc(a)+' → '+esc(vec((plan.predicted_states||[])[i]))+'</span>').join("");
 }
+function renderModelRevision(o){
+ const lab=o.planning_lab||{},revisions=lab.model_revisions||[],effects=lab.state_effects||{},plans=lab.plans||[];
+ const last=revisions[revisions.length-1]||{},recovery=plans.slice().reverse().find(p=>p.reason==="replan_after_invalidation")||{};
+ const exceptions=Object.entries(effects).filter(([,e])=>(+e.blocked_samples||0)>0||e.blocked===true),latestException=exceptions[exceptions.length-1]||[];
+ let status="waiting for surprise",cls="blue";
+ if(revisions.length){status=recovery.id?"replanned":"revision recorded";cls=recovery.id?"good":"warn"}
+ el("revisionStatus").textContent=status;el("revisionStatus").className="pill "+cls;
+ el("revisionCount").textContent=revisions.length;
+ el("stateEffectCount").textContent=Object.keys(effects).length;
+ el("latestRevision").textContent=last.id||"—";
+ el("revisionMismatch").textContent=last.id?vec(last.predicted_after)+" predicted → "+vec(last.observed_after)+" observed":"No mismatch observed yet.";
+ el("revisionException").textContent=latestException.length?latestException[0]+" · "+((latestException[1]||{}).blocked_samples||0)+" blocked sample"+(((latestException[1]||{}).blocked_samples||0)===1?"":"s"):"—";
+ el("revisionRecovery").textContent=recovery.id?recovery.id+" · "+pretty(recovery.reason||"replan")+" · "+vec(recovery.start)+" → "+vec(recovery.goal):(revisions.length?"Waiting for next natural replan.":"—");
+ el("revisionHistory").innerHTML=tail(revisions,4).map(r=>'<span class="pred violated">'+esc(r.id)+" · "+esc(r.state_action_key||"state/action")+" · "+esc(vec(r.predicted_after))+" → "+esc(vec(r.observed_after))+"</span>").join("");
+}
 function renderAttention(o){const i=tail(o.intentions,1)[0]||{},d=i.dominant_drive||"—",pressure=Number((o.drives||{})[d]);el("dominantDrive").textContent=pretty(d);el("intentionKind").textContent=pretty(i.kind);el("intentionTarget").textContent=i.target||"—";el("intentionRationale").textContent=i.rationale||"—";el("drivePressure").textContent=Number.isFinite(pressure)?pressure.toFixed(2)+" pressure":"—";
  const q=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0];el("currentQuestion").textContent=q?.text||"—";
  const active=(o.experiments||[]).filter(x=>!["completed","closed","rejected"].includes(x.status)).slice(-1)[0];el("activeExperiment").textContent=active?active.id+" · "+pretty(active.readiness||active.status):"—";
@@ -166,7 +196,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderPlanning(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function resolveGrowthSha(){
  const now=Date.now();
  if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
