@@ -2474,6 +2474,172 @@ class AgentCoreTests(unittest.TestCase):
             5,
         )
 
+    def test_empirical_frontier_requires_mature_decisive_evidence(self) -> None:
+        from agenttest.learning import (
+            REPOSITORY_STABILITY_FAMILY,
+            consolidate_empirical_learning,
+            empirical_frontier_signal,
+        )
+
+        state = initial_state()
+        state["cycles"] = 10
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "confirmed",
+                "evidence_refs": [f"P{index:06d}"],
+            }
+            for index in range(1, 3)
+        ]
+
+        consolidate_empirical_learning(state)
+        self.assertIsNone(empirical_frontier_signal(state))
+
+        state["experiments"].append(
+            {
+                "id": "X000003",
+                "cycle": 3,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "confirmed",
+                "evidence_refs": ["P000003"],
+            }
+        )
+        consolidate_empirical_learning(state)
+        signal = empirical_frontier_signal(state)
+
+        self.assertIsNotNone(signal)
+        self.assertEqual(signal["family"], REPOSITORY_STABILITY_FAMILY)
+        self.assertEqual(signal["evaluable_trials"], 3)
+        self.assertEqual(signal["stable_observations"], 3)
+        self.assertEqual(signal["change_observations"], 0)
+        self.assertGreater(signal["pressure"], 0.5)
+        self.assertIn("P000003", signal["evidence_refs"])
+
+    def test_mixed_empirical_family_has_no_frontier_transfer_authority(self) -> None:
+        from agenttest.learning import (
+            consolidate_empirical_learning,
+            empirical_frontier_signal,
+        )
+
+        state = initial_state()
+        state["cycles"] = 10
+        statuses = ["confirmed", "confirmed", "violated", "violated"]
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": status,
+                "evidence_refs": [f"P{index:06d}"],
+            }
+            for index, status in enumerate(statuses, start=1)
+        ]
+
+        consolidate_empirical_learning(state)
+
+        self.assertIsNone(empirical_frontier_signal(state))
+
+    def test_empirical_learning_transfers_into_intention_selection(self) -> None:
+        from agenttest.drives import choose_intention, compute_drives
+        from agenttest.learning import (
+            REPOSITORY_STABILITY_FAMILY,
+            consolidate_empirical_learning,
+        )
+
+        state = initial_state()
+        state["cycles"] = 10
+        state["metrics"].update(
+            {
+                "continuity": 1.0,
+                "self_model": 1.0,
+                "open_endedness": 1.0,
+            }
+        )
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "confirmed",
+                "evidence_refs": [f"P{index:06d}", f"R{index:06d}"],
+            }
+            for index in range(1, 4)
+        ]
+        consolidate_empirical_learning(state)
+
+        drives = compute_drives(
+            state,
+            strict_question_attention=True,
+        )
+        intention = choose_intention(state, drives)
+
+        self.assertGreater(drives["empirical_frontier"], 0.5)
+        self.assertEqual(intention["dominant_drive"], "empirical_frontier")
+        self.assertEqual(intention["kind"], "explore_empirical_frontier")
+        self.assertEqual(intention["target"], REPOSITORY_STABILITY_FAMILY)
+        self.assertTrue(intention["evidence_refs"])
+        self.assertEqual(
+            intention["empirical_transfer"]["evaluable_trials"],
+            3,
+        )
+
+    def test_empirical_transfer_redirects_attention_without_admitting_ungrounded_experiment(self) -> None:
+        state = initial_state()
+        state["cycles"] = 10
+        state["generation"] = 10
+        prior = observation(100)
+        prior["cycle"] = 10
+        state["environment_snapshots"] = [prior]
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "confirmed",
+                "evidence_refs": [f"P{index:06d}", f"R{index:06d}"],
+            }
+            for index in range(1, 4)
+        ]
+        self.store.save(state)
+
+        result = self.core.cycle(
+            observation=observation(100),
+            strict_experiment_admission=True,
+        )
+        after = self.store.load()
+        question = result["question"]
+
+        self.assertEqual(
+            result["intention"]["kind"],
+            "explore_empirical_frontier",
+        )
+        self.assertEqual(
+            question["source"],
+            "empirical_frontier_transfer",
+        )
+        self.assertEqual(
+            question["source_learning_family"],
+            "repository_stability_without_intervention",
+        )
+        self.assertTrue(question["source_evidence_refs"])
+        self.assertIsNone(result["experiment"])
+        self.assertIsNotNone(result["prediction_experiment"])
+        self.assertEqual(
+            [
+                item["id"]
+                for item in after["experiments"]
+                if item.get("status") == "proposed"
+            ],
+            [result["prediction_experiment"]["id"]],
+        )
+
     def test_prediction_contract_resolves_only_matching_experiment(self) -> None:
         first = self.core.cycle(observation=observation(100))
         state = self.store.load()

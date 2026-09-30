@@ -25,6 +25,7 @@ from agenttest.intervention import record_verified_intervention
 from agenttest.learning import (
     REPOSITORY_STABILITY_FAMILY,
     consolidate_empirical_learning,
+    empirical_frontier_signal,
 )
 from agenttest.diagnostics import run_proposal_diagnostic
 from agenttest.proposal_review import review_change_proposal
@@ -32,7 +33,7 @@ from agenttest.semantic import actionable_open_questions, retrieve_semantic_memo
 from agenttest.self_proposal import propose_self_change, select_change_target
 from agenttest.state import StateStore, initial_state
 from agenttest.world import current_world_claims
-from agenttest.drives import compute_drives
+from agenttest.drives import choose_intention, compute_drives
 
 SUITE = "behavioral-preservation-v25"
 
@@ -1884,6 +1885,88 @@ def specification_backlog_lifecycle_scope() -> dict[str, Any]:
         temp_stale.cleanup()
 
 
+def empirical_learning_transfers_to_attention_without_ungrounded_action() -> dict[str, Any]:
+    temp, store, core = fresh()
+    try:
+        state = store.load()
+        state["cycles"] = 10
+        state["generation"] = 10
+        state["metrics"].update(
+            {
+                "continuity": 1.0,
+                "self_model": 1.0,
+                "open_endedness": 1.0,
+            }
+        )
+        prior = observation(100)
+        prior["cycle"] = 10
+        state["environment_snapshots"] = [prior]
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "confirmed",
+                "evidence_refs": [f"P{index:06d}", f"R{index:06d}"],
+            }
+            for index in range(1, 4)
+        ]
+        consolidate_empirical_learning(state)
+        signal = empirical_frontier_signal(state)
+        pre_drives = compute_drives(
+            state,
+            strict_question_attention=True,
+        )
+        pre_intention = choose_intention(state, pre_drives)
+        store.save(state)
+
+        result = core.cycle(
+            observation=observation(100),
+            strict_experiment_admission=True,
+        )
+        after = store.load()
+        primary = result.get("experiment")
+        prediction_experiment = result.get("prediction_experiment")
+        question = result.get("question") or {}
+        proposed_ids = [
+            item.get("id")
+            for item in after.get("experiments", [])
+            if item.get("status") == "proposed"
+        ]
+
+        return {
+            "passed": (
+                signal is not None
+                and signal.get("evaluable_trials") == 3
+                and float(signal.get("pressure", 0.0)) > 0.5
+                and pre_intention.get("kind") == "explore_empirical_frontier"
+                and result.get("intention", {}).get("kind")
+                == "explore_empirical_frontier"
+                and question.get("source") == "empirical_frontier_transfer"
+                and question.get("source_learning_family")
+                == REPOSITORY_STABILITY_FAMILY
+                and bool(question.get("source_evidence_refs"))
+                and primary is None
+                and prediction_experiment is not None
+                and proposed_ids == [prediction_experiment.get("id")]
+            ),
+            "signal_pressure": signal.get("pressure") if signal else None,
+            "pre_intention": pre_intention.get("kind"),
+            "cycle_intention": result.get("intention", {}).get("kind"),
+            "question_source": question.get("source"),
+            "primary_experiment_id": primary.get("id") if primary else None,
+            "prediction_experiment_id": (
+                prediction_experiment.get("id")
+                if prediction_experiment
+                else None
+            ),
+            "proposed_ids": proposed_ids,
+        }
+    finally:
+        temp.cleanup()
+
+
 def bounded_action_lab_causal_learning() -> dict[str, Any]:
     state = initial_state()
     first_actions = []
@@ -2202,6 +2285,7 @@ CHECKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("system_diagnostic_evidence_governance", system_diagnostic_evidence_governance),
     ("blocked_attention_diagnostic_governance", blocked_attention_diagnostic_governance),
     ("autonomous_grounded_experiment_admission", autonomous_grounded_experiment_admission),
+    ("empirical_learning_transfers_to_attention_without_ungrounded_action", empirical_learning_transfers_to_attention_without_ungrounded_action),
     ("bounded_action_lab_causal_learning", bounded_action_lab_causal_learning),
     ("empirical_learning_changes_future_prediction_stance", empirical_learning_changes_future_prediction_stance),
     ("parked_question_attention_scope", parked_question_attention_scope),
