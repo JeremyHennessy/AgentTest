@@ -95,7 +95,8 @@ const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.is
 function age(iso){if(!iso)return"—";const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000));return s<60?s+"s":s<3600?Math.floor(s/60)+"m":(s/3600).toFixed(1)+"h"}
 function arrow(d){if(!Array.isArray(d))return"·";const x=+d[0],y=+d[1];return x===1&&y===0?"→":x===-1&&y===0?"←":x===0&&y===1?"↑":x===0&&y===-1?"↓":x===0&&y===0?"•":vec(d)}
 function renderWorld(o){
- const lab=o.action_lab||{},b=+(lab.bounds??2),pos=lab.position||[0,0],vis=lab.visit_counts||{},h=lab.history||[],cells=[];
+ const lab=o.action_lab||{},b=+(lab.bounds??2),pos=lab.position||[0,0],vis=lab.visit_counts||{},h=lab.history||[],cells=[],side=b*2+1;
+ el("worldGrid").style.gridTemplateColumns="repeat("+side+",1fr)";el("worldGrid").style.gridTemplateRows="repeat("+side+",1fr)";
  for(let y=b;y>=-b;y--)for(let x=-b;x<=b;x++){const k=x+","+y,c=+vis[k]||0,a=+pos[0]===x&&+pos[1]===y;cells.push('<div class="cell'+(c?' visited':'')+(a?' active':'')+'"><span class="coord">'+x+','+y+'</span>'+(a?'<span class="agent"></span>':'')+(c?'<span class="visits">×'+c+'</span>':'')+'</div>')}
  el("worldGrid").innerHTML=cells.join("");
  const path=[];if(h.length&&Array.isArray(h[0].before))path.push(h[0].before);h.forEach(a=>Array.isArray(a.after)&&path.push(a.after));
