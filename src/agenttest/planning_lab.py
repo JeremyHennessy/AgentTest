@@ -101,8 +101,17 @@ def _bootstrap_from_action_lab(
     lab: dict[str, Any],
 ) -> bool:
     if lab.get("status") != "uninitialized":
-        _rebuild_model(lab)
-        return True
+        learned = _rebuild_model(lab)
+        ready = all(
+            int(learned[action].get("unblocked_samples", 0) or 0)
+            >= MIN_MODEL_SAMPLES
+            and isinstance(learned[action].get("modal_delta"), list)
+            and float(learned[action].get("confidence", 0.0) or 0.0) > 0.0
+            for action in ACTION_ORDER
+        )
+        if not ready:
+            lab["status"] = "waiting_for_model"
+        return ready
 
     action_lab = state.get("action_lab", {})
     valid, error = validate_action_lab_history(action_lab)
