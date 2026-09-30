@@ -2640,6 +2640,70 @@ class AgentCoreTests(unittest.TestCase):
             [result["prediction_experiment"]["id"]],
         )
 
+    def test_empirical_frontier_question_persists_across_consecutive_cycles(self) -> None:
+        state = initial_state()
+        state["cycles"] = 10
+        state["generation"] = 10
+        prior = observation(100)
+        prior["cycle"] = 10
+        state["environment_snapshots"] = [prior]
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "status": "completed",
+                "source": "repository_stability_prediction",
+                "observed_prediction_status": "confirmed",
+                "evidence_refs": [f"P{index:06d}", f"R{index:06d}"],
+            }
+            for index in range(1, 4)
+        ]
+        self.store.save(state)
+
+        first = self.core.cycle(
+            observation=observation(100),
+            strict_experiment_admission=True,
+        )
+        second = self.core.cycle(
+            observation=observation(100),
+            strict_experiment_admission=True,
+        )
+        after = self.store.load()
+
+        self.assertEqual(
+            first["intention"]["kind"],
+            "explore_empirical_frontier",
+        )
+        self.assertEqual(
+            second["intention"]["kind"],
+            "explore_empirical_frontier",
+        )
+        self.assertEqual(first["question"]["id"], second["question"]["id"])
+        self.assertEqual(
+            second["question"]["text"],
+            (
+                "Which distinct measurable relationship should be tested next to "
+                "challenge or extend the learned "
+                "repository_stability_without_intervention pattern?"
+            ),
+        )
+        self.assertEqual(
+            second["question"]["source"],
+            "empirical_frontier_transfer",
+        )
+        self.assertEqual(
+            second["question"]["source_learning_family"],
+            "repository_stability_without_intervention",
+        )
+        self.assertTrue(second["question"]["source_evidence_refs"])
+
+        persisted = next(
+            item
+            for item in after["questions"]
+            if item["id"] == second["question"]["id"]
+        )
+        self.assertEqual(persisted["times_selected"], 2)
+
     def test_prediction_contract_resolves_only_matching_experiment(self) -> None:
         first = self.core.cycle(observation=observation(100))
         state = self.store.load()
