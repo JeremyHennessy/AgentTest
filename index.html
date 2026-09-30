@@ -1,331 +1,134 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <title>AgentTest · Persistent Growth Console</title>
-  <meta name="description" content="Live evidence-linked view of the AgentTest persistent growth experiment.">
-  <style>
-    :root {
-      --bg:#07111d;
-      --panel:#0c1928;
-      --panel-2:#102236;
-      --line:#1d3852;
-      --text:#eaf4ff;
-      --muted:#8da7bd;
-      --accent:#56d8c2;
-      --accent-2:#7fb8ff;
-      --warn:#f4c875;
-      --danger:#ff8e8e;
-      --shadow:0 20px 70px rgba(0,0,0,.28);
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      min-height:100vh;
-      background:
-        radial-gradient(circle at 10% 0%, rgba(86,216,194,.12), transparent 32rem),
-        radial-gradient(circle at 90% 5%, rgba(127,184,255,.10), transparent 28rem),
-        var(--bg);
-      color:var(--text);
-      font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    }
-    a{color:inherit}
-    .shell{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:34px 0 70px}
-    header{display:flex;gap:24px;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
-    .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:800}
-    h1{font-size:clamp(31px,5vw,58px);line-height:1.02;margin:8px 0 12px;max-width:760px;letter-spacing:-.035em}
-    .lede{max-width:760px;color:var(--muted);font-size:16px;margin:0}
-    .status{
-      display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid var(--line);
-      border-radius:999px;background:rgba(12,25,40,.76);white-space:nowrap;color:var(--muted)
-    }
-    .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px var(--accent)}
-    .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}
-    .card{
-      border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,rgba(16,34,54,.94),rgba(10,23,37,.94));
-      box-shadow:var(--shadow);padding:22px
-    }
-    .card h2{margin:0 0 5px;font-size:19px}
-    .sub{margin:0;color:var(--muted);font-size:13px}
-    .chat{margin-top:18px;display:flex;flex-direction:column;gap:12px}
-    textarea{
-      width:100%;min-height:124px;resize:vertical;border-radius:14px;border:1px solid var(--line);
-      background:#071421;color:var(--text);padding:15px 16px;font:inherit;outline:none
-    }
-    textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(86,216,194,.10)}
-    .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    button,.button{
-      appearance:none;border:0;border-radius:12px;padding:11px 14px;font-weight:800;font:inherit;
-      text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px
-    }
-    .primary{background:var(--accent);color:#03231e}
-    .secondary{background:#142a40;color:var(--text);border:1px solid var(--line)}
-    .micro{color:var(--muted);font-size:12px}
-    .security{
-      margin-top:14px;padding:12px 14px;border:1px solid rgba(244,200,117,.26);
-      background:rgba(244,200,117,.06);border-radius:13px;color:#d9c79c;font-size:13px
-    }
-    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:17px}
-    .stat{padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(5,17,29,.42)}
-    .stat .v{font-size:21px;font-weight:850;letter-spacing:-.02em}
-    .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-top:2px}
-    .section-title{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:800;margin:20px 0 8px}
-    .response{
-      padding:17px;border-radius:15px;border:1px solid var(--line);background:#071421;white-space:pre-wrap
-    }
-    .row{display:flex;gap:12px;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(29,56,82,.65)}
-    .row:last-child{border-bottom:0}
-    .label{color:var(--muted)}
-    .value{text-align:right;max-width:68%;overflow-wrap:anywhere}
-    .metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;margin-top:12px}
-    .metric{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
-    .track{grid-column:1/-1;height:5px;border-radius:99px;background:#071421;overflow:hidden}
-    .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px}
-    .pending{margin-top:12px;color:var(--warn);font-size:13px;min-height:20px}
-    .lab-layout{display:grid;grid-template-columns:minmax(260px,.8fr) 1.2fr;gap:18px;margin-top:18px;align-items:start}
-    .lab-board{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:360px}
-    .lab-cell{aspect-ratio:1;border:1px solid var(--line);border-radius:10px;background:#071421;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;position:relative}
-    .lab-cell.visited{background:rgba(127,184,255,.09)}
-    .lab-cell.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(86,216,194,.12),0 0 20px rgba(86,216,194,.12);color:var(--accent);font-weight:900}
-    .lab-cell .count{position:absolute;right:5px;bottom:3px;font-size:9px;color:var(--muted)}
-    .lab-effects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
-    .lab-effect{border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(5,17,29,.42)}
-    .lab-effect strong{display:block;margin-bottom:3px}
-    .error{color:var(--danger)}
-    footer{margin-top:22px;color:var(--muted);font-size:12px;display:flex;gap:14px;flex-wrap:wrap}
-    @media(max-width:820px){
-      header{flex-direction:column}
-      .grid{grid-template-columns:1fr}
-      .lab-layout{grid-template-columns:1fr}
-      .shell{width:min(100% - 20px,1180px);padding-top:22px}
-    }
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark">
+<title>AgentTest · Live Observer</title>
+<style>
+:root{--bg:#06101a;--panel:#0d1d2b;--panel2:#102536;--line:#1d3b52;--text:#eef8ff;--muted:#8ba8bd;--cyan:#5fe0c9;--blue:#7ab9ff;--gold:#f2c978;--green:#7ae3aa;--red:#ff9696}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 8% 0,rgba(95,224,201,.12),transparent 30rem),radial-gradient(circle at 92% 0,rgba(122,185,255,.10),transparent 28rem),var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:inherit}.shell{width:min(1400px,calc(100% - 28px));margin:auto;padding:28px 0 60px}.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:17px}.eyebrow{color:var(--cyan);font-weight:900;font-size:11px;letter-spacing:.15em;text-transform:uppercase}h1{font-size:clamp(31px,4.7vw,58px);line-height:1;letter-spacing:-.045em;margin:7px 0 10px}.lede{max-width:780px;color:var(--muted);margin:0}.status{border:1px solid var(--line);border-radius:999px;padding:9px 12px;color:var(--muted);background:#091824;white-space:nowrap}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 16px var(--cyan);margin-right:7px}
+.summary{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:15px}.stat,.card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(16,37,54,.95),rgba(8,23,36,.96));box-shadow:0 22px 70px rgba(0,0,0,.25)}.stat{padding:13px 14px;border-radius:15px}.stat .k{font-size:10px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:800}.stat .v{font-size:24px;font-weight:900;letter-spacing:-.03em;margin-top:6px}.stat .s{font-size:10px;color:var(--muted);margin-top:3px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:15px}.card{border-radius:19px;padding:19px;min-width:0}.s8{grid-column:span 8}.s7{grid-column:span 7}.s5{grid-column:span 5}.s4{grid-column:span 4}.s12{grid-column:1/-1}.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:13px}.head h2{margin:0 0 3px;font-size:18px}.sub,.micro{color:var(--muted);font-size:11px}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 8px;font-size:10px;color:var(--muted);white-space:nowrap}.good{color:var(--green);border-color:rgba(122,227,170,.32)}.warn{color:var(--gold);border-color:rgba(242,201,120,.32)}.blue{color:var(--blue);border-color:rgba(122,185,255,.32)}
+.world-layout{display:grid;grid-template-columns:minmax(360px,1.15fr) minmax(260px,.85fr);gap:17px}.board-wrap{position:relative;aspect-ratio:1;max-width:630px;margin:auto}.board{position:absolute;inset:0;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:7px}.trail{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}.cell{position:relative;border:1px solid var(--line);border-radius:13px;background:#071522;display:flex;align-items:center;justify-content:center}.cell.visited{background:linear-gradient(145deg,rgba(122,185,255,.12),rgba(95,224,201,.05));border-color:#2d536a}.cell.active{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(95,224,201,.13),0 0 25px rgba(95,224,201,.12)}.coord{position:absolute;left:6px;top:4px;font-size:9px;color:#58778d}.visits{position:absolute;right:6px;bottom:4px;font-size:9px;color:var(--muted)}.agent{width:14px;height:14px;border-radius:50%;background:var(--cyan);box-shadow:0 0 18px var(--cyan);z-index:3}
+.rows{border-top:1px solid rgba(29,59,82,.7)}.row{display:grid;grid-template-columns:125px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid rgba(29,59,82,.55)}.row .label{color:var(--muted)}.row .value{text-align:right;overflow-wrap:anywhere}.gate{margin-top:13px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#071522}.gate-top{display:flex;justify-content:space-between;gap:10px}.progress{height:7px;background:#04101a;border-radius:999px;overflow:hidden;margin-top:9px}.progress>div{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue));border-radius:999px}
+.models{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.model{border:1px solid var(--line);border-radius:13px;padding:11px;background:#071522}.model.learned{border-color:#2d566e}.model-top{display:flex;justify-content:space-between}.name{font-weight:900;text-transform:capitalize}.effect{font-size:26px;font-weight:900;color:var(--cyan);margin:6px 0 1px}
+.attention{border-left:3px solid var(--cyan);padding-left:12px}.attention .main{font-size:21px;font-weight:900;margin:2px 0}.question{margin-top:12px;padding:11px;border:1px solid var(--line);border-radius:12px;background:#071522}.question b{display:block;color:var(--muted);font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
+.evidence{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.ebox{border:1px solid var(--line);border-radius:12px;padding:11px;background:#071522}.ebox .n{font-size:21px;font-weight:900}.ebox .t{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}.preds{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.pred{padding:4px 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:9px}.pred.confirmed{color:var(--green)}.pred.pending{color:var(--blue)}.pred.invalidated_by_intervention{color:var(--gold)}
+.timeline .event{display:grid;grid-template-columns:58px 95px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid rgba(29,59,82,.5)}.cycle{color:var(--muted);font:10px ui-monospace,monospace}.kind{color:var(--blue);font-size:9px;text-transform:uppercase;letter-spacing:.09em;font-weight:900}.body{font-size:11px}.body strong{color:var(--text)}
+.bars{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 13px}.bar{display:grid;grid-template-columns:1fr auto;gap:6px}.track{grid-column:1/-1;height:5px;border-radius:999px;background:#06111c;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue))}.barname,.barval{font-size:10px;color:var(--muted)}
+.changes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.change{border:1px solid var(--line);border-radius:12px;padding:11px;background:#071522}.change b{font-size:11px}.change div{font-size:9px;color:var(--muted);margin-top:3px}
+details{margin-top:15px;border:1px solid var(--line);border-radius:14px;background:#081724}summary{cursor:pointer;padding:13px 15px;color:var(--muted);font-weight:800}.interaction{padding:0 15px 15px}textarea{width:100%;min-height:85px;resize:vertical;border:1px solid var(--line);background:#06131f;color:var(--text);border-radius:11px;padding:11px;font:inherit}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}button,.button{border:1px solid var(--line);background:#112b40;color:var(--text);border-radius:9px;padding:8px 10px;text-decoration:none;font:inherit;font-size:11px;font-weight:800;cursor:pointer}.primary{background:var(--cyan);color:#02231d}.pending{font-size:10px;color:var(--gold);margin-top:7px}footer{display:flex;gap:13px;flex-wrap:wrap;margin-top:17px;color:var(--muted);font-size:10px}.error{color:var(--red)}
+@media(max-width:1080px){.summary{grid-template-columns:repeat(3,1fr)}.s8,.s7,.s5,.s4{grid-column:span 6}.world-layout{grid-template-columns:1fr}}@media(max-width:720px){.shell{width:min(100% - 18px,1400px);padding-top:18px}.top{flex-direction:column}.summary{grid-template-columns:repeat(2,1fr)}.grid{display:block}.card{margin-bottom:11px;padding:14px}.models,.bars,.changes{grid-template-columns:1fr}.timeline .event{grid-template-columns:45px 75px 1fr}.row{grid-template-columns:95px 1fr}}
+</style>
 </head>
 <body>
-  <main class="shell">
-    <header>
-      <div>
-        <div class="eyebrow">AgentTest · live experiment</div>
-        <h1>Persistent growth, exposed as evidence.</h1>
-        <p class="lede">This console reads the current persistent interaction state from <code>autonomous/growth</code>. Messages use GitHub owner authentication before they can enter the organism's evidence-linked interaction loop.</p>
-      </div>
-      <div class="status"><span class="dot"></span><span id="liveStatus">Loading live state…</span></div>
-    </header>
+<main class="shell">
+<header class="top">
+<div><div class="eyebrow">AgentTest · live observer</div><h1>Watch the organism learn.</h1><p class="lede">Read-only visibility into persistent state, causal exploration, attention, evidence, and verified self-development. Viewing this dashboard does not change AgentTest or interrupt its heartbeat.</p></div>
+<div class="status"><span class="dot"></span><span id="liveStatus">Loading live state…</span></div>
+</header>
 
-    <div class="grid">
-      <section class="card">
-        <h2>Talk to AgentTest</h2>
-        <p class="sub">Compose here. GitHub performs the authenticated write; the response then appears back in the live state.</p>
-        <div class="chat">
-          <textarea id="message" maxlength="1200" placeholder="What are you investigating now? What evidence would change your direction?"></textarea>
-          <div class="actions">
-            <button class="primary" id="send">Open secure GitHub handoff</button>
-            <button class="secondary" id="refresh">Refresh live state</button>
-            <a class="button secondary" href="https://github.com/JeremyHennessy/AgentTest/actions/workflows/interact.yml" target="_blank" rel="noopener">Advanced workflow</a>
-          </div>
-          <div class="micro">The handoff opens a pre-filled GitHub issue. Submit it while signed in as the repository owner. No GitHub token is stored in this page.</div>
-          <div class="pending" id="pending"></div>
-        </div>
+<section class="summary">
+<div class="stat"><div class="k">Generation</div><div class="v" id="generation">—</div><div class="s" id="generationSub">persistent state</div></div>
+<div class="stat"><div class="k">Action Lab</div><div class="v" id="actionCount">—</div><div class="s" id="actionSub">persisted actions</div></div>
+<div class="stat"><div class="k">Decision</div><div class="v" id="decisionMode">—</div><div class="s" id="decisionSub">latest policy</div></div>
+<div class="stat"><div class="k">Position</div><div class="v" id="position">—</div><div class="s">bounded micro-world</div></div>
+<div class="stat"><div class="k">Empirical stability</div><div class="v" id="stability">—</div><div class="s">stable / evaluable</div></div>
+<div class="stat"><div class="k">State age</div><div class="v" id="stateAge">—</div><div class="s" id="stateAgeSub">last update</div></div>
+</section>
 
-        <div class="section-title">Latest response</div>
-        <div class="response" id="response">Waiting for live state…</div>
+<section class="grid">
+<article class="card s8">
+<div class="head"><div><h2>Exploration space</h2><div class="sub">Path, visited cells, current location, and the latest observed consequence.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
+<div class="world-layout">
+<div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g></svg><div class="board" id="worldGrid"></div></div></div>
+<div><div class="rows">
+<div class="row"><span class="label">Latest action</span><span class="value" id="latestAction">—</span></div>
+<div class="row"><span class="label">Observed delta</span><span class="value" id="latestDelta">—</span></div>
+<div class="row"><span class="label">Blocked</span><span class="value" id="latestBlocked">—</span></div>
+<div class="row"><span class="label">Decision reason</span><span class="value" id="decisionReason">—</span></div>
+<div class="row"><span class="label">Recent action pace</span><span class="value" id="actionPace">—</span></div>
+</div>
+<div class="gate"><div class="gate-top"><div><b>Phase 32 learned-choice gate</b><div class="micro" id="gateCopy">Gathering causal experience.</div></div><span class="pill blue" id="gatePill">—</span></div><div class="progress"><div id="gateProgress" style="width:0%"></div></div></div>
+</div>
+</div>
+</article>
 
-        <div class="section-title">Current adaptive state</div>
-        <div id="current"></div>
-      </section>
+<aside class="card s4"><div class="head"><div><h2>Learned causal model</h2><div class="sub">Effects are learned from outcomes, not inferred from action names.</div></div></div><div class="models" id="causalModel"></div></aside>
 
-      <aside class="card">
-        <h2>Evidence state</h2>
-        <p class="sub">A compact view of the latest persisted interaction—not a claim of consciousness.</p>
+<article class="card s5">
+<div class="head"><div><h2>Current attention</h2><div class="sub">What currently has the strongest claim on foreground behavior.</div></div><span class="pill" id="drivePressure">—</span></div>
+<div class="attention"><div class="micro">Dominant drive</div><div class="main" id="dominantDrive">—</div><div class="micro" id="intentionRationale">—</div></div>
+<div class="rows" style="margin-top:13px"><div class="row"><span class="label">Intention</span><span class="value" id="intentionKind">—</span></div><div class="row"><span class="label">Target</span><span class="value" id="intentionTarget">—</span></div><div class="row"><span class="label">Experiment</span><span class="value" id="activeExperiment">—</span></div></div>
+<div class="question"><b>Most recently selected question</b><span id="currentQuestion">—</span></div>
+</article>
 
-        <div class="stats">
-          <div class="stat"><div class="v" id="cycle">—</div><div class="k">Cycle</div></div>
-          <div class="stat"><div class="v" id="interaction">—</div><div class="k">Interaction</div></div>
-          <div class="stat"><div class="v" id="unverified">—</div><div class="k">Unverified claims</div></div>
-          <div class="stat"><div class="v" id="worldClaims">—</div><div class="k">Prior world claims</div></div>
-        </div>
+<article class="card s7">
+<div class="head"><div><h2>Empirical learning</h2><div class="sub">Evidence behind what AgentTest currently treats as provisionally learned.</div></div><span class="pill good" id="evidenceState">—</span></div>
+<div class="evidence"><div class="ebox"><div class="n" id="stableObs">—</div><div class="t">Stable observations</div></div><div class="ebox"><div class="n" id="evaluableTrials">—</div><div class="t">Evaluable trials</div></div><div class="ebox"><div class="n" id="completedTrials">—</div><div class="t">Completed trials</div></div></div>
+<div class="rows" style="margin-top:10px"><div class="row"><span class="label">Learning family</span><span class="value" id="learningFamily">—</span></div><div class="row"><span class="label">Stability rate</span><span class="value" id="stabilityRate">—</span></div><div class="row"><span class="label">Inconclusive</span><span class="value" id="inconclusiveTrials">—</span></div></div>
+<div class="preds" id="predictionList"></div>
+</article>
 
-        <div class="section-title">Metrics</div>
-        <div class="metrics" id="metrics"></div>
+<article class="card s8"><div class="head"><div><h2>Recent activity</h2><div class="sub">Actions, attention changes, human input, surprises, and verified changes.</div></div><span class="pill" id="eventCount">—</span></div><div class="timeline" id="timeline"></div></article>
 
-        <div class="security">
-          <strong>Security boundary:</strong> GitHub Pages is static. Directly calling a write-capable GitHub API from this page would require exposing a credential, so writes are intentionally handed to GitHub's authenticated UI instead.
-        </div>
-      </aside>
-    </div>
+<aside class="card s4">
+<div class="head"><div><h2>Drive pressures</h2><div class="sub">Pressure feeding the next intention selection.</div></div></div><div class="bars" id="driveBars"></div>
+<div class="head" style="margin-top:19px"><div><h2>Capabilities</h2><div class="sub">Persisted metrics; not claims of consciousness.</div></div></div><div class="bars" id="metricBars"></div>
+</aside>
 
-    <section class="card" style="margin-top:18px">
-      <h2>Bounded Action Lab</h2>
-      <p class="sub">A protected internal micro-world for reversible action→outcome experiments. No network, shell, filesystem, or external-system authority.</p>
-      <div class="lab-layout">
-        <div>
-          <div class="section-title">Persistent position</div>
-          <div class="lab-board" id="labBoard"></div>
-          <div class="pending" id="labStatus">Loading action state…</div>
-        </div>
-        <div>
-          <div class="row"><span class="label">Latest action</span><span class="value" id="labAction">—</span></div>
-          <div class="row"><span class="label">Decision mode</span><span class="value" id="labDecision">—</span></div>
-          <div class="row"><span class="label">Recorded actions</span><span class="value" id="labHistory">—</span></div>
-          <div class="section-title">Learned action effects</div>
-          <div class="lab-effects" id="labEffects"></div>
-        </div>
-      </div>
-    </section>
+<article class="card s12"><div class="head"><div><h2>Verified self-development</h2><div class="sub">Changes admitted only after verification and preservation gates.</div></div><span class="pill good" id="acceptedCount">—</span></div><div class="changes" id="changeHistory"></div></article>
+</section>
 
-    <footer>
-      <span>Source: <a href="https://github.com/JeremyHennessy/AgentTest" target="_blank" rel="noopener">AgentTest repository</a></span>
-      <span>Persistent branch: <a href="https://github.com/JeremyHennessy/AgentTest/tree/autonomous/growth" target="_blank" rel="noopener">autonomous/growth</a></span>
-      <span>Autonomous journal: <a href="https://github.com/JeremyHennessy/AgentTest/pull/4" target="_blank" rel="noopener">PR #4</a></span>
-    </footer>
-  </main>
+<details><summary>Optional owner interaction · hidden by default</summary><div class="interaction"><div class="sub" style="margin-bottom:8px">Existing authenticated GitHub handoff; no token is stored in this page.</div><textarea id="message" maxlength="1200" placeholder="Send an evidence-linked interaction…"></textarea><div class="actions"><button class="primary" id="send">Open secure GitHub handoff</button><button id="refresh">Refresh now</button><a class="button" href="https://github.com/JeremyHennessy/AgentTest/actions/workflows/interact.yml" target="_blank" rel="noopener">Advanced workflow</a></div><div class="pending" id="pending"></div><div class="question"><b>Latest response</b><span id="latestResponse">No persisted response yet.</span></div></div></details>
 
-  <script>
-    const STATE_URL = "https://raw.githubusercontent.com/JeremyHennessy/AgentTest/refs/heads/autonomous/growth/state/last_interaction.json";
-    const ORGANISM_URL = "https://raw.githubusercontent.com/JeremyHennessy/AgentTest/refs/heads/autonomous/growth/state/organism.json";
-    const ISSUE_BASE = "https://github.com/JeremyHennessy/AgentTest/issues/new";
-    const els = Object.fromEntries(["liveStatus","message","send","refresh","pending","response","current","cycle","interaction","unverified","worldClaims","metrics","labBoard","labStatus","labAction","labDecision","labHistory","labEffects"].map(id => [id, document.getElementById(id)]));
-    let latest = null;
+<footer><span><a href="https://github.com/JeremyHennessy/AgentTest" target="_blank">Repository</a></span><span><a href="https://github.com/JeremyHennessy/AgentTest/tree/autonomous/growth" target="_blank">Persistent state</a></span><span><a href="https://github.com/JeremyHennessy/AgentTest/pull/4" target="_blank">Growth journal</a></span><span id="refreshFoot">Waiting for refresh…</span></footer>
+</main>
 
-    const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[ch]));
-
-    function row(label, value) {
-      return `<div class="row"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(value ?? "—")}</span></div>`;
-    }
-
-    function render(data) {
-      latest = data;
-      const interaction = data.interaction || {};
-      const current = data.current || {};
-      const selfModel = data.self_model || {};
-      const world = data.world || {};
-      const metrics = data.metrics || {};
-
-      els.liveStatus.textContent = interaction.created_at ? "Live persistent state" : "State available";
-      els.response.textContent = data.response_text || "No persisted response yet.";
-      els.cycle.textContent = interaction.cycle ?? "—";
-      els.interaction.textContent = interaction.id ?? "—";
-      els.unverified.textContent = (selfModel.unverified || []).length;
-      els.worldClaims.textContent = (world.prior_current_claims || []).length;
-
-      els.current.innerHTML =
-        row("Dominant drive", current.intention?.dominant_drive) +
-        row("Intention", current.intention?.kind) +
-        row("Current question", current.question?.text) +
-        row("Experiment", current.experiment?.id ? `${current.experiment.id} · ${current.experiment.status || "unknown"}` : "—") +
-        row("Experiment method", current.experiment?.method);
-
-      els.metrics.innerHTML = Object.entries(metrics)
-        .sort(([a],[b]) => a.localeCompare(b))
-        .map(([name,value]) => {
-          const n = Math.max(0, Math.min(1, Number(value) || 0));
-          return `<div class="metric"><span>${escapeHtml(name)}</span><strong>${n.toFixed(2)}</strong><div class="track"><div class="fill" style="width:${(n*100).toFixed(0)}%"></div></div></div>`;
-        }).join("");
-
-      const pendingMessage = localStorage.getItem("agenttest.pendingMessage");
-      if (pendingMessage && interaction.input === pendingMessage) {
-        els.pending.textContent = `Response received as ${interaction.id || "latest interaction"}.`;
-        localStorage.removeItem("agenttest.pendingMessage");
-      }
-    }
-
-    function renderActionLab(organism) {
-      const lab = organism?.action_lab;
-      if (!lab) {
-        els.labStatus.textContent = "Action lab is not enabled on the current live baseline.";
-        els.labBoard.innerHTML = "";
-        els.labAction.textContent = "—";
-        els.labDecision.textContent = "—";
-        els.labHistory.textContent = "0";
-        els.labEffects.innerHTML = "";
-        return;
-      }
-
-      const bounds = Number(lab.bounds ?? 2);
-      const position = Array.isArray(lab.position) ? lab.position : [0,0];
-      const visits = lab.visit_counts || {};
-      const cells = [];
-      for (let y = bounds; y >= -bounds; y--) {
-        for (let x = -bounds; x <= bounds; x++) {
-          const key = x + "," + y;
-          const count = Number(visits[key] || 0);
-          const active = Number(position[0]) === x && Number(position[1]) === y;
-          cells.push(
-            `<div class="lab-cell${count ? " visited" : ""}${active ? " active" : ""}" title="(${x}, ${y}) · visits ${count}">` +
-            (active ? "●" : "") +
-            (count ? `<span class="count">${count}</span>` : "") +
-            `</div>`
-          );
-        }
-      }
-      els.labBoard.innerHTML = cells.join("");
-
-      const history = Array.isArray(lab.history) ? lab.history : [];
-      const last = history[history.length - 1] || {};
-      els.labStatus.textContent = history.length
-        ? `${history.length} persisted actions · ${Object.keys(visits).length} visited locations`
-        : "Action lab is initialized but has not acted yet.";
-      els.labAction.textContent = last.action
-        ? `${last.action} · [${(last.before || []).join(", ")}] → [${(last.after || []).join(", ")}]`
-        : "—";
-      els.labDecision.textContent = last.decision?.kind || "—";
-      els.labHistory.textContent = String(history.length);
-
-      const effects = lab.learned_effects || {};
-      els.labEffects.innerHTML = ["north","east","south","west"].map(action => {
-        const effect = effects[action] || {};
-        const delta = Array.isArray(effect.modal_delta) ? "[" + effect.modal_delta.join(", ") + "]" : "unknown";
-        const samples = Number(effect.unblocked_samples || 0);
-        const confidence = Number(effect.confidence || 0);
-        return `<div class="lab-effect"><strong>${escapeHtml(action)}</strong><span class="micro">effect ${escapeHtml(delta)} · ${samples} samples · ${confidence.toFixed(2)} confidence</span></div>`;
-      }).join("");
-    }
-
-    async function loadState() {
-      els.liveStatus.textContent = "Refreshing…";
-      try {
-        const stamp = "?t=" + Date.now();
-        const [interactionRes, organismRes] = await Promise.all([
-          fetch(STATE_URL + stamp, {cache:"no-store"}),
-          fetch(ORGANISM_URL + stamp, {cache:"no-store"})
-        ]);
-        if (!interactionRes.ok) throw new Error("interaction HTTP " + interactionRes.status);
-        if (!organismRes.ok) throw new Error("organism HTTP " + organismRes.status);
-        const [data, organism] = await Promise.all([
-          interactionRes.json(),
-          organismRes.json()
-        ]);
-        render(data);
-        renderActionLab(organism);
-      } catch (err) {
-        els.liveStatus.textContent = "Live state unavailable";
-        els.pending.innerHTML = `<span class="error">Could not load the persistent branch: ${escapeHtml(err.message)}</span>`;
-      }
-    }
-
-    function openHandoff() {
-      const message = els.message.value.trim();
-      if (!message) {
-        els.pending.textContent = "Enter a message first.";
-        els.message.focus();
-        return;
-      }
-      localStorage.setItem("agenttest.pendingMessage", message);
-      const params = new URLSearchParams({
-        title: "AgentTest interaction",
-        body: "/agent " + message
-      });
-      const url = ISSUE_BASE + "?" + params.toString();
-      els.pending.textContent = "GitHub opened in a new tab. Submit the pre-filled issue as the repository owner, then return here; this page will watch for the persisted response. The one-shot issue closes automatically after the response is recorded.";
-      window.open(url, "_blank", "noopener");
-    }
-
-    els.send.addEventListener("click", openHandoff);
-    els.refresh.addEventListener("click", loadState);
-    loadState();
-    setInterval(loadState, 12000);
-  </script>
-</body>
-</html>
+<script>
+const ORGANISM_URL="https://raw.githubusercontent.com/JeremyHennessy/AgentTest/refs/heads/autonomous/growth/state/organism.json";
+const STATE_URL="https://raw.githubusercontent.com/JeremyHennessy/AgentTest/refs/heads/autonomous/growth/state/last_interaction.json";
+const ISSUE_BASE="https://github.com/JeremyHennessy/AgentTest/issues/new",REFRESH_MS=15000,el=id=>document.getElementById(id);
+let organism=null;
+const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.isArray(v)?v.slice(-n):[],vec=v=>Array.isArray(v)?"["+v.join(", ")+"]":"—";
+function age(iso){if(!iso)return"—";const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000));return s<60?s+"s":s<3600?Math.floor(s/60)+"m":(s/3600).toFixed(1)+"h"}
+function arrow(d){if(!Array.isArray(d))return"·";const x=+d[0],y=+d[1];return x===1&&y===0?"→":x===-1&&y===0?"←":x===0&&y===1?"↑":x===0&&y===-1?"↓":x===0&&y===0?"•":vec(d)}
+function renderWorld(o){
+ const lab=o.action_lab||{},b=+(lab.bounds??2),pos=lab.position||[0,0],vis=lab.visit_counts||{},h=lab.history||[],cells=[];
+ for(let y=b;y>=-b;y--)for(let x=-b;x<=b;x++){const k=x+","+y,c=+vis[k]||0,a=+pos[0]===x&&+pos[1]===y;cells.push('<div class="cell'+(c?' visited':'')+(a?' active':'')+'"><span class="coord">'+x+','+y+'</span>'+(a?'<span class="agent"></span>':'')+(c?'<span class="visits">×'+c+'</span>':'')+'</div>')}
+ el("worldGrid").innerHTML=cells.join("");
+ const path=[];if(h.length&&Array.isArray(h[0].before))path.push(h[0].before);h.forEach(a=>Array.isArray(a.after)&&path.push(a.after));
+ const cell=500/(b*2+1),pts=path.map(p=>[(+p[0]+b)*cell+cell/2,(b-(+p[1]))*cell+cell/2]);
+ el("pathLine").setAttribute("points",pts.map(p=>p[0]+","+p[1]).join(" "));
+ el("pathDots").innerHTML=pts.map((p,i)=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(i===pts.length-1?7:4)+'" fill="'+(i===pts.length-1?'#5fe0c9':'#7ab9ff')+'" opacity="'+(i===pts.length-1?1:.7)+'"></circle>').join("");
+ const last=h[h.length-1]||{},mode=last.decision?.kind||"—";
+ el("worldBadge").textContent=Object.keys(vis).length+" / "+Math.pow(b*2+1,2)+" cells visited";el("latestAction").textContent=last.action||"—";el("latestDelta").textContent=vec(last.delta);el("latestBlocked").textContent=last.blocked==null?"—":last.blocked?"yes":"no";el("decisionReason").textContent=last.decision?.reason||"—";
+ const ae=(o.episodes||[]).filter(e=>e.kind==="action_lab"&&e.time).slice(-6);let pace="need more observations";if(ae.length>1){const hrs=(new Date(ae[ae.length-1].time)-new Date(ae[0].time))/36e5;if(hrs>0)pace=((ae.length-1)/hrs).toFixed(1)+" actions / hour"}el("actionPace").textContent=pace;
+ el("actionCount").textContent=h.length;el("actionSub").textContent=Object.keys(vis).length+" locations experienced";el("position").textContent=vec(pos);el("decisionMode").textContent=pretty(mode);el("decisionSub").textContent=last.action?"latest: "+last.action:"no action yet";
+ const learned=mode==="use_learned_transition",p=learned?100:Math.min(100,h.length/9*100);el("gateProgress").style.width=p+"%";
+ if(learned){el("gatePill").textContent="passed";el("gatePill").className="pill good";el("gateCopy").textContent="A learned transition has been used to choose future behavior."}else if(h.length>=9){el("gatePill").textContent="due";el("gatePill").className="pill warn";el("gateCopy").textContent="Nine decisions are available; waiting for learned-transition use."}else{el("gatePill").textContent=h.length+" / 9";el("gatePill").className="pill blue";el("gateCopy").textContent="Causal experience is accumulating before the learned-choice test."}
+ const eff=lab.learned_effects||{};el("causalModel").innerHTML=["north","east","south","west"].map(a=>{const e=eff[a]||{},s=+e.unblocked_samples||0,bl=+e.blocked_samples||0,cf=+e.confidence||0;return'<div class="model'+(s?' learned':'')+'"><div class="model-top"><span class="name">'+esc(a)+'</span><span class="pill '+(s?'good':'')+'">'+(s?'observed':'unknown')+'</span></div><div class="effect">'+esc(arrow(e.modal_delta))+'</div><div class="micro">delta '+esc(vec(e.modal_delta))+'</div><div class="micro">'+s+' usable · '+bl+' blocked · '+cf.toFixed(2)+' confidence</div></div>'}).join("");
+}
+function renderAttention(o){const i=tail(o.intentions,1)[0]||{},d=i.dominant_drive||"—",pressure=Number((o.drives||{})[d]);el("dominantDrive").textContent=pretty(d);el("intentionKind").textContent=pretty(i.kind);el("intentionTarget").textContent=i.target||"—";el("intentionRationale").textContent=i.rationale||"—";el("drivePressure").textContent=Number.isFinite(pressure)?pressure.toFixed(2)+" pressure":"—";
+ const q=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0];el("currentQuestion").textContent=q?.text||"—";
+ const active=(o.experiments||[]).filter(x=>!["completed","closed","rejected"].includes(x.status)).slice(-1)[0];el("activeExperiment").textContent=active?active.id+" · "+pretty(active.readiness||active.status):"—";
+}
+function renderEvidence(o){const fs=Object.values(o.empirical_learning?.families||{}).sort((a,b)=>(b.last_completed_cycle||0)-(a.last_completed_cycle||0)),f=fs[0]||{},st=+f.stable_observations||0,ev=+f.evaluable_trials||0;el("stableObs").textContent=st;el("evaluableTrials").textContent=ev;el("completedTrials").textContent=+f.completed_trials||0;el("learningFamily").textContent=f.family||"—";el("stabilityRate").textContent=f.stability_rate==null?"—":Math.round(f.stability_rate*100)+"%";el("inconclusiveTrials").textContent=+f.inconclusive_trials||0;el("evidenceState").textContent=pretty(f.evidence_state||"none");el("stability").textContent=ev?st+"/"+ev:"—";
+ el("predictionList").innerHTML=tail(o.predictions,6).map(p=>'<span class="pred '+esc(p.status||"")+'">'+esc(p.id)+" · "+esc(pretty(p.status))+'</span>').join("");
+}
+function bars(id,obj){el(id).innerHTML=Object.entries(obj||{}).sort((a,b)=>+b[1]-+a[1]).map(([n,v])=>{const x=Math.max(0,Math.min(1,+v||0));return'<div class="bar"><span class="barname">'+esc(pretty(n))+'</span><span class="barval">'+x.toFixed(2)+'</span><div class="track"><div class="fill" style="width:'+Math.round(x*100)+'%"></div></div></div>'}).join("")}
+function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind==="action_lab").forEach(e=>at[e.cycle]=e.time);tail(o.action_lab?.history,7).forEach(a=>out.push({c:+a.cycle||0,k:"action",t:at[a.cycle],b:"<strong>"+esc(a.action)+"</strong> produced "+esc(vec(a.delta))+". Decision: "+esc(pretty(a.decision?.kind))+"."}));
+ tail(o.intentions,6).forEach((i,n,a)=>{const p=n?a[n-1]:null;if(!p||p.dominant_drive!==i.dominant_drive||p.kind!==i.kind)out.push({c:+i.cycle||0,k:"attention",b:"Selected <strong>"+esc(pretty(i.dominant_drive))+"</strong> via "+esc(pretty(i.kind))+"."})});
+ tail(eps.filter(e=>e.kind==="stimulus"&&e.source==="human_interaction"),2).forEach(e=>out.push({c:+e.cycle||0,k:"interaction",t:e.time,b:"Human input: “"+esc(String(e.content||"").slice(0,130))+"”"}));
+ tail(o.surprises,2).forEach(s=>out.push({c:+s.cycle||0,k:"surprise",t:s.time,b:"Observed changes across <strong>"+Object.keys(s.changes||{}).length+"</strong> measured repository fields."}));
+ tail(o.accepted_changes,3).forEach(c=>out.push({c:+c.accepted_cycle||0,k:"verified change",t:c.accepted_at,b:"Accepted <strong>"+esc(c.proposal_id||c.id)+"</strong> after "+esc(c.verification_scope||"verification")+"."}));
+ return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
+function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
+function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderWorld(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+async function load(){el("liveStatus").textContent="Refreshing…";try{const q="?t="+Date.now(),r=await Promise.all([fetch(ORGANISM_URL+q,{cache:"no-store"}),fetch(STATE_URL+q,{cache:"no-store"})]);if(!r[0].ok||!r[1].ok)throw new Error("state fetch failed");const d=await Promise.all([r[0].json(),r[1].json()]);render(d[0],d[1])}catch(e){el("liveStatus").innerHTML='<span class="error">Live state unavailable</span>';el("refreshFoot").textContent=e.message}}
+function handoff(){const m=el("message").value.trim();if(!m){el("pending").textContent="Enter a message first.";return}localStorage.setItem("agenttest.pendingMessage",m);const p=new URLSearchParams({title:"AgentTest interaction",body:"/agent "+m});el("pending").textContent="GitHub opened in a new tab. Submit the pre-filled issue as repository owner.";window.open(ISSUE_BASE+"?"+p,"_blank","noopener")}
+el("send").addEventListener("click",handoff);el("refresh").addEventListener("click",load);load();setInterval(load,REFRESH_MS);setInterval(()=>{if(organism)el("stateAge").textContent=age(organism.updated_at)},1000);
+</script>
+</body></html>
