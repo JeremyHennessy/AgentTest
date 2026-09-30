@@ -143,3 +143,79 @@ def expected_prediction_status(
         return "confirmed"
     stance = record.get("next_expected_status")
     return stance if stance in {"confirmed", "violated"} else "confirmed"
+
+
+EMPIRICAL_FRONTIER_MAX_PRESSURE = 0.7
+EMPIRICAL_FRONTIER_FULL_MATURITY_TRIALS = 6
+
+
+def empirical_family_saturation(record: dict[str, Any]) -> float:
+    """Estimate how little marginal information another identical trial is likely to add."""
+
+    evaluable = int(record.get("evaluable_trials", 0) or 0)
+    if evaluable < MIN_ADAPTIVE_EVALUABLE_TRIALS:
+        return 0.0
+
+    rate = record.get("stability_rate")
+    if not isinstance(rate, (int, float)):
+        return 0.0
+
+    decisiveness = min(1.0, abs(float(rate) - 0.5) * 2.0)
+    maturity = min(
+        1.0,
+        evaluable / float(EMPIRICAL_FRONTIER_FULL_MATURITY_TRIALS),
+    )
+    return round(decisiveness * (0.5 + 0.5 * maturity), 6)
+
+
+def empirical_frontier_signal(state: dict[str, Any]) -> dict[str, Any] | None:
+    """Transfer mature empirical evidence into a bounded foreground-attention signal."""
+
+    learning_state = state.get("empirical_learning", {})
+    families = (
+        learning_state.get("families", {})
+        if isinstance(learning_state, dict)
+        else {}
+    )
+    candidates: list[dict[str, Any]] = []
+
+    for family, record in families.items():
+        if not isinstance(record, dict):
+            continue
+        saturation = empirical_family_saturation(record)
+        if saturation <= 0.0:
+            continue
+        candidates.append(
+            {
+                "family": str(family),
+                "saturation": saturation,
+                "pressure": round(
+                    EMPIRICAL_FRONTIER_MAX_PRESSURE * saturation,
+                    6,
+                ),
+                "evaluable_trials": int(
+                    record.get("evaluable_trials", 0) or 0
+                ),
+                "stable_observations": int(
+                    record.get("stable_observations", 0) or 0
+                ),
+                "change_observations": int(
+                    record.get("change_observations", 0) or 0
+                ),
+                "stability_rate": record.get("stability_rate"),
+                "evidence_state": record.get("evidence_state"),
+                "evidence_refs": list(record.get("evidence_refs", []))[-16:],
+            }
+        )
+
+    if not candidates:
+        return None
+
+    candidates.sort(
+        key=lambda item: (
+            -float(item["pressure"]),
+            -int(item["evaluable_trials"]),
+            str(item["family"]),
+        )
+    )
+    return candidates[0]
