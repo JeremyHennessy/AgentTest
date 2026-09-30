@@ -1310,12 +1310,10 @@ class AgentCore:
             intention["kind"] == "explore_empirical_frontier"
             and intention.get("target")
         ):
-            candidate = (
+            return (
                 "Which distinct measurable relationship should be tested next to "
                 f"challenge or extend the learned {intention['target']} pattern?"
             )
-            if not self._question_exists(state, candidate):
-                return candidate
 
         if thought is not None:
             candidate = thought["question"].strip()
