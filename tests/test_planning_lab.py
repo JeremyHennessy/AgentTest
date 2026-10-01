@@ -1001,6 +1001,88 @@ class PlanningLabTests(unittest.TestCase):
         self.assertEqual(decision["status"], "completed")
         self.assertIsNone(lab["active_objective_realization_id"])
 
+    def test_phase39_uncertainty_counts_only_realizable_unseen_actions(self) -> None:
+        state = self._phase32_ready_state()
+        lab = ensure_planning_lab_state(state)
+        self.assertTrue(planning_lab._bootstrap_from_action_lab(state, lab))
+
+        lab["bounds"] = 2
+        lab["learned_effects"] = {
+            "north": {
+                "unblocked_samples": 3,
+                "blocked_samples": 0,
+                "modal_delta": [1, 0],
+                "confidence": 1.0,
+            },
+            "east": {
+                "unblocked_samples": 3,
+                "blocked_samples": 0,
+                "modal_delta": [0, -1],
+                "confidence": 1.0,
+            },
+            "south": {
+                "unblocked_samples": 3,
+                "blocked_samples": 0,
+                "modal_delta": [-1, 0],
+                "confidence": 1.0,
+            },
+            "west": {
+                "unblocked_samples": 3,
+                "blocked_samples": 0,
+                "modal_delta": [0, 1],
+                "confidence": 1.0,
+            },
+        }
+        lab["transition_observations"] = [
+            {
+                "source": "test_fixture",
+                "source_id": f"SRC_{action}",
+                "cycle": 1,
+                "action": action,
+                "before": [0, 0],
+                "after": [
+                    {"north": 1, "east": 0, "south": -1, "west": 0}[action],
+                    {"north": 0, "east": -1, "south": 0, "west": 1}[action],
+                ],
+                "delta": {
+                    "north": [1, 0],
+                    "east": [0, -1],
+                    "south": [-1, 0],
+                    "west": [0, 1],
+                }[action],
+                "blocked": False,
+                "world_version": lab["world_version"],
+            }
+            for action in planning_lab.ACTION_ORDER
+        ]
+
+        lab["state_effects"] = {
+            "2,-1|east": {"samples": 1},
+            "2,-1|south": {"samples": 1},
+            "2,-1|west": {"samples": 1},
+            "1,-1|east": {"samples": 1},
+            "1,-1|south": {"samples": 1},
+            "1,-1|west": {"samples": 1},
+        }
+
+        boundary = planning_lab._objective_candidate_metrics(
+            lab,
+            target=(2, -1),
+            visit_count=1,
+            distance=3,
+        )
+        interior = planning_lab._objective_candidate_metrics(
+            lab,
+            target=(1, -1),
+            visit_count=1,
+            distance=3,
+        )
+
+        self.assertEqual(boundary["unseen_target_actions"], 0)
+        self.assertEqual(boundary["uncertainty_value"], 0.0)
+        self.assertEqual(interior["unseen_target_actions"], 1)
+        self.assertEqual(interior["uncertainty_value"], 0.25)
+
     def test_phase39_selects_bounded_objective_with_explicit_counterfactual(self) -> None:
         state = self._phase32_ready_state()
         lab = ensure_planning_lab_state(state)
