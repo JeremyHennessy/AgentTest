@@ -1720,8 +1720,6 @@ def _select_objective_realization(
             position[0] + int(delta[0]),
             position[1] + int(delta[1]),
         ]
-        if not _in_bounds((predicted_after[0], predicted_after[1]), bounds):
-            continue
         refs = [
             str(item.get("source_id") or "")
             for item in observations
