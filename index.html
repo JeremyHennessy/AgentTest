@@ -41,7 +41,7 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <article class="card s8">
 <div class="head"><div><h2>Bounded Action Lab → Phase 33 planning world</h2><div class="sub">Phase 32 causal history remains visible; Phase 33 adds persistent goals and multi-step plans.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
 <div class="world-layout">
-<div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g><g id="blockedEdges"></g></svg><div class="board" id="worldGrid"></div></div></div>
+<div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="plannedPath" points="" fill="none" stroke="rgba(122,185,255,.45)" stroke-width="5" stroke-dasharray="9 8" stroke-linecap="round" stroke-linejoin="round"></polyline><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g><g id="blockedEdges"></g><g id="curiosityMarks"></g></svg><div class="board" id="worldGrid"></div></div></div>
 <div><div class="rows">
 <div class="row"><span class="label">Latest action</span><span class="value" id="latestAction">—</span></div>
 <div class="row"><span class="label">Observed delta</span><span class="value" id="latestDelta">—</span></div>
@@ -49,7 +49,7 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="row"><span class="label">Decision reason</span><span class="value" id="decisionReason">—</span></div>
 <div class="row"><span class="label">Recent action pace</span><span class="value" id="actionPace">—</span></div>
 </div>
-<div class="gate"><div class="gate-top"><div><b>Phase 32 learned-choice gate</b><div class="micro" id="gateCopy">Gathering causal experience.</div></div><span class="pill blue" id="gatePill">—</span></div><div class="progress"><div id="gateProgress" style="width:0%"></div></div></div>
+<div class="gate"><div class="gate-top"><div><b>Phase 32 learned-choice gate</b><div class="micro" id="gateCopy">Gathering causal experience.</div></div><span class="pill blue" id="gatePill">—</span></div><div class="progress"><div id="gateProgress" style="width:0%"></div></div></div><div class="micro" style="margin-top:9px">Map: teal actual · blue dashed planned · red × learned block · gold ? curiosity probe</div>
 </div>
 </div>
 </article>
@@ -85,6 +85,23 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="row"><span class="label">Recovery route</span><span class="value" id="revisionRecovery">—</span></div>
 </div>
 <div class="preds" id="revisionHistory"></div>
+</article>
+
+<article class="card s12">
+<div class="head"><div><h2>Phase 35 · evidence-valued curiosity</h2><div class="sub">Surprising evidence can earn one bounded investigative action when its information value exceeds the cost of delaying the current goal.</div></div><span class="pill blue" id="curiosityStatus">waiting for eligible revisit</span></div>
+<div class="evidence">
+<div class="ebox"><div class="n" id="curiosityDecisionCount">0</div><div class="t">Curiosity decisions</div></div>
+<div class="ebox"><div class="n" id="curiosityProbeCount">0</div><div class="t">Bounded probes</div></div>
+<div class="ebox"><div class="n" id="curiosityLatest">—</div><div class="t">Latest evidence</div></div>
+</div>
+<div class="rows" style="margin-top:10px">
+<div class="row"><span class="label">Source uncertainty</span><span class="value" id="curiositySource">Waiting for a later revisit to unresolved evidence.</span></div>
+<div class="row"><span class="label">Value vs. delay</span><span class="value" id="curiosityTradeoff">—</span></div>
+<div class="row"><span class="label">Decision</span><span class="value" id="curiosityDecision">—</span></div>
+<div class="row"><span class="label">Probe outcome</span><span class="value" id="curiosityOutcome">—</span></div>
+<div class="row"><span class="label">Plan effect</span><span class="value" id="curiosityPlanEffect">—</span></div>
+</div>
+<div class="preds" id="curiosityHistory"></div>
 </article>
 
 <article class="card s5">
@@ -137,8 +154,13 @@ function renderActionLab(o){
  const cell=500/(b*2+1),pts=path.map(p=>[(+p[0]+b)*cell+cell/2,(b-(+p[1]))*cell+cell/2]);
  el("pathLine").setAttribute("points",pts.map(p=>p[0]+","+p[1]).join(" "));
  el("pathDots").innerHTML=pts.map((p,i)=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(i===pts.length-1?7:4)+'" fill="'+(i===pts.length-1?'#5fe0c9':'#7ab9ff')+'" opacity="'+(i===pts.length-1?1:.7)+'"></circle>').join("");
+ const activePlan=(pl.plans||[]).find(p=>p.id===pl.active_plan_id)||{},nextIndex=+activePlan.next_step_index||0;
+ const remainingStates=(activePlan.predicted_states||[]).slice(nextIndex),planned=[pos,...remainingStates].filter(Array.isArray).map(p=>[(+p[0]+b)*cell+cell/2,(b-(+p[1]))*cell+cell/2]);
+ el("plannedPath").setAttribute("points",planned.length>1?planned.map(p=>p[0]+","+p[1]).join(" "):"");
  const revisions=(pl.model_revisions||[]),blocked=new Map();revisions.filter(r=>r.observed_blocked&&Array.isArray(r.before)&&Array.isArray(r.predicted_after)).forEach(r=>blocked.set((r.state_action_key||vec(r.before)+"|"+(r.action||"")),r));
  el("blockedEdges").innerHTML=[...blocked.values()].map(r=>{const a=[(+r.before[0]+b)*cell+cell/2,(b-(+r.before[1]))*cell+cell/2],z=[(+r.predicted_after[0]+b)*cell+cell/2,(b-(+r.predicted_after[1]))*cell+cell/2],mx=(a[0]+z[0])/2,my=(a[1]+z[1])/2;return '<g><line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+z[0]+'" y2="'+z[1]+'" stroke="#ff9696" stroke-width="5" stroke-dasharray="10 8" stroke-linecap="round" opacity=".9"></line><circle cx="'+mx+'" cy="'+my+'" r="11" fill="#071522" stroke="#ff9696" stroke-width="2"></circle><text x="'+mx+'" y="'+(my+5)+'" text-anchor="middle" font-size="16" font-weight="900" fill="#ff9696">×</text></g>'}).join("");
+ const curiosityProbes=tail(pl.curiosity_probes||[],4);
+ el("curiosityMarks").innerHTML=curiosityProbes.map(q=>{if(!Array.isArray(q.before)||!Array.isArray(q.after))return"";const a=[(+q.before[0]+b)*cell+cell/2,(b-(+q.before[1]))*cell+cell/2],z=[(+q.after[0]+b)*cell+cell/2,(b-(+q.after[1]))*cell+cell/2],same=a[0]===z[0]&&a[1]===z[1];if(same)return '<g><circle cx="'+a[0]+'" cy="'+a[1]+'" r="16" fill="none" stroke="#f2c978" stroke-width="4" opacity=".95"></circle><text x="'+a[0]+'" y="'+(a[1]+5)+'" text-anchor="middle" font-size="17" font-weight="900" fill="#f2c978">?</text></g>';return '<g><line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+z[0]+'" y2="'+z[1]+'" stroke="#f2c978" stroke-width="5" stroke-dasharray="5 7" stroke-linecap="round" opacity=".95"></line><circle cx="'+z[0]+'" cy="'+z[1]+'" r="8" fill="#071522" stroke="#f2c978" stroke-width="3"></circle></g>'}).join("");
  const phase32=(lab.history||[]),phase32Last=phase32[phase32.length-1]||{},last=h[h.length-1]||{},plan=(pl.plans||[]).find(p=>p.id===last.plan_id)||{},mode=planningActive?(pl.status||"planning"):phase32Last.decision?.kind||"—";
  el("worldBadge").textContent=(planningActive?"Phase 33 · ":"")+Object.keys(vis).length+" / "+Math.pow(b*2+1,2)+" cells experienced";
  el("latestAction").textContent=last.action||"—";el("latestDelta").textContent=vec(last.delta);el("latestBlocked").textContent=last.blocked==null?"—":last.blocked?"yes":"no";
@@ -182,6 +204,24 @@ function renderModelRevision(o){
  el("revisionRecovery").textContent=recovery.id?recovery.id+" · "+pretty(recovery.reason||"replan")+" · "+vec(recovery.start)+" → "+vec(recovery.goal):(revisions.length?"Waiting for next natural replan.":"—");
  el("revisionHistory").innerHTML=tail(revisions,4).map(r=>'<span class="pred violated">'+esc(r.id)+" · "+esc(r.state_action_key||"state/action")+" · "+esc(vec(r.predicted_after))+" → "+esc(vec(r.observed_after))+"</span>").join("");
 }
+function renderCuriosity(o){
+ const lab=o.planning_lab||{},decisions=lab.curiosity_decisions||[],probes=lab.curiosity_probes||[];
+ const d=decisions[decisions.length-1]||{},p=probes[probes.length-1]||{};
+ let status="waiting for eligible revisit",cls="blue";
+ if(p.id){status=p.matched_prior_state_effect===false?"model challenged":p.blocked?"probe confirmed":"probe observed";cls=p.matched_prior_state_effect===false?"warn":"good"}
+ else if(d.id){status=d.status==="probe_selected"?"probe selected":pretty(d.status||"decision recorded");cls=d.status==="probe_selected"?"warn":"blue"}
+ el("curiosityStatus").textContent=status;el("curiosityStatus").className="pill "+cls;
+ el("curiosityDecisionCount").textContent=decisions.length;
+ el("curiosityProbeCount").textContent=probes.length;
+ el("curiosityLatest").textContent=p.id||d.id||"—";
+ el("curiositySource").textContent=(p.source_model_revision_id||d.source_model_revision_id)?(p.source_model_revision_id||d.source_model_revision_id)+" · "+(p.state_action_key||d.state_action_key||"state/action"):"Waiting for a later revisit to unresolved evidence.";
+ const iv=p.id?p.information_value:d.information_value,gc=p.id?p.goal_delay_cost:d.goal_delay_cost,margin=p.id?p.decision_margin:d.decision_margin;
+ el("curiosityTradeoff").textContent=Number.isFinite(+iv)&&Number.isFinite(+gc)?"information "+(+iv).toFixed(2)+" vs delay "+(+gc).toFixed(2)+" · margin "+(+margin).toFixed(2):"—";
+ el("curiosityDecision").textContent=d.id?d.id+" · "+pretty(d.status||"recorded")+" · "+(d.action||"—")+" from "+vec(d.state):"—";
+ el("curiosityOutcome").textContent=p.id?p.id+" · "+(p.action||"—")+" · "+vec(p.predicted_after)+" predicted → "+vec(p.after)+" observed · "+(p.blocked?"blocked":"moved")+" · evidence "+(+p.state_samples_before||0)+"→"+(+p.state_samples_after||0):"No curiosity probe observed yet.";
+ el("curiosityPlanEffect").textContent=p.id?(p.goal_reached?"probe reached goal":p.replan_required?"state changed · replan required":"plan preserved · pending step unchanged"):"—";
+ el("curiosityHistory").innerHTML=tail(probes,4).map(q=>'<span class="pred '+(q.matched_prior_state_effect===false?'violated':'confirmed')+'">'+esc(q.id)+" · "+esc(q.source_model_revision_id||"MR")+" · "+esc(q.state_action_key||"state/action")+" · "+esc(q.blocked?"blocked":"moved")+"</span>").join("");
+}
 function renderAttention(o){const i=tail(o.intentions,1)[0]||{},d=i.dominant_drive||"—",pressure=Number((o.drives||{})[d]);el("dominantDrive").textContent=pretty(d);el("intentionKind").textContent=pretty(i.kind);el("intentionTarget").textContent=i.target||"—";el("intentionRationale").textContent=i.rationale||"—";el("drivePressure").textContent=Number.isFinite(pressure)?pressure.toFixed(2)+" pressure":"—";
  const q=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0];el("currentQuestion").textContent=q?.text||"—";
  const active=(o.experiments||[]).filter(x=>!["completed","closed","rejected"].includes(x.status)).slice(-1)[0];el("activeExperiment").textContent=active?active.id+" · "+pretty(active.readiness||active.status):"—";
@@ -191,6 +231,7 @@ function renderEvidence(o){const fs=Object.values(o.empirical_learning?.families
 }
 function bars(id,obj){el(id).innerHTML=Object.entries(obj||{}).sort((a,b)=>+b[1]-+a[1]).map(([n,v])=>{const x=Math.max(0,Math.min(1,+v||0));return'<div class="bar"><span class="barname">'+esc(pretty(n))+'</span><span class="barval">'+x.toFixed(2)+'</span><div class="track"><div class="fill" style="width:'+Math.round(x*100)+'%"></div></div></div>'}).join("")}
 function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind==="action_lab").forEach(e=>at[e.cycle]=e.time);tail(o.action_lab?.history,7).forEach(a=>out.push({c:+a.cycle||0,k:"action",t:at[a.cycle],b:"<strong>"+esc(a.action)+"</strong> produced "+esc(vec(a.delta))+". Decision: "+esc(pretty(a.decision?.kind))+"."}));tail(o.planning_lab?.executions,7).forEach(x=>out.push({c:+x.cycle||0,k:"plan step",b:"<strong>"+esc(x.action)+"</strong> predicted "+esc(vec(x.predicted_after))+" and observed "+esc(vec(x.after))+(x.matched_prediction?" · matched.":" · mismatch; replan required.")}));
+ tail(o.planning_lab?.curiosity_probes,3).forEach(q=>out.push({c:+q.cycle||0,k:"curiosity probe",b:"<strong>"+esc(q.action)+"</strong> at "+esc(vec(q.before))+" tested "+esc(q.source_model_revision_id||"prior evidence")+" · "+esc(q.blocked?"blocked":"moved")+" · samples "+esc(q.state_samples_before)+"→"+esc(q.state_samples_after)+"."}));
  tail(o.intentions,6).forEach((i,n,a)=>{const p=n?a[n-1]:null;if(!p||p.dominant_drive!==i.dominant_drive||p.kind!==i.kind)out.push({c:+i.cycle||0,k:"attention",b:"Selected <strong>"+esc(pretty(i.dominant_drive))+"</strong> via "+esc(pretty(i.kind))+"."})});
  tail(eps.filter(e=>e.kind==="stimulus"&&e.source==="human_interaction"),2).forEach(e=>out.push({c:+e.cycle||0,k:"interaction",t:e.time,b:"Human input: “"+esc(String(e.content||"").slice(0,130))+"”"}));
  tail(o.surprises,2).forEach(s=>out.push({c:+s.cycle||0,k:"surprise",t:s.time,b:"Observed changes across <strong>"+Object.keys(s.changes||{}).length+"</strong> measured repository fields."}));
@@ -198,7 +239,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function resolveGrowthSha(){
  const now=Date.now();
  if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
