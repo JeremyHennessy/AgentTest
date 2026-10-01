@@ -1001,6 +1001,191 @@ class PlanningLabTests(unittest.TestCase):
         self.assertEqual(decision["status"], "completed")
         self.assertIsNone(lab["active_objective_realization_id"])
 
+    def test_phase40_can_realize_boundary_exception_information(self) -> None:
+        state = self._phase32_ready_state()
+        lab = ensure_planning_lab_state(state)
+        self.assertTrue(planning_lab._bootstrap_from_action_lab(state, lab))
+
+        world_version = lab["world_version"]
+        lab["transition_observations"] = [
+            {
+                "source": "test_fixture",
+                "source_id": "P40_N1",
+                "cycle": 8,
+                "action": "north",
+                "before": [-1, 0],
+                "after": [0, 0],
+                "delta": [1, 0],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_N2",
+                "cycle": 8,
+                "action": "north",
+                "before": [0, 0],
+                "after": [1, 0],
+                "delta": [1, 0],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_S1",
+                "cycle": 8,
+                "action": "south",
+                "before": [1, 0],
+                "after": [0, 0],
+                "delta": [-1, 0],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_S2",
+                "cycle": 8,
+                "action": "south",
+                "before": [0, 0],
+                "after": [-1, 0],
+                "delta": [-1, 0],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_E1",
+                "cycle": 8,
+                "action": "east",
+                "before": [0, 1],
+                "after": [0, 0],
+                "delta": [0, -1],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_E2",
+                "cycle": 8,
+                "action": "east",
+                "before": [0, 0],
+                "after": [0, -1],
+                "delta": [0, -1],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_W1",
+                "cycle": 8,
+                "action": "west",
+                "before": [0, -1],
+                "after": [0, 0],
+                "delta": [0, 1],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_W2",
+                "cycle": 8,
+                "action": "west",
+                "before": [0, 0],
+                "after": [0, 1],
+                "delta": [0, 1],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_LOCAL_N",
+                "cycle": 9,
+                "action": "north",
+                "before": [-2, 1],
+                "after": [-1, 1],
+                "delta": [1, 0],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_LOCAL_E",
+                "cycle": 9,
+                "action": "east",
+                "before": [-2, 1],
+                "after": [-2, 0],
+                "delta": [0, -1],
+                "blocked": False,
+                "world_version": world_version,
+            },
+            {
+                "source": "test_fixture",
+                "source_id": "P40_LOCAL_W",
+                "cycle": 9,
+                "action": "west",
+                "before": [-2, 1],
+                "after": [-2, 2],
+                "delta": [0, 1],
+                "blocked": False,
+                "world_version": world_version,
+            },
+        ]
+        lab["position"] = [-2, 1]
+        lab["visit_counts"] = {"-2,1": 1}
+        lab["goals"] = [
+            {
+                "id": "PG_PHASE40_BOUNDARY",
+                "assigned_cycle": 11,
+                "completed_cycle": 14,
+                "status": "completed",
+                "target": [-2, 1],
+                "selection": {
+                    "kind": "self_selected_bounded_objective",
+                    "objective_decision_id": "OD_PHASE40_BOUNDARY",
+                },
+            }
+        ]
+        lab["objective_decisions"] = [
+            {
+                "id": "OD_PHASE40_BOUNDARY",
+                "cycle": 11,
+                "changed_choice": True,
+            }
+        ]
+        lab["active_goal_id"] = None
+        lab["active_plan_id"] = None
+        lab["objective_realization_started_cycle"] = 10
+        lab["objective_realization_decisions"] = []
+        lab["objective_realizations"] = []
+        lab["active_objective_realization_id"] = None
+        lab["status"] = "goal_reached"
+
+        state["cycles"] = 15
+        state["generation"] = 15
+        precommit = step_planning_lab(state)
+
+        self.assertEqual(
+            precommit["execution_kind"],
+            "objective_information_precommit",
+        )
+        decision = lab["objective_realization_decisions"][0]
+        self.assertEqual(decision["action"], "south")
+        self.assertEqual(decision["predicted_after"], [-3, 1])
+        self.assertEqual(decision["state_samples_before"], 0)
+
+        state["cycles"] = 16
+        state["generation"] = 16
+        realized = step_planning_lab(state)
+
+        self.assertEqual(realized["action"], "south")
+        self.assertTrue(realized["blocked"])
+        self.assertEqual(realized["after"], [-2, 1])
+        self.assertFalse(realized["matched_prediction"])
+        self.assertEqual(realized["interpretation"], "hypothesis_refuted")
+        self.assertEqual(realized["state_samples_before"], 0)
+        self.assertEqual(realized["state_samples_after"], 1)
+        self.assertEqual(realized["realized_information_gain"], 1.0)
+
     def test_phase39_selects_bounded_objective_with_explicit_counterfactual(self) -> None:
         state = self._phase32_ready_state()
         lab = ensure_planning_lab_state(state)
