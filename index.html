@@ -18,62 +18,75 @@ a{color:inherit}.shell{width:min(1400px,calc(100% - 28px));margin:auto;padding:2
 .bars{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 13px}.bar{display:grid;grid-template-columns:1fr auto;gap:6px}.track{grid-column:1/-1;height:5px;border-radius:999px;background:#06111c;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue))}.barname,.barval{font-size:10px;color:var(--muted)}
 .changes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.change{border:1px solid var(--line);border-radius:12px;padding:11px;background:#071522}.change b{font-size:11px}.change div{font-size:9px;color:var(--muted);margin-top:3px}
 .now-card{padding:17px 19px}.now-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.now-item{border:1px solid var(--line);border-radius:13px;padding:11px 12px;background:#071522;min-width:0}.now-item .t{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:800}.now-item .v{font-size:14px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.ladder{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.phase-chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:9px;color:var(--muted);background:#071522}.phase-chip .p-dot{width:6px;height:6px;border-radius:50%;background:#58778d}.phase-chip.done{color:var(--green);border-color:rgba(122,227,170,.28)}.phase-chip.done .p-dot{background:var(--green);box-shadow:0 0 10px rgba(122,227,170,.45)}.phase-chip.active{color:var(--blue);border-color:rgba(122,185,255,.3)}.phase-chip.active .p-dot{background:var(--blue);box-shadow:0 0 10px rgba(122,185,255,.45)}
-.evidence-drawer{padding:0;overflow:hidden;margin-top:0}.evidence-drawer>summary{list-style:none;padding:17px 19px;display:flex;justify-content:space-between;gap:15px;align-items:center;color:var(--text)}.evidence-drawer>summary::-webkit-details-marker{display:none}.evidence-drawer>summary:after{content:"Open";font-size:10px;color:var(--blue);border:1px solid var(--line);border-radius:999px;padding:5px 8px}.evidence-drawer[open]>summary:after{content:"Close"}.drawer-title{font-weight:900}.drawer-copy{display:block;color:var(--muted);font-size:11px;font-weight:400;margin-top:2px}.detail-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:15px;padding:0 15px 15px}.detail-grid>.card{box-shadow:none;margin:0;background:#081724}
+.story-main{font-size:clamp(18px,2vw,25px);line-height:1.35;font-weight:800;letter-spacing:-.02em;padding:14px 15px;border:1px solid rgba(95,224,201,.24);border-radius:15px;background:linear-gradient(135deg,rgba(95,224,201,.08),rgba(122,185,255,.04));margin-bottom:10px}.story-main strong{color:var(--cyan)}.milestone-phase{font-size:12px;color:var(--cyan);font-weight:900;letter-spacing:.1em;text-transform:uppercase}.milestone-main{font-size:24px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin:8px 0}.milestone-copy{color:var(--muted);font-size:12px;margin:0 0 14px}.milestone-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.milestone-stat{border:1px solid var(--line);border-radius:12px;padding:10px;background:#071522}.milestone-stat b{display:block;font-size:18px}.milestone-stat span{font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}.phase-chip.latest{color:var(--cyan);border-color:rgba(95,224,201,.42);box-shadow:0 0 18px rgba(95,224,201,.08)}.phase-chip.latest .p-dot{background:var(--cyan);box-shadow:0 0 12px var(--cyan)}.map-details{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:#071522}.map-details summary{padding:9px 11px;font-size:10px}.map-details .gate{margin:0 10px 10px}.evidence-drawer{padding:0;overflow:hidden;margin-top:0}.evidence-drawer>summary{list-style:none;padding:17px 19px;display:flex;justify-content:space-between;gap:15px;align-items:center;color:var(--text)}.evidence-drawer>summary::-webkit-details-marker{display:none}.evidence-drawer>summary:after{content:"Open";font-size:10px;color:var(--blue);border:1px solid var(--line);border-radius:999px;padding:5px 8px}.evidence-drawer[open]>summary:after{content:"Close"}.drawer-title{font-weight:900}.drawer-copy{display:block;color:var(--muted);font-size:11px;font-weight:400;margin-top:2px}.detail-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:15px;padding:0 15px 15px}.detail-grid>.card{box-shadow:none;margin:0;background:#081724}
 details{margin-top:15px;border:1px solid var(--line);border-radius:14px;background:#081724}summary{cursor:pointer;padding:13px 15px;color:var(--muted);font-weight:800}.interaction{padding:0 15px 15px}textarea{width:100%;min-height:85px;resize:vertical;border:1px solid var(--line);background:#06131f;color:var(--text);border-radius:11px;padding:11px;font:inherit}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}button,.button{border:1px solid var(--line);background:#112b40;color:var(--text);border-radius:9px;padding:8px 10px;text-decoration:none;font:inherit;font-size:11px;font-weight:800;cursor:pointer}.primary{background:var(--cyan);color:#02231d}.pending{font-size:10px;color:var(--gold);margin-top:7px}footer{display:flex;gap:13px;flex-wrap:wrap;margin-top:17px;color:var(--muted);font-size:10px}.error{color:var(--red)}
-@media(max-width:1080px){.summary{grid-template-columns:repeat(3,1fr)}.s8,.s7,.s6,.s5,.s4{grid-column:span 6}.world-layout{grid-template-columns:1fr}.now-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.shell{width:min(100% - 18px,1400px);padding-top:18px}.top{flex-direction:column}.summary{grid-template-columns:repeat(2,1fr)}.grid,.detail-grid{display:block}.card{margin-bottom:11px;padding:14px}.evidence-drawer{padding:0}.evidence-drawer>summary{padding:14px}.detail-grid{padding:0 10px 10px}.now-grid,.models,.bars,.changes{grid-template-columns:1fr}.timeline .event{grid-template-columns:45px 75px 1fr}.row{grid-template-columns:95px 1fr}}
+@media(max-width:1080px){.summary{grid-template-columns:repeat(3,1fr)}.s8,.s7,.s6,.s5,.s4{grid-column:span 6}.world-layout{grid-template-columns:1fr}.now-grid{grid-template-columns:repeat(2,1fr)}.milestone-stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.shell{width:min(100% - 18px,1400px);padding-top:18px}.top{flex-direction:column}.summary{grid-template-columns:repeat(2,1fr)}.grid,.detail-grid{display:block}.card{margin-bottom:11px;padding:14px}.evidence-drawer{padding:0}.evidence-drawer>summary{padding:14px}.detail-grid{padding:0 10px 10px}.now-grid,.models,.bars,.changes{grid-template-columns:1fr}.timeline .event{grid-template-columns:45px 75px 1fr}.row{grid-template-columns:95px 1fr}}
 </style>
 </head>
 <body>
 <main class="shell">
 <header class="top">
-<div><div class="eyebrow">AgentTest · live observer</div><h1>Watch the organism learn.</h1><p class="lede">Read-only visibility into persistent state, causal exploration, attention, evidence, and verified self-development. Viewing this dashboard does not change AgentTest or interrupt its heartbeat.</p></div>
+<div><div class="eyebrow">AgentTest · Ora live observer</div><h1>Ora, right now.</h1><p class="lede">A plain-English, read-only view of what Ora is doing and learning. Start here; open Evidence &amp; history only when you want the technical trail.</p></div>
 <div class="status"><span class="dot"></span><span id="liveStatus">Loading live state…</span></div>
 </header>
 
 <section class="summary">
 <div class="stat"><div class="k">Generation</div><div class="v" id="generation">—</div><div class="s" id="generationSub">persistent state</div></div>
-<div class="stat"><div class="k">Experience</div><div class="v" id="actionCount">—</div><div class="s" id="actionSub">persisted actions</div></div>
-<div class="stat"><div class="k">Current mode</div><div class="v" id="decisionMode">—</div><div class="s" id="decisionSub">latest policy</div></div>
-<div class="stat"><div class="k">World position</div><div class="v" id="position">—</div><div class="s">bounded micro-world</div></div>
-<div class="stat"><div class="k">Learning evidence</div><div class="v" id="stability">—</div><div class="s">stable / evaluable</div></div>
-<div class="stat"><div class="k">State age</div><div class="v" id="stateAge">—</div><div class="s" id="stateAgeSub">last update</div></div>
+<div class="stat"><div class="k">Current phase</div><div class="v" id="actionCount">—</div><div class="s" id="actionSub">capability stage</div></div>
+<div class="stat"><div class="k">Current goal</div><div class="v" id="decisionMode">—</div><div class="s" id="decisionSub">goal progress</div></div>
+<div class="stat"><div class="k">Position</div><div class="v" id="position">—</div><div class="s">bounded world</div></div>
+<div class="stat"><div class="k">Self-tests</div><div class="v" id="stability">—</div><div class="s">self-generated experiments</div></div>
+<div class="stat"><div class="k">Updated</div><div class="v" id="stateAge">—</div><div class="s" id="stateAgeSub">last heartbeat</div></div>
 </section>
+
+<section class="grid"></section>
 
 <section class="grid">
 <article class="card s12 now-card">
-<div class="head"><div><h2>Right now</h2><div class="sub">The organism in one glance. Detailed phase evidence is still available below.</div></div><span class="pill blue" id="nowStatus">loading</span></div>
+<div class="head"><div><h2>What Ora is doing</h2><div class="sub">One sentence first. The evidence IDs and internal mechanics are further down.</div></div><span class="pill blue" id="nowStatus">loading</span></div>
+<div class="story-main" id="nowStory">Loading Ora’s current story…</div>
 <div class="now-grid">
-<div class="now-item"><div class="t">Where it is going</div><div class="v" id="nowGoal">—</div></div>
-<div class="now-item"><div class="t">What it is doing</div><div class="v" id="nowPlan">—</div></div>
-<div class="now-item"><div class="t">Why</div><div class="v" id="nowWhy">—</div></div>
-<div class="now-item"><div class="t">What it remembers</div><div class="v" id="nowMemory">—</div></div>
-<div class="now-item"><div class="t">What it just learned</div><div class="v" id="nowLearning">—</div></div>
-<div class="now-item"><div class="t">What it is wondering about</div><div class="v" id="nowQuestion">—</div></div>
+<div class="now-item"><div class="t">Next planned move</div><div class="v" id="nowPlan">—</div></div>
+<div class="now-item"><div class="t">Latest learning</div><div class="v" id="nowLearning">—</div></div>
+<div class="now-item"><div class="t">Current question</div><div class="v" id="nowQuestion">—</div></div>
 </div>
 <div class="ladder" id="capabilityLadder"></div>
 </article>
 
+<article class="card s8"></article>
+
 <article class="card s8">
-<div class="head"><div><h2>Bounded Action Lab → planning, memory & transfer worlds</h2><div class="sub">Phase 32 causal learning → Phase 33 planning → Phase 34 model revision → Phase 35 curiosity → Phase 36 episodic memory → Phase 37 bounded transfer.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
+<div class="head"><div><h2>Where Ora is exploring</h2><div class="sub">The Bounded Action Lab as a small world: teal is Ora’s lived path and dashed blue is the remaining plan.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
 <div class="world-layout">
-<div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="plannedPath" points="" fill="none" stroke="rgba(122,185,255,.45)" stroke-width="5" stroke-dasharray="9 8" stroke-linecap="round" stroke-linejoin="round"></polyline><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g><g id="blockedEdges"></g><g id="curiosityMarks"></g><g id="transferMarks"></g></svg><div class="board" id="worldGrid"></div></div></div>
+<div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="plannedPath" points="" fill="none" stroke="rgba(122,185,255,.45)" stroke-width="5" stroke-dasharray="9 8" stroke-linecap="round" stroke-linejoin="round"></polyline><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g><g id="blockedEdges"></g><g id="curiosityMarks"></g><g id="transferMarks"></g><g id="selfExperimentMarks"></g></svg><div class="board" id="worldGrid"></div></div></div>
 <div><div class="rows">
-<div class="row"><span class="label">Latest action</span><span class="value" id="latestAction">—</span></div>
-<div class="row"><span class="label">Observed delta</span><span class="value" id="latestDelta">—</span></div>
-<div class="row"><span class="label">Blocked</span><span class="value" id="latestBlocked">—</span></div>
-<div class="row"><span class="label">Decision reason</span><span class="value" id="decisionReason">—</span></div>
-<div class="row"><span class="label">Recent action pace</span><span class="value" id="actionPace">—</span></div>
+<div class="row"><span class="label">Current goal</span><span class="value" id="latestAction">—</span></div>
+<div class="row"><span class="label">Next move</span><span class="value" id="latestDelta">—</span></div>
+<div class="row"><span class="label">Steps left</span><span class="value" id="latestBlocked">—</span></div>
+<div class="row"><span class="label">Why this route</span><span class="value" id="decisionReason">—</span></div>
+<div class="row"><span class="label">Last move</span><span class="value" id="actionPace">—</span></div>
 </div>
-<div class="gate"><div class="gate-top"><div><b>Phase 32 learned-choice gate</b><div class="micro" id="gateCopy">Gathering causal experience.</div></div><span class="pill blue" id="gatePill">—</span></div><div class="progress"><div id="gateProgress" style="width:0%"></div></div></div><div class="micro" style="margin-top:9px">Map: teal source-world path · blue dashed plan · red × learned block · gold ? curiosity probe · violet T target-world transfer</div>
+<details class="map-details"><summary>Map legend &amp; early learning evidence</summary><div class="gate"><div class="gate-top"><div><b>Phase 32 learned-choice gate</b><div class="micro" id="gateCopy">Gathering causal experience.</div></div><span class="pill blue" id="gatePill">—</span></div><div class="progress"><div id="gateProgress" style="width:0%"></div></div></div><div class="micro" style="padding:0 11px 11px">Teal actual · blue dashed planned · red × learned block · gold ? curiosity · violet T transfer · green E self-test</div></details>
 </div>
 </div>
 </article>
 
-<aside class="card s4"><div class="head"><div><h2>Learned causal model</h2><div class="sub">Effects are learned from outcomes, not inferred from action names.</div></div></div><div class="models" id="causalModel"></div></aside>
+<aside class="card s4">
+<div class="head"><div><h2>Latest milestone</h2><div class="sub">The newest capability supported by Ora’s persisted natural behavior.</div></div><span class="pill good" id="milestoneStatus">checking</span></div>
+<div class="milestone-phase" id="milestonePhase">—</div>
+<div class="milestone-main" id="milestoneTitle">Loading evidence…</div>
+<p class="milestone-copy" id="milestoneCopy">—</p>
+<div class="milestone-stats">
+<div class="milestone-stat"><b id="milestoneTests">—</b><span>self-tests</span></div>
+<div class="milestone-stat"><b id="milestoneRecoveries">—</b><span>goals recovered</span></div>
+</div>
+</aside>
 
 <details class="card s12 evidence-drawer">
 <summary><span><span class="drawer-title">Evidence & history</span><span class="drawer-copy">Open the scientific trail for planning, surprise, curiosity, memory, transfer, attention and empirical learning.</span></span></summary>
 <div class="detail-grid">
+<article class="card s4"><div class="head"><div><h2>Learned causal model</h2><div class="sub">Technical action effects learned from outcomes, not action names.</div></div></div><div class="models" id="causalModel"></div></article>
+<article class="card s8"><div class="head"><div><h2>Phase progression</h2><div class="sub">The same capabilities shown above, with scientific framing.</div></div></div><div class="micro">Phase 32 actions → 33 planning → 34 revision → 35 curiosity → 36 episodic memory → 37 transfer → 38 self-generated falsifiable experiments.</div></article>
 <article class="card s12">
 <div class="head"><div><h2>Phase 33 · persistent planning</h2><div class="sub">Goal, persisted multi-step plan, predicted intermediate states, and execution evidence across heartbeats.</div></div><span class="pill blue" id="planningStatus">not started</span></div>
 <div class="evidence">
@@ -156,6 +169,23 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="preds" id="transferHistory"></div>
 </article>
 
+<article class="card s12">
+<div class="head"><div><h2>Phase 38 · self-generated falsifiable experiments</h2><div class="sub">Ora can identify a locally untested belief, state a prediction and falsifier before acting, spend one bounded action to test it, then recover its existing goal.</div></div><span class="pill blue" id="selfExperimentStatus">waiting for natural evidence</span></div>
+<div class="evidence">
+<div class="ebox"><div class="n" id="selfExperimentDecisionCount">0</div><div class="t">Experiments chosen</div></div>
+<div class="ebox"><div class="n" id="selfExperimentCount">0</div><div class="t">Experiments run</div></div>
+<div class="ebox"><div class="n" id="selfExperimentRecoveryCount">0</div><div class="t">Goals recovered</div></div>
+</div>
+<div class="rows" style="margin-top:10px">
+<div class="row"><span class="label">Latest hypothesis</span><span class="value" id="selfExperimentHypothesis">—</span></div>
+<div class="row"><span class="label">Falsifier</span><span class="value" id="selfExperimentFalsifier">—</span></div>
+<div class="row"><span class="label">Changed action</span><span class="value" id="selfExperimentChoice">—</span></div>
+<div class="row"><span class="label">Observed result</span><span class="value" id="selfExperimentOutcome">—</span></div>
+<div class="row"><span class="label">Goal recovery</span><span class="value" id="selfExperimentRecovery">—</span></div>
+</div>
+<div class="preds" id="selfExperimentHistory"></div>
+</article>
+
 <article class="card s5">
 <div class="head"><div><h2>Current attention</h2><div class="sub">What currently has the strongest claim on foreground behavior.</div></div><span class="pill" id="drivePressure">—</span></div>
 <div class="attention"><div class="micro">Dominant drive</div><div class="main" id="dominantDrive">—</div><div class="micro" id="intentionRationale">—</div></div>
@@ -203,41 +233,81 @@ const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;"
 const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.isArray(v)?v.slice(-n):[],vec=v=>Array.isArray(v)?"["+v.join(", ")+"]":"—",route=v=>Array.isArray(v)&&v.length?v.join(" → "):"—";
 function age(iso){if(!iso)return"—";const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000));return s<60?s+"s":s<3600?Math.floor(s/60)+"m":(s/3600).toFixed(1)+"h"}
 function arrow(d){if(!Array.isArray(d))return"·";const x=+d[0],y=+d[1];return x===1&&y===0?"→":x===-1&&y===0?"←":x===0&&y===1?"↑":x===0&&y===-1?"↓":x===0&&y===0?"•":vec(d)}
+function planningPhaseNumber(lab){
+ const match=String(lab?.version||"").match(/persistent-planning-lab-v(\d+)$/);
+ return match?32+Number(match[1]):((lab?.executions||[]).length?33:32)
+}
+function phaseLabel(n){
+ const labels={32:"learned actions",33:"persistent planning",34:"learned from surprise",35:"tested uncertainty",36:"episodic memory",37:"knowledge transfer",38:"self-generated experiments"};
+ return labels[n]||"active capability"
+}
+function phase38RecoveryCount(lab){
+ return (lab.self_experiments||[]).filter(x=>{
+  const goal=(lab.goals||[]).find(g=>g.id===x.goal_id);
+  return goal&&goal.status==="completed"&&Number(goal.completed_cycle||0)>Number(x.cycle||0)
+ }).length
+}
 function renderNow(o){
  const lab=o.planning_lab||{},goals=lab.goals||[],plans=lab.plans||[],execs=lab.executions||[];
  const goal=goals.find(g=>g.id===lab.active_goal_id)||goals[goals.length-1]||{};
  const plan=plans.find(p=>p.id===lab.active_plan_id)||plans[plans.length-1]||{};
- const last=execs[execs.length-1]||{},intent=tail(o.intentions,1)[0]||{};
- const decisions=lab.memory_decisions||[],changed=decisions.filter(x=>x.changed_choice),md=changed[changed.length-1]||decisions[decisions.length-1]||{};
- const memories=lab.episodic_route_memories||[],tp=tail(lab.transfer_probes,1)[0]||{},cp=tail(lab.curiosity_probes,1)[0]||{},mr=tail(lab.model_revisions,1)[0]||{};
- const question=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0]||{};
- const step=+plan.next_step_index||0,len=Array.isArray(plan.actions)?plan.actions.length:0;
+ const last=execs[execs.length-1]||{},step=Number(plan.next_step_index||0),actions=Array.isArray(plan.actions)?plan.actions:[],states=Array.isArray(plan.predicted_states)?plan.predicted_states:[],remaining=Math.max(0,actions.length-step);
+ const nextAction=step<actions.length?actions[step]:null,nextState=step<states.length?states[step]:null;
+ const selfTests=lab.self_experiments||[],latestTest=selfTests[selfTests.length-1]||{},recoveries=phase38RecoveryCount(lab),currentPhase=planningPhaseNumber(lab);
+ const question=(o.questions||[]).slice().sort((x,y)=>(y.last_selected_cycle||y.created_cycle||0)-(x.last_selected_cycle||x.created_cycle||0))[0]||{};
+ const reason=plan.memory_influenced?"Past route memory helped choose this route.":plan.reason==="replan_after_invalidation"?"Ora rebuilt this route after an experiment changed its position.":"This route follows Ora’s learned model.";
+ let story;
+ if(goal.id&&plan.id){
+  story="Ora is at "+vec(lab.position)+" and moving toward "+vec(goal.target)+". "+(remaining?remaining+" planned step"+(remaining===1?"":"s")+" remain"+(remaining===1?"s":"")+", with "+nextAction+" next. ":"")+" "+reason;
+ }else if(goal.id){
+  story="Ora is at "+vec(lab.position)+" and still working toward "+vec(goal.target)+", but no active route is currently persisted.";
+ }else{
+  story="Ora is at "+vec(lab.position)+". It has just completed a goal and is between persisted plans.";
+ }
+ el("nowStory").textContent=story;
  el("nowStatus").textContent=pretty(lab.status||"observing");el("nowStatus").className="pill "+(["executing_plan","goal_reached","plan_active"].includes(lab.status)?"good":["needs_replan","blocked_no_plan"].includes(lab.status)?"warn":"blue");
- el("nowGoal").textContent=goal.id?goal.id+" · "+vec(goal.target)+" · "+pretty(goal.status||"active"):"Waiting for a planning goal.";
- el("nowPlan").textContent=plan.id?plan.id+" · step "+Math.min(step+1,Math.max(1,len))+"/"+len+(last.action?" · latest "+last.action:""):"No active persisted plan.";
- let why="Following the learned transition model.";
- if(plan.memory_influenced)why="Past episodic memory changed this route.";
- else if(last.model_revision_id)why="A surprise changed the model and forced replanning.";
- else if(intent.kind)why="Attention: "+pretty(intent.kind)+".";
- el("nowWhy").textContent=why;
- el("nowMemory").textContent=memories.length+" route memories · "+changed.length+" later choice"+(changed.length===1?"":"s")+" changed"+(md.id?" · latest "+md.id:"");
- if(tp.id)el("nowLearning").textContent=tp.id+" · "+pretty(tp.interpretation||"target-world result");
- else if(cp.id)el("nowLearning").textContent=cp.id+" · curiosity "+(cp.blocked?"confirmed a block":"observed movement");
- else if(mr.id)el("nowLearning").textContent=mr.id+" · revised "+(mr.state_action_key||"a state/action model");
- else el("nowLearning").textContent="Accumulating ordinary experience.";
+ el("nowPlan").textContent=nextAction?(nextAction+" → "+vec(nextState)):"No pending move.";
+ if(latestTest.id)el("nowLearning").textContent="C"+latestTest.cycle+": Ora tested "+latestTest.action+" from "+vec(latestTest.before)+"; "+pretty(latestTest.interpretation)+".";
+ else el("nowLearning").textContent="No self-generated Phase 38 experiment yet.";
  el("nowQuestion").textContent=question.text||"No active question.";
+
+ // Human-readable top strip overrides the underlying technical renderers.
+ el("actionCount").textContent="Phase "+currentPhase;el("actionSub").textContent=phaseLabel(currentPhase);
+ el("decisionMode").textContent=goal.id?vec(goal.target):"—";el("decisionSub").textContent=remaining?remaining+" step"+(remaining===1?"":"s")+" remaining":"between goals";
+ el("position").textContent=vec(lab.position||[0,0]);
+ el("stability").textContent=String(selfTests.length); 
+
+ // Human-readable world-side rows.
+ el("latestAction").textContent=goal.id?vec(goal.target):"—";
+ el("latestDelta").textContent=nextAction?(nextAction+" → "+vec(nextState)):"—";
+ el("latestBlocked").textContent=String(remaining);
+ el("decisionReason").textContent=reason;
+ el("actionPace").textContent=last.id?(last.action+" · "+vec(last.before)+" → "+vec(last.after)):"—";
+
+ const changed=(lab.memory_decisions||[]).some(x=>x.changed_choice);
  const phase32=(o.action_lab?.history||[]).some(x=>x.decision?.kind==="use_learned_transition");
- const phase33=(lab.plans||[]).some(x=>x.status==="completed");
- const phase34=(lab.model_revisions||[]).length>0;
- const phase35=(lab.curiosity_probes||[]).length>0;
- const phase36=changed.length>0;
- const phase37=(lab.transfer_probes||[]).length>0;
- const chips=[[32,"learned actions",phase32],[33,"persistent plans",phase33],[34,"revised model",phase34],[35,"tested uncertainty",phase35],[36,"memory changed choice",phase36],[37,"transferred knowledge",phase37]];
- el("capabilityLadder").innerHTML=chips.map(([n,label,done])=>'<span class="phase-chip '+(done?'done':'active')+'"><span class="p-dot"></span>Phase '+n+' · '+esc(label)+'</span>').join("");
+ const evidence={32:phase32,33:(lab.plans||[]).some(x=>x.status==="completed"),34:(lab.model_revisions||[]).length>0,35:(lab.curiosity_probes||[]).length>0,36:changed,37:(lab.transfer_probes||[]).length>0,38:selfTests.length>0&&recoveries>0};
+ const maxPhase=Math.max(38,currentPhase);
+ const chips=[];
+ for(let n=32;n<=maxPhase;n++)chips.push([n,phaseLabel(n),Boolean(evidence[n]),n===currentPhase]);
+ el("capabilityLadder").innerHTML=chips.map(([n,label,done,latest])=>'<span class="phase-chip '+(done?'done ':'')+(latest?'latest':'')+'"><span class="p-dot"></span>Phase '+n+' · '+esc(label)+'</span>').join("");
+
+ const p38passed=selfTests.length>0&&recoveries>0;
+ el("milestoneStatus").textContent=p38passed?"passed":"gathering evidence";el("milestoneStatus").className="pill "+(p38passed?"good":"blue");
+ el("milestonePhase").textContent="Phase "+currentPhase;
+ if(currentPhase>=38&&p38passed){
+  el("milestoneTitle").textContent="Ora designed and ran its own test.";
+  el("milestoneCopy").textContent="It chose an action that differed from its current plan, wrote a prediction and falsifier first, observed the result, then replanned and still completed the interrupted goal.";
+ }else{
+  el("milestoneTitle").textContent=phaseLabel(currentPhase);
+  el("milestoneCopy").textContent="Ora is accumulating natural evidence for its newest capability.";
+ }
+ el("milestoneTests").textContent=String(selfTests.length);
+ el("milestoneRecoveries").textContent=String(recoveries);
 }
 function renderActionLab(o){
  const lab=o.action_lab||{},pl=o.planning_lab||{},planningActive=pl.bootstrapped_cycle!=null||(pl.executions||[]).length>0;
- const w=planningActive?pl:lab,b=+(w.bounds??2),pos=w.position||[0,0],vis=w.visit_counts||{},h=planningActive?(pl.executions||[]):(lab.history||[]),pathEvents=planningActive?[...(pl.executions||[]),...(pl.curiosity_probes||[])].sort((a,b)=>(+a.cycle||0)-(+b.cycle||0)):(lab.history||[]),cells=[],side=b*2+1;
+ const w=planningActive?pl:lab,b=+(w.bounds??2),pos=w.position||[0,0],vis=w.visit_counts||{},h=planningActive?(pl.executions||[]):(lab.history||[]),pathEvents=planningActive?[...(pl.executions||[]),...(pl.curiosity_probes||[]),...(pl.self_experiments||[])].sort((a,b)=>(+a.cycle||0)-(+b.cycle||0)):(lab.history||[]),cells=[],side=b*2+1;
  el("worldGrid").style.gridTemplateColumns="repeat("+side+",1fr)";el("worldGrid").style.gridTemplateRows="repeat("+side+",1fr)";
  for(let y=b;y>=-b;y--)for(let x=-b;x<=b;x++){const k=x+","+y,n=+vis[k]||0,a=+pos[0]===x&&+pos[1]===y;cells.push('<div class="cell'+(n?' visited':'')+(a?' active':'')+'"><span class="coord">'+x+','+y+'</span>'+(a?'<span class="agent"></span>':'')+(n?'<span class="visits">×'+n+'</span>':'')+'</div>')}
  el("worldGrid").innerHTML=cells.join("");
@@ -254,8 +324,10 @@ function renderActionLab(o){
  el("curiosityMarks").innerHTML=curiosityProbes.map(q=>{if(!Array.isArray(q.before)||!Array.isArray(q.after))return"";const a=[(+q.before[0]+b)*cell+cell/2,(b-(+q.before[1]))*cell+cell/2],z=[(+q.after[0]+b)*cell+cell/2,(b-(+q.after[1]))*cell+cell/2],same=a[0]===z[0]&&a[1]===z[1];if(same)return '<g><circle cx="'+a[0]+'" cy="'+a[1]+'" r="16" fill="none" stroke="#f2c978" stroke-width="4" opacity=".95"></circle><text x="'+a[0]+'" y="'+(a[1]+5)+'" text-anchor="middle" font-size="17" font-weight="900" fill="#f2c978">?</text></g>';return '<g><line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+z[0]+'" y2="'+z[1]+'" stroke="#f2c978" stroke-width="5" stroke-dasharray="5 7" stroke-linecap="round" opacity=".95"></line><circle cx="'+z[0]+'" cy="'+z[1]+'" r="8" fill="#071522" stroke="#f2c978" stroke-width="3"></circle></g>'}).join("");
  const transferProbes=tail(pl.transfer_probes||[],2);
  el("transferMarks").innerHTML=transferProbes.map(q=>{if(!Array.isArray(q.before)||!Array.isArray(q.after))return"";const a=[(+q.before[0]+b)*cell+cell/2,(b-(+q.before[1]))*cell+cell/2],z=[(+q.after[0]+b)*cell+cell/2,(b-(+q.after[1]))*cell+cell/2],mx=(a[0]+z[0])/2,my=(a[1]+z[1])/2;return '<g><line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+z[0]+'" y2="'+z[1]+'" stroke="#b7a1ff" stroke-width="5" stroke-dasharray="3 6" stroke-linecap="round" opacity=".95"></line><rect x="'+(z[0]-8)+'" y="'+(z[1]-8)+'" width="16" height="16" rx="3" fill="#071522" stroke="#b7a1ff" stroke-width="3" transform="rotate(45 '+z[0]+' '+z[1]+')"></rect><text x="'+mx+'" y="'+(my-8)+'" text-anchor="middle" font-size="12" font-weight="900" fill="#b7a1ff">T</text></g>'}).join("");
+ const selfTests=tail(pl.self_experiments||[],3);
+ el("selfExperimentMarks").innerHTML=selfTests.map(q=>{if(!Array.isArray(q.before)||!Array.isArray(q.after))return"";const a=[(+q.before[0]+b)*cell+cell/2,(b-(+q.before[1]))*cell+cell/2],z=[(+q.after[0]+b)*cell+cell/2,(b-(+q.after[1]))*cell+cell/2],mx=(a[0]+z[0])/2,my=(a[1]+z[1])/2;return '<g><line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+z[0]+'" y2="'+z[1]+'" stroke="#7ae3aa" stroke-width="5" stroke-dasharray="4 6" stroke-linecap="round" opacity=".95"></line><circle cx="'+z[0]+'" cy="'+z[1]+'" r="10" fill="#071522" stroke="#7ae3aa" stroke-width="3"></circle><text x="'+mx+'" y="'+(my-8)+'" text-anchor="middle" font-size="12" font-weight="900" fill="#7ae3aa">E</text></g>'}).join("");
  const phase32=(lab.history||[]),phase32Last=phase32[phase32.length-1]||{},last=h[h.length-1]||{},plan=(pl.plans||[]).find(p=>p.id===last.plan_id)||{},mode=planningActive?(pl.status||"planning"):phase32Last.decision?.kind||"—";
- const phaseLabel=pl.version==="persistent-planning-lab-v5"?"Phase 37":pl.version==="persistent-planning-lab-v4"?"Phase 36":pl.version==="persistent-planning-lab-v3"?"Phase 35":pl.version==="persistent-planning-lab-v2"?"Phase 34":planningActive?"Phase 33":"";el("worldBadge").textContent=(phaseLabel?phaseLabel+" · ":"")+Object.keys(vis).length+" / "+Math.pow(b*2+1,2)+" cells experienced";
+ const versionMatch=String(pl.version||"").match(/persistent-planning-lab-v(\d+)$/),phaseNumber=versionMatch?32+Number(versionMatch[1]):(planningActive?33:null),phaseText=phaseNumber?"Phase "+phaseNumber:"";el("worldBadge").textContent=(phaseText?phaseText+" · ":"")+Object.keys(vis).length+" / "+Math.pow(b*2+1,2)+" cells experienced";
  el("latestAction").textContent=last.action||"—";el("latestDelta").textContent=vec(last.delta);el("latestBlocked").textContent=last.blocked==null?"—":last.blocked?"yes":"no";
  el("decisionReason").textContent=planningActive?(last.plan_id?last.plan_id+" · step "+((+last.step_index||0)+1)+"/"+(+last.plan_length||0)+" · predicted "+vec(last.predicted_after):"Planning bootstrap pending"):phase32Last.decision?.reason||"—";
  const kind=planningActive?"planning_lab":"action_lab",ae=(o.episodes||[]).filter(e=>e.kind===kind&&e.time).slice(-6);let pace="need more observations";if(ae.length>1){const hrs=(new Date(ae[ae.length-1].time)-new Date(ae[0].time))/36e5;if(hrs>0)pace=((ae.length-1)/hrs).toFixed(1)+" actions / hour"}el("actionPace").textContent=pace;
@@ -346,6 +418,24 @@ function renderTransfer(o){
  el("transferContinuity").textContent=p.id?(p.source_plan_preserved?"source plan preserved · "+(p.plan_id||"plan")+" step "+(+p.plan_next_step_index||0)+" unchanged":"source plan continuity not preserved"):"—";
  el("transferHistory").innerHTML=tail(probes,4).map(q=>'<span class="pred '+(q.matched_selected_prior?'confirmed':'violated')+'">'+esc(q.id)+" · "+esc(q.source_model_revision_id||"MR")+" · "+esc(pretty(q.interpretation||"observed"))+"</span>").join("");
 }
+function renderSelfExperiment(o){
+ const lab=o.planning_lab||{},decisions=lab.self_experiment_decisions||[],tests=lab.self_experiments||[],goals=lab.goals||[];
+ const d=decisions[decisions.length-1]||{},x=tests[tests.length-1]||{};
+ const recoveries=tests.filter(t=>{const g=goals.find(z=>z.id===t.goal_id);return g&&g.status==="completed"&&Number(g.completed_cycle||0)>Number(t.cycle||0)}).length;
+ const passed=tests.length>0&&recoveries>0;
+ el("selfExperimentStatus").textContent=passed?"natural gate passed":tests.length?"experiment observed":"waiting for natural evidence";
+ el("selfExperimentStatus").className="pill "+(passed?"good":tests.length?"warn":"blue");
+ el("selfExperimentDecisionCount").textContent=decisions.length;
+ el("selfExperimentCount").textContent=tests.length;
+ el("selfExperimentRecoveryCount").textContent=recoveries;
+ el("selfExperimentHypothesis").textContent=x.hypothesis||"—";
+ el("selfExperimentFalsifier").textContent=x.falsification||"—";
+ el("selfExperimentChoice").textContent=d.id?(pretty(d.next_goal_action||"planned")+" planned → "+pretty(d.action||"test")+" tested"):"—";
+ el("selfExperimentOutcome").textContent=x.id?(vec(x.predicted_after)+" predicted → "+vec(x.after)+" observed · "+pretty(x.interpretation||"observed")):"—";
+ const goal=goals.find(g=>g.id===x.goal_id)||{};
+ el("selfExperimentRecovery").textContent=x.id?(goal.status==="completed"?"same goal completed at C"+goal.completed_cycle:"goal still "+pretty(goal.status||"active")):"—";
+ el("selfExperimentHistory").innerHTML=tail(tests,4).map(t=>'<span class="pred '+(t.matched_prediction?'confirmed':'violated')+'">'+esc(t.id)+" · C"+esc(t.cycle)+" · "+esc(pretty(t.interpretation||"observed"))+"</span>").join("");
+}
 function renderAttention(o){const i=tail(o.intentions,1)[0]||{},d=i.dominant_drive||"—",pressure=Number((o.drives||{})[d]);el("dominantDrive").textContent=pretty(d);el("intentionKind").textContent=pretty(i.kind);el("intentionTarget").textContent=i.target||"—";el("intentionRationale").textContent=i.rationale||"—";el("drivePressure").textContent=Number.isFinite(pressure)?pressure.toFixed(2)+" pressure":"—";
  const q=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0];el("currentQuestion").textContent=q?.text||"—";
  const active=(o.experiments||[]).filter(x=>!["completed","closed","rejected"].includes(x.status)).slice(-1)[0];el("activeExperiment").textContent=active?active.id+" · "+pretty(active.readiness||active.status):"—";
@@ -358,6 +448,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  tail(o.planning_lab?.curiosity_probes,3).forEach(q=>out.push({c:+q.cycle||0,k:"curiosity probe",b:"<strong>"+esc(q.action)+"</strong> at "+esc(vec(q.before))+" tested "+esc(q.source_model_revision_id||"prior evidence")+" · "+esc(q.blocked?"blocked":"moved")+" · samples "+esc(q.state_samples_before)+"→"+esc(q.state_samples_after)+"."}));
  tail(o.planning_lab?.memory_decisions,3).filter(x=>x.changed_choice).forEach(x=>out.push({c:+x.cycle||0,k:"memory choice",b:"<strong>"+esc(x.id)+"</strong> changed route from "+esc(route(x.counterfactual_actions))+" to "+esc(route(x.selected_actions))+" using "+esc((x.memory_refs||[]).join(", ")||"episodic memory")+"."}));
  tail(o.planning_lab?.transfer_probes,3).forEach(q=>out.push({c:+q.cycle||0,k:"transfer probe",b:"<strong>"+esc(q.id)+"</strong> tested "+esc(q.source_model_revision_id||"source evidence")+" in "+esc(pretty(q.target_world_version||"target world"))+" · "+esc(vec(q.before))+" → "+esc(vec(q.after))+" · "+esc(pretty(q.interpretation||"observed"))+"."}));
+ tail(o.planning_lab?.self_experiments,3).forEach(q=>out.push({c:+q.cycle||0,k:"self-test",b:"<strong>"+esc(q.id)+"</strong> chose "+esc(q.action)+" instead of the planned move to test: "+esc(q.hypothesis||"a local prediction")+" Result: "+esc(pretty(q.interpretation||"observed"))+"."}));
  tail(o.intentions,6).forEach((i,n,a)=>{const p=n?a[n-1]:null;if(!p||p.dominant_drive!==i.dominant_drive||p.kind!==i.kind)out.push({c:+i.cycle||0,k:"attention",b:"Selected <strong>"+esc(pretty(i.dominant_drive))+"</strong> via "+esc(pretty(i.kind))+"."})});
  tail(eps.filter(e=>e.kind==="stimulus"&&e.source==="human_interaction"),2).forEach(e=>out.push({c:+e.cycle||0,k:"interaction",t:e.time,b:"Human input: “"+esc(String(e.content||"").slice(0,130))+"”"}));
  tail(o.surprises,2).forEach(s=>out.push({c:+s.cycle||0,k:"surprise",t:s.time,b:"Observed changes across <strong>"+Object.keys(s.changes||{}).length+"</strong> measured repository fields."}));
@@ -365,7 +456,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function resolveGrowthSha(){
  const now=Date.now();
  if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
