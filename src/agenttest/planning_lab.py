@@ -9,18 +9,22 @@ from .action_lab import (
     BASE_WORLD_VERSION,
     BOUNDS,
     STATEFUL_WORLD_VERSION,
+    TRANSFER_WORLD_VERSION,
     apply_bounded_action,
     validate_action_lab_history,
 )
 
-PLANNING_LAB_VERSION = "persistent-planning-lab-v4"
+PLANNING_LAB_VERSION = "persistent-planning-lab-v5"
 CURIOSITY_POLICY_VERSION = "evidence-valued-curiosity-v1"
 EPISODIC_MEMORY_VERSION = "episodic-route-memory-v1"
+TRANSFER_POLICY_VERSION = "bounded-transfer-v1"
 EPISODIC_MEMORY_MAX_ENTRIES = 64
 EPISODIC_MEMORY_MAX_DECISIONS = 128
 EPISODIC_MEMORY_MAX_ROUTE_CANDIDATES = 24
 CURIOSITY_TARGET_STATE_SAMPLES = 2
 CURIOSITY_MAX_PROBES_PER_REVISION = 1
+TRANSFER_MAX_PROBES_PER_REVISION = 1
+TRANSFER_MIN_SOURCE_STATE_SAMPLES = 2
 MIN_MODEL_SAMPLES = 2
 PREFERRED_MIN_PLAN_STEPS = 3
 PREFERRED_MAX_PLAN_STEPS = 4
@@ -42,6 +46,9 @@ def initial_planning_lab_state() -> dict[str, Any]:
         "episodic_memory_started_cycle": None,
         "episodic_route_memories": [],
         "memory_decisions": [],
+        "transfer_decisions": [],
+        "transfer_probes": [],
+        "last_transfer_probe_cycle": None,
         "world_version": STATEFUL_WORLD_VERSION,
         "goals": [],
         "plans": [],
@@ -583,6 +590,268 @@ def _execute_curiosity_probe(
     }
 
 
+
+def _select_transfer_probe(
+    lab: dict[str, Any],
+    goal: dict[str, Any],
+    plan: dict[str, Any],
+    cycle: int,
+) -> dict[str, Any] | None:
+    """Select one isolated target-world probe from source-world evidence only."""
+
+    source_world = str(lab.get("world_version") or STATEFUL_WORLD_VERSION)
+    if source_world != STATEFUL_WORLD_VERSION:
+        return None
+    if plan.get("status") != "active":
+        return None
+
+    step_index = int(plan.get("next_step_index", 0) or 0)
+    actions = list(plan.get("actions", []))
+    if step_index >= len(actions):
+        return None
+
+    learned = lab.get("learned_effects", {})
+    source_effects = lab.get("state_effects", {})
+    probes = lab.get("transfer_probes", [])
+
+    for revision in reversed(lab.get("model_revisions", [])):
+        revision_id = str(revision.get("id") or "")
+        action = str(revision.get("action") or "")
+        before = revision.get("before")
+        if (
+            not revision_id
+            or action not in ACTION_ORDER
+            or not isinstance(before, list)
+            or len(before) != 2
+            or revision.get("world_version") != source_world
+            or revision.get("observed_blocked") is not True
+            or revision.get("curiosity_status") != "probe_confirmed"
+        ):
+            continue
+
+        prior_probe_count = sum(
+            1
+            for probe in probes
+            if probe.get("source_model_revision_id") == revision_id
+        )
+        if prior_probe_count >= TRANSFER_MAX_PROBES_PER_REVISION:
+            continue
+
+        state_action_key = _state_action_key(before, action)
+        source_effect = source_effects.get(state_action_key, {})
+        source_samples = int(source_effect.get("samples", 0) or 0)
+        if (
+            source_samples < TRANSFER_MIN_SOURCE_STATE_SAMPLES
+            or source_effect.get("blocked") is not True
+        ):
+            continue
+
+        general_effect = learned.get(action, {})
+        general_delta = general_effect.get("modal_delta")
+        general_samples = int(general_effect.get("unblocked_samples", 0) or 0)
+        if (
+            general_samples < MIN_MODEL_SAMPLES
+            or not isinstance(general_delta, list)
+            or len(general_delta) != 2
+            or float(general_effect.get("confidence", 0.0) or 0.0) <= 0.0
+        ):
+            continue
+
+        probe_state = [int(before[0]), int(before[1])]
+        source_prediction = _state_effect_prediction(lab, probe_state, action)
+        if source_prediction is None:
+            continue
+        general_prediction = [
+            probe_state[0] + int(general_delta[0]),
+            probe_state[1] + int(general_delta[1]),
+        ]
+        if (
+            not _in_bounds(
+                (general_prediction[0], general_prediction[1]),
+                int(lab.get("bounds", BOUNDS)),
+            )
+            or general_prediction == source_prediction
+        ):
+            continue
+
+        target_evidence_samples = sum(
+            1
+            for probe in probes
+            if (
+                probe.get("target_world_version") == TRANSFER_WORLD_VERSION
+                and probe.get("state_action_key") == state_action_key
+            )
+        )
+        if target_evidence_samples != 0:
+            continue
+
+        decision = {
+            "id": f"TD{len(lab.get('transfer_decisions', [])) + 1:06d}",
+            "cycle": cycle,
+            "policy_version": TRANSFER_POLICY_VERSION,
+            "source_model_revision_id": revision_id,
+            "source_world_version": source_world,
+            "target_world_version": TRANSFER_WORLD_VERSION,
+            "goal_id": goal.get("id"),
+            "plan_id": plan.get("id"),
+            "plan_next_step_index": step_index,
+            "state_action_key": state_action_key,
+            "probe_state": probe_state,
+            "action": action,
+            "source_state_samples": source_samples,
+            "general_action_samples": general_samples,
+            "target_evidence_samples_before": target_evidence_samples,
+            "source_specific_prediction": source_prediction,
+            "general_action_prediction": general_prediction,
+            "counterfactual_prior": "source_state_exception_as_if_transferable",
+            "counterfactual_prediction": source_prediction,
+            "selected_prior": "general_action_effect",
+            "selected_prediction": general_prediction,
+            "status": "probe_selected",
+            "rationale": (
+                "Target-world evidence is absent. Keep the source-world state exception "
+                "scoped to its observed world and test whether the broader learned action "
+                "effect transfers with one isolated bounded probe."
+            ),
+        }
+        lab.setdefault("transfer_decisions", []).append(decision)
+        return decision
+    return None
+
+
+def _execute_transfer_probe(
+    lab: dict[str, Any],
+    goal: dict[str, Any],
+    plan: dict[str, Any],
+    decision: dict[str, Any],
+    cycle: int,
+) -> dict[str, Any]:
+    """Execute one target-world action without mutating the active source-world plan."""
+
+    source_position_before = [
+        int(value) for value in lab.get("position", [0, 0])
+    ]
+    source_step_before = int(plan.get("next_step_index", 0) or 0)
+    source_plan_id = str(plan.get("id") or "")
+    probe_state = [int(value) for value in decision["probe_state"]]
+    action = str(decision["action"])
+
+    outcome = apply_bounded_action(
+        probe_state,
+        action,
+        bounds=int(lab.get("bounds", BOUNDS)),
+        world_version=TRANSFER_WORLD_VERSION,
+    )
+    after = list(outcome["after"])
+    selected_prediction = [
+        int(value) for value in decision["selected_prediction"]
+    ]
+    counterfactual_prediction = [
+        int(value) for value in decision["counterfactual_prediction"]
+    ]
+    matched_selected_prior = after == selected_prediction
+    matched_source_exception_counterfactual = after == counterfactual_prediction
+
+    if matched_selected_prior and not matched_source_exception_counterfactual:
+        interpretation = "general_effect_transferred_source_exception_did_not"
+    elif matched_source_exception_counterfactual and not matched_selected_prior:
+        interpretation = "source_exception_transferred"
+    else:
+        interpretation = "target_world_surprise"
+
+    probe = {
+        "id": f"TP{len(lab.get('transfer_probes', [])) + 1:06d}",
+        "cycle": cycle,
+        "policy_version": TRANSFER_POLICY_VERSION,
+        "decision_id": decision["id"],
+        "source_model_revision_id": decision["source_model_revision_id"],
+        "source_world_version": decision["source_world_version"],
+        "target_world_version": TRANSFER_WORLD_VERSION,
+        "goal_id": goal.get("id"),
+        "plan_id": source_plan_id,
+        "plan_next_step_index": source_step_before,
+        "state_action_key": decision["state_action_key"],
+        "action": action,
+        "before": probe_state,
+        "selected_prediction": selected_prediction,
+        "counterfactual_prediction": counterfactual_prediction,
+        "after": after,
+        "delta": list(outcome["delta"]),
+        "blocked": bool(outcome["blocked"]),
+        "matched_selected_prior": matched_selected_prior,
+        "matched_source_exception_counterfactual": (
+            matched_source_exception_counterfactual
+        ),
+        "target_evidence_samples_before": int(
+            decision["target_evidence_samples_before"]
+        ),
+        "target_evidence_samples_after": int(
+            decision["target_evidence_samples_before"]
+        ) + 1,
+        "interpretation": interpretation,
+    }
+    lab.setdefault("transfer_probes", []).append(probe)
+    lab["last_transfer_probe_cycle"] = cycle
+
+    source_plan_preserved = (
+        list(lab.get("position", [0, 0])) == source_position_before
+        and lab.get("active_plan_id") == source_plan_id
+        and int(plan.get("next_step_index", 0) or 0) == source_step_before
+        and plan.get("status") == "active"
+    )
+    probe["source_position_before"] = source_position_before
+    probe["source_position_after"] = list(lab.get("position", [0, 0]))
+    probe["source_plan_preserved"] = source_plan_preserved
+    decision["probe_id"] = probe["id"]
+    decision["outcome"] = interpretation
+
+    return {
+        "id": probe["id"],
+        "execution_kind": "transfer_probe",
+        "cycle": cycle,
+        "goal_id": goal.get("id"),
+        "plan_id": source_plan_id,
+        "step_index": source_step_before,
+        "plan_length": len(plan.get("actions", [])),
+        "action": action,
+        "before": probe_state,
+        "predicted_after": selected_prediction,
+        "after": after,
+        "delta": list(outcome["delta"]),
+        "blocked": bool(outcome["blocked"]),
+        "matched_prediction": matched_selected_prior,
+        "source_world_version": decision["source_world_version"],
+        "world_version": TRANSFER_WORLD_VERSION,
+        "lab_version": PLANNING_LAB_VERSION,
+        "status": lab.get("status"),
+        "goal": list(goal.get("target", [])),
+        "goal_reached": False,
+        "replan_required": False,
+        "model_revision_id": None,
+        "source_model_revision_id": decision["source_model_revision_id"],
+        "transfer_decision_id": decision["id"],
+        "transfer_probe_id": probe["id"],
+        "target_evidence_samples_before": decision[
+            "target_evidence_samples_before"
+        ],
+        "target_evidence_samples_after": probe[
+            "target_evidence_samples_after"
+        ],
+        "source_specific_prediction": list(
+            decision["source_specific_prediction"]
+        ),
+        "counterfactual_prior": decision["counterfactual_prior"],
+        "counterfactual_prediction": counterfactual_prediction,
+        "selected_prior": decision["selected_prior"],
+        "interpretation": interpretation,
+        "source_plan_preserved": source_plan_preserved,
+        "remaining_plan_steps": len(plan.get("actions", [])) - source_step_before,
+        "learned_effects": json.loads(
+            json.dumps(lab.get("learned_effects", {}))
+        ),
+    }
+
+
 def _planning_episode_payload(episode: dict[str, Any]) -> dict[str, Any] | None:
     if episode.get("kind") != "planning_lab":
         return None
@@ -1106,6 +1375,21 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
             goal,
             plan,
             curiosity_decision,
+            cycle,
+        )
+
+    transfer_decision = _select_transfer_probe(
+        lab,
+        goal,
+        plan,
+        cycle,
+    )
+    if transfer_decision is not None:
+        return _execute_transfer_probe(
+            lab,
+            goal,
+            plan,
+            transfer_decision,
             cycle,
         )
 
