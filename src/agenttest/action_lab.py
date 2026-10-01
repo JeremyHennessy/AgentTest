@@ -10,6 +10,7 @@ MIN_EFFECT_SAMPLES = 2
 BOUNDS = 2
 BASE_WORLD_VERSION = "bounded-world-v1"
 STATEFUL_WORLD_VERSION = "bounded-stateful-world-v1"
+TRANSFER_WORLD_VERSION = "bounded-transfer-world-v1"
 
 # The labels are intentionally not their ordinary spatial meanings. AgentTest is
 # given only action outcomes and must learn the transition mapping empirically.
@@ -25,6 +26,13 @@ _HIDDEN_ACTION_DELTAS: dict[str, tuple[int, int]] = {
 # execution evidence.
 _HIDDEN_STATEFUL_BLOCKS: set[tuple[tuple[int, int], str]] = {
     ((0, 2), "south"),
+}
+
+# Phase 37 introduces a second bounded world with the same broad action
+# dynamics but a different local exception. The organism is never given this
+# map; it can only observe outcomes through apply_bounded_action.
+_HIDDEN_TRANSFER_BLOCKS: set[tuple[tuple[int, int], str]] = {
+    ((0, -2), "south"),
 }
 
 
@@ -71,7 +79,11 @@ def apply_bounded_action(
 
     if action not in ACTION_ORDER:
         raise ValueError(f"action is not permitted: {action}")
-    if world_version not in {BASE_WORLD_VERSION, STATEFUL_WORLD_VERSION}:
+    if world_version not in {
+        BASE_WORLD_VERSION,
+        STATEFUL_WORLD_VERSION,
+        TRANSFER_WORLD_VERSION,
+    }:
         raise ValueError(f"unsupported bounded-world version: {world_version}")
 
     before = [int(position[0]), int(position[1])]
@@ -79,7 +91,11 @@ def apply_bounded_action(
         world_version == STATEFUL_WORLD_VERSION
         and ((before[0], before[1]), action) in _HIDDEN_STATEFUL_BLOCKS
     )
-    if stateful_blocked:
+    transfer_blocked = (
+        world_version == TRANSFER_WORLD_VERSION
+        and ((before[0], before[1]), action) in _HIDDEN_TRANSFER_BLOCKS
+    )
+    if stateful_blocked or transfer_blocked:
         proposed = (before[0], before[1])
         blocked = True
     else:
