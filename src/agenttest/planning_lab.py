@@ -348,6 +348,7 @@ def _select_curiosity_probe(
             or action not in ACTION_ORDER
             or not isinstance(before, list)
             or before != position
+            or revision.get("goal_id") == goal.get("id")
             or action == next_goal_action
         ):
             continue
