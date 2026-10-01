@@ -186,6 +186,38 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="preds" id="selfExperimentHistory"></div>
 </article>
 
+<article class="card s6">
+<div class="head"><div><h2>Phase 39 · self-selected objectives</h2><div class="sub">Ora compares reachable goals using persisted novelty, uncertainty, memory familiarity and travel cost, while preserving the old least-visited policy as a counterfactual.</div></div><span class="pill blue" id="objectiveStatus">waiting for natural evidence</span></div>
+<div class="evidence">
+<div class="ebox"><div class="n" id="objectiveDecisionCount">0</div><div class="t">Objective decisions</div></div>
+<div class="ebox"><div class="n" id="objectiveChangedCount">0</div><div class="t">Choices changed</div></div>
+<div class="ebox"><div class="n" id="objectiveCompletedCount">0</div><div class="t">Chosen goals completed</div></div>
+</div>
+<div class="rows" style="margin-top:10px">
+<div class="row"><span class="label">Selected objective</span><span class="value" id="objectiveSelected">—</span></div>
+<div class="row"><span class="label">Old-policy control</span><span class="value" id="objectiveCounterfactual">—</span></div>
+<div class="row"><span class="label">Decision margin</span><span class="value" id="objectiveMargin">—</span></div>
+<div class="row"><span class="label">Evidence value</span><span class="value" id="objectiveEvidenceValue">—</span></div>
+</div>
+<div class="preds" id="objectiveHistory"></div>
+</article>
+
+<article class="card s6">
+<div class="head"><div><h2>Phase 40 · objective information realization</h2><div class="sub">After a self-selected goal is completed, Ora precommits one local evidence-gathering action, states its prediction and falsifier, then measures whether the expected information was actually gained.</div></div><span class="pill blue" id="realizationStatus">waiting for natural evidence</span></div>
+<div class="evidence">
+<div class="ebox"><div class="n" id="realizationDecisionCount">0</div><div class="t">Precommits</div></div>
+<div class="ebox"><div class="n" id="realizationCount">0</div><div class="t">Realizations</div></div>
+<div class="ebox"><div class="n" id="realizationGain">—</div><div class="t">Latest realized gain</div></div>
+</div>
+<div class="rows" style="margin-top:10px">
+<div class="row"><span class="label">Hypothesis</span><span class="value" id="realizationHypothesis">—</span></div>
+<div class="row"><span class="label">Falsifier</span><span class="value" id="realizationFalsifier">—</span></div>
+<div class="row"><span class="label">Expected → realized</span><span class="value" id="realizationExpected">—</span></div>
+<div class="row"><span class="label">Observed result</span><span class="value" id="realizationOutcome">—</span></div>
+</div>
+<div class="preds" id="realizationHistory"></div>
+</article>
+
 <article class="card s5">
 <div class="head"><div><h2>Current attention</h2><div class="sub">What currently has the strongest claim on foreground behavior.</div></div><span class="pill" id="drivePressure">—</span></div>
 <div class="attention"><div class="micro">Dominant drive</div><div class="main" id="dominantDrive">—</div><div class="micro" id="intentionRationale">—</div></div>
@@ -238,7 +270,7 @@ function planningPhaseNumber(lab){
  return match?32+Number(match[1]):((lab?.executions||[]).length?33:32)
 }
 function phaseLabel(n){
- const labels={32:"learned actions",33:"persistent planning",34:"learned from surprise",35:"tested uncertainty",36:"episodic memory",37:"knowledge transfer",38:"self-generated experiments"};
+ const labels={32:"learned actions",33:"persistent planning",34:"learned from surprise",35:"tested uncertainty",36:"episodic memory",37:"knowledge transfer",38:"self-generated experiments",39:"self-selected objectives",40:"realized information"};
  return labels[n]||"active capability"
 }
 function phase38RecoveryCount(lab){
@@ -267,7 +299,9 @@ function renderNow(o){
  el("nowStory").textContent=story;
  el("nowStatus").textContent=pretty(lab.status||"observing");el("nowStatus").className="pill "+(["executing_plan","goal_reached","plan_active"].includes(lab.status)?"good":["needs_replan","blocked_no_plan"].includes(lab.status)?"warn":"blue");
  el("nowPlan").textContent=nextAction?(nextAction+" → "+vec(nextState)):"No pending move.";
- if(latestTest.id)el("nowLearning").textContent="C"+latestTest.cycle+": Ora tested "+latestTest.action+" from "+vec(latestTest.before)+"; "+pretty(latestTest.interpretation)+".";
+ const latestRealization=(lab.objective_realizations||[]).slice(-1)[0]||{};
+ if(latestRealization.id)el("nowLearning").textContent="C"+latestRealization.cycle+": Ora turned a self-selected objective into evidence; "+latestRealization.action+" at "+vec(latestRealization.before)+" produced "+vec(latestRealization.after)+" with realized information gain "+(+latestRealization.realized_information_gain||0).toFixed(2)+".";
+ else if(latestTest.id)el("nowLearning").textContent="C"+latestTest.cycle+": Ora tested "+latestTest.action+" from "+vec(latestTest.before)+"; "+pretty(latestTest.interpretation)+".";
  else el("nowLearning").textContent="No self-generated Phase 38 experiment yet.";
  el("nowQuestion").textContent=question.text||"No active question.";
 
@@ -286,24 +320,33 @@ function renderNow(o){
 
  const changed=(lab.memory_decisions||[]).some(x=>x.changed_choice);
  const phase32=(o.action_lab?.history||[]).some(x=>x.decision?.kind==="use_learned_transition");
- const evidence={32:phase32,33:(lab.plans||[]).some(x=>x.status==="completed"),34:(lab.model_revisions||[]).length>0,35:(lab.curiosity_probes||[]).length>0,36:changed,37:(lab.transfer_probes||[]).length>0,38:selfTests.length>0&&recoveries>0};
- const maxPhase=Math.max(38,currentPhase);
+ const p39changed=(lab.objective_decisions||[]).filter(x=>x.changed_choice),p39completed=p39changed.filter(x=>(lab.goals||[]).some(g=>g.selection?.objective_decision_id===x.id&&g.status==="completed"));
+ const p40=lab.objective_realizations||[];
+ const evidence={32:phase32,33:(lab.plans||[]).some(x=>x.status==="completed"),34:(lab.model_revisions||[]).length>0,35:(lab.curiosity_probes||[]).length>0,36:changed,37:(lab.transfer_probes||[]).length>0,38:selfTests.length>0&&recoveries>0,39:p39completed.length>0,40:p40.length>0};
+ const maxPhase=Math.max(40,currentPhase);
  const chips=[];
  for(let n=32;n<=maxPhase;n++)chips.push([n,phaseLabel(n),Boolean(evidence[n]),n===currentPhase]);
  el("capabilityLadder").innerHTML=chips.map(([n,label,done,latest])=>'<span class="phase-chip '+(done?'done ':'')+(latest?'latest':'')+'"><span class="p-dot"></span>Phase '+n+' · '+esc(label)+'</span>').join("");
 
- const p38passed=selfTests.length>0&&recoveries>0;
- el("milestoneStatus").textContent=p38passed?"passed":"gathering evidence";el("milestoneStatus").className="pill "+(p38passed?"good":"blue");
+ const p38passed=selfTests.length>0&&recoveries>0,p40passed=p40.length>0,p39passed=p39completed.length>0;
+ const milestonePassed=currentPhase>=40?p40passed:currentPhase>=39?p39passed:p38passed;
+ el("milestoneStatus").textContent=milestonePassed?"passed":"gathering evidence";el("milestoneStatus").className="pill "+(milestonePassed?"good":"blue");
  el("milestonePhase").textContent="Phase "+currentPhase;
- if(currentPhase>=38&&p38passed){
+ if(currentPhase>=40&&p40passed){
+  el("milestoneTitle").textContent="Ora turned a chosen objective into measured information.";
+  el("milestoneCopy").textContent="It precommitted a prediction and falsifier after reaching a self-selected goal, performed one bounded evidence-gathering action, and measured expected versus realized information gain.";
+ }else if(currentPhase>=39&&p39passed){
+  el("milestoneTitle").textContent="Ora chose what was worth pursuing.";
+  el("milestoneCopy").textContent="Its evidence-valued objective policy selected and completed a bounded goal that differed from the preserved old-policy counterfactual.";
+ }else if(currentPhase>=38&&p38passed){
   el("milestoneTitle").textContent="Ora designed and ran its own test.";
   el("milestoneCopy").textContent="It chose an action that differed from its current plan, wrote a prediction and falsifier first, observed the result, then replanned and still completed the interrupted goal.";
  }else{
   el("milestoneTitle").textContent=phaseLabel(currentPhase);
   el("milestoneCopy").textContent="Ora is accumulating natural evidence for its newest capability.";
  }
- el("milestoneTests").textContent=String(selfTests.length);
- el("milestoneRecoveries").textContent=String(recoveries);
+ el("milestoneTests").textContent=String(currentPhase>=40?p40.length:currentPhase>=39?p39changed.length:selfTests.length);
+ el("milestoneRecoveries").textContent=String(currentPhase>=40?p40.filter(x=>(+x.realized_information_gain||0)>0).length:currentPhase>=39?p39completed.length:recoveries);
 }
 function renderActionLab(o){
  const lab=o.action_lab||{},pl=o.planning_lab||{},planningActive=pl.bootstrapped_cycle!=null||(pl.executions||[]).length>0;
@@ -436,6 +479,27 @@ function renderSelfExperiment(o){
  el("selfExperimentRecovery").textContent=x.id?(goal.status==="completed"?"same goal completed at C"+goal.completed_cycle:"goal still "+pretty(goal.status||"active")):"—";
  el("selfExperimentHistory").innerHTML=tail(tests,4).map(t=>'<span class="pred '+(t.matched_prediction?'confirmed':'violated')+'">'+esc(t.id)+" · C"+esc(t.cycle)+" · "+esc(pretty(t.interpretation||"observed"))+"</span>").join("");
 }
+function renderObjectiveSelection(o){
+ const lab=o.planning_lab||{},decisions=lab.objective_decisions||[],goals=lab.goals||[];
+ const d=decisions[decisions.length-1]||{},changed=decisions.filter(x=>x.changed_choice),completed=changed.filter(x=>goals.some(g=>g.selection?.objective_decision_id===x.id&&g.status==="completed"));
+ el("objectiveStatus").textContent=completed.length?"natural gate passed":changed.length?"choice changed":"waiting for natural evidence";el("objectiveStatus").className="pill "+(completed.length?"good":changed.length?"warn":"blue");
+ el("objectiveDecisionCount").textContent=decisions.length;el("objectiveChangedCount").textContent=changed.length;el("objectiveCompletedCount").textContent=completed.length;
+ el("objectiveSelected").textContent=d.id?vec(d.selected?.target)+" · score "+Number(d.selected?.objective_score||0).toFixed(3):"—";
+ el("objectiveCounterfactual").textContent=d.id?vec(d.counterfactual?.target)+" · score "+Number(d.counterfactual?.objective_score||0).toFixed(3):"—";
+ el("objectiveMargin").textContent=d.id?Number(d.decision_margin||0).toFixed(3):"—";
+ el("objectiveEvidenceValue").textContent=d.id?"information "+Number(d.selected?.information_value||0).toFixed(3)+" · unseen actions "+Number(d.selected?.unseen_target_actions||0):"—";
+ el("objectiveHistory").innerHTML=tail(decisions,4).map(x=>'<span class="pred '+(x.changed_choice?'confirmed':'pending')+'">'+esc(x.id)+" · "+esc(x.changed_choice?"changed objective":"control retained")+" · "+esc(vec(x.selected?.target))+"</span>").join("");
+}
+function renderObjectiveRealization(o){
+ const lab=o.planning_lab||{},decisions=lab.objective_realization_decisions||[],runs=lab.objective_realizations||[];
+ const d=decisions[decisions.length-1]||{},r=runs[runs.length-1]||{};
+ el("realizationStatus").textContent=r.id?"information realized":d.id&&d.status==="precommitted"?"precommitted":"waiting for natural evidence";el("realizationStatus").className="pill "+(r.id?"good":d.id?"warn":"blue");
+ el("realizationDecisionCount").textContent=decisions.length;el("realizationCount").textContent=runs.length;el("realizationGain").textContent=r.id?Number(r.realized_information_gain||0).toFixed(2):"—";
+ el("realizationHypothesis").textContent=d.hypothesis||"—";el("realizationFalsifier").textContent=d.falsification||"—";
+ el("realizationExpected").textContent=d.id?Number(d.expected_information_gain||0).toFixed(2)+" expected → "+(r.id?Number(r.realized_information_gain||0).toFixed(2):"pending")+" realized":"—";
+ el("realizationOutcome").textContent=r.id?vec(r.predicted_after)+" predicted → "+vec(r.after)+" observed · "+pretty(r.interpretation||"observed")+" · samples "+(+r.state_samples_before||0)+"→"+(+r.state_samples_after||0):"No Phase 40 action observed yet.";
+ el("realizationHistory").innerHTML=tail(runs,4).map(x=>'<span class="pred '+(x.matched_prediction?'confirmed':'violated')+'">'+esc(x.id)+" · C"+esc(x.cycle)+" · gain "+esc(Number(x.realized_information_gain||0).toFixed(2))+"</span>").join("");
+}
 function renderAttention(o){const i=tail(o.intentions,1)[0]||{},d=i.dominant_drive||"—",pressure=Number((o.drives||{})[d]);el("dominantDrive").textContent=pretty(d);el("intentionKind").textContent=pretty(i.kind);el("intentionTarget").textContent=i.target||"—";el("intentionRationale").textContent=i.rationale||"—";el("drivePressure").textContent=Number.isFinite(pressure)?pressure.toFixed(2)+" pressure":"—";
  const q=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0];el("currentQuestion").textContent=q?.text||"—";
  const active=(o.experiments||[]).filter(x=>!["completed","closed","rejected"].includes(x.status)).slice(-1)[0];el("activeExperiment").textContent=active?active.id+" · "+pretty(active.readiness||active.status):"—";
@@ -449,6 +513,8 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  tail(o.planning_lab?.memory_decisions,3).filter(x=>x.changed_choice).forEach(x=>out.push({c:+x.cycle||0,k:"memory choice",b:"<strong>"+esc(x.id)+"</strong> changed route from "+esc(route(x.counterfactual_actions))+" to "+esc(route(x.selected_actions))+" using "+esc((x.memory_refs||[]).join(", ")||"episodic memory")+"."}));
  tail(o.planning_lab?.transfer_probes,3).forEach(q=>out.push({c:+q.cycle||0,k:"transfer probe",b:"<strong>"+esc(q.id)+"</strong> tested "+esc(q.source_model_revision_id||"source evidence")+" in "+esc(pretty(q.target_world_version||"target world"))+" · "+esc(vec(q.before))+" → "+esc(vec(q.after))+" · "+esc(pretty(q.interpretation||"observed"))+"."}));
  tail(o.planning_lab?.self_experiments,3).forEach(q=>out.push({c:+q.cycle||0,k:"self-test",b:"<strong>"+esc(q.id)+"</strong> chose "+esc(q.action)+" instead of the planned move to test: "+esc(q.hypothesis||"a local prediction")+" Result: "+esc(pretty(q.interpretation||"observed"))+"."}));
+ tail(o.planning_lab?.objective_decisions,3).filter(x=>x.changed_choice).forEach(x=>out.push({c:+x.cycle||0,k:"objective choice",b:"<strong>"+esc(x.id)+"</strong> selected "+esc(vec(x.selected?.target))+" instead of old-policy "+esc(vec(x.counterfactual?.target))+" · margin "+esc(Number(x.decision_margin||0).toFixed(3))+"."}));
+ tail(o.planning_lab?.objective_realizations,3).forEach(x=>out.push({c:+x.cycle||0,k:"information realization",b:"<strong>"+esc(x.id)+"</strong> tested "+esc(x.action)+" at "+esc(vec(x.before))+" after a self-selected goal · expected "+esc(Number(x.expected_information_gain||0).toFixed(2))+" information, realized "+esc(Number(x.realized_information_gain||0).toFixed(2))+"."}));
  tail(o.intentions,6).forEach((i,n,a)=>{const p=n?a[n-1]:null;if(!p||p.dominant_drive!==i.dominant_drive||p.kind!==i.kind)out.push({c:+i.cycle||0,k:"attention",b:"Selected <strong>"+esc(pretty(i.dominant_drive))+"</strong> via "+esc(pretty(i.kind))+"."})});
  tail(eps.filter(e=>e.kind==="stimulus"&&e.source==="human_interaction"),2).forEach(e=>out.push({c:+e.cycle||0,k:"interaction",t:e.time,b:"Human input: “"+esc(String(e.content||"").slice(0,130))+"”"}));
  tail(o.surprises,2).forEach(s=>out.push({c:+s.cycle||0,k:"surprise",t:s.time,b:"Observed changes across <strong>"+Object.keys(s.changes||{}).length+"</strong> measured repository fields."}));
@@ -456,7 +522,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderObjectiveSelection(o);renderObjectiveRealization(o);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function resolveGrowthSha(){
  const now=Date.now();
  if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
