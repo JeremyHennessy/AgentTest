@@ -12,15 +12,17 @@ on:
         description: "Controller generation token"
         required: true
       delay_seconds:
-        description: "Delay before dispatching the next growth heartbeat"
+        description: "Optional delay before dispatching the next growth heartbeat"
         required: false
-        default: "60"
+        default: "0"
 
 permissions:
   actions: write
   contents: read
 
 concurrency:
+  # Keep the existing concurrency lane so an older queued controller and the
+  # new generation cannot run state-dispatch logic at the same time.
   group: agenttest-heartbeat-controller-v2
   cancel-in-progress: false
 
@@ -30,12 +32,13 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Validate controller generation
+        id: validate
         env:
           EVENT_NAME: ${{ github.event_name }}
           CONTROLLER_TOKEN: ${{ github.event.inputs.controller_token || '' }}
         shell: bash
         run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$CONTROLLER_TOKEN" != "controller-v2" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$CONTROLLER_TOKEN" != "controller-v3" ]; then
             echo "Refusing stale or unversioned controller dispatch."
             exit 1
           fi
@@ -65,7 +68,9 @@ jobs:
         shell: bash
         run: |
           for attempt in $(seq 1 60); do
-            busy="$(gh run list               --repo "$GITHUB_REPOSITORY"               --workflow reconcile.yml               --limit 20               --json status               --jq '[.[] | select(.status != "completed")] | length')"
+            busy="$(
+              gh run list                 --repo "$GITHUB_REPOSITORY"                 --workflow reconcile.yml                 --limit 20                 --json status                 --jq '[.[] | select(.status != "completed")] | length'
+            )"
             if [ "$busy" = "0" ]; then
               exit 0
             fi
@@ -75,25 +80,23 @@ jobs:
           echo "Reconciliation lane did not clear within 10 minutes."
           exit 1
 
-      - name: Queue successor controller
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          gh workflow run heartbeat-controller.yml             --repo "$GITHUB_REPOSITORY"             --ref main             -f controller_token=controller-v2
-
       - name: Dispatch and verify autonomous growth
+        id: growth
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          before="$(gh run list             --repo "$GITHUB_REPOSITORY"             --workflow growth.yml             --event workflow_dispatch             --limit 1             --json databaseId             --jq '.[0].databaseId // 0')"
+          before="$(
+            gh run list               --repo "$GITHUB_REPOSITORY"               --workflow growth.yml               --event workflow_dispatch               --limit 1               --json databaseId               --jq '.[0].databaseId // 0'
+          )"
 
           gh workflow run growth.yml             --repo "$GITHUB_REPOSITORY"             --ref main
 
           run_id=""
           for attempt in $(seq 1 30); do
-            candidate="$(gh run list               --repo "$GITHUB_REPOSITORY"               --workflow growth.yml               --event workflow_dispatch               --limit 1               --json databaseId               --jq '.[0].databaseId // 0')"
+            candidate="$(
+              gh run list                 --repo "$GITHUB_REPOSITORY"                 --workflow growth.yml                 --event workflow_dispatch                 --limit 1                 --json databaseId                 --jq '.[0].databaseId // 0'
+            )"
             if [ "$candidate" != "0" ] && [ "$candidate" != "$before" ]; then
               run_id="$candidate"
               break
@@ -108,3 +111,17 @@ jobs:
 
           echo "Watching autonomous growth run $run_id"
           gh run watch "$run_id"             --repo "$GITHUB_REPOSITORY"             --exit-status
+
+      - name: Queue successor controller
+        if: ${{ always() && steps.validate.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GROWTH_OUTCOME: ${{ steps.growth.outcome }}
+        shell: bash
+        run: |
+          if [ "$GROWTH_OUTCOME" != "success" ]; then
+            echo "Growth did not complete successfully; backing off for 60 seconds."
+            sleep 60
+          fi
+
+          gh workflow run heartbeat-controller.yml             --repo "$GITHUB_REPOSITORY"             --ref main             -f controller_token=controller-v3             -f delay_seconds=0
