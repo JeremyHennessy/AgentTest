@@ -605,6 +605,21 @@ def _select_transfer_probe(
     if plan.get("status") != "active":
         return None
 
+    latest_curiosity_probe = (
+        lab.get("curiosity_probes", [])[-1]
+        if lab.get("curiosity_probes")
+        else None
+    )
+    if (
+        isinstance(latest_curiosity_probe, dict)
+        and latest_curiosity_probe.get("plan_id") == plan.get("id")
+        and int(latest_curiosity_probe.get("cycle", -1) or -1) == cycle - 1
+        and latest_curiosity_probe.get("resulting_status") == "executing_plan"
+        and latest_curiosity_probe.get("after")
+        == latest_curiosity_probe.get("before")
+    ):
+        return None
+
     step_index = int(plan.get("next_step_index", 0) or 0)
     actions = list(plan.get("actions", []))
     if step_index >= len(actions):
