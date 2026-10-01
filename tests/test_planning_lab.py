@@ -482,8 +482,8 @@ class PlanningLabTests(unittest.TestCase):
             }
             for index, item in enumerate(executions, start=1)
         ]
-        lab["episodic_memory_started_cycle"] = int(
-            completed_plan["completed_cycle"]
+        lab["episodic_memory_started_cycle"] = min(
+            int(item["cycle"]) for item in executions
         )
 
         next_cycle = int(completed_plan["completed_cycle"]) + 1
