@@ -622,7 +622,7 @@ class PlanningLabTests(unittest.TestCase):
         old["planning_lab"]["self_experiment_started_cycle"] = None
         migrated = migrate_state(old)
 
-        self.assertEqual(migrated["schema_version"], 22)
+        self.assertEqual(migrated["schema_version"], 23)
         self.assertEqual(
             migrated["planning_lab"]["self_experiment_started_cycle"],
             50,
@@ -902,7 +902,7 @@ class PlanningLabTests(unittest.TestCase):
 
         migrated = migrate_state(state)
 
-        self.assertEqual(migrated["schema_version"], 22)
+        self.assertEqual(migrated["schema_version"], 23)
         self.assertEqual(
             migrated["planning_lab"]["objective_selection_started_cycle"],
             50,
@@ -911,6 +911,95 @@ class PlanningLabTests(unittest.TestCase):
         self.assertIsNone(
             migrated["planning_lab"]["last_objective_selection_cycle"]
         )
+        self.assertEqual(
+            migrated["planning_lab"]["objective_realization_started_cycle"],
+            50,
+        )
+        self.assertEqual(
+            migrated["planning_lab"]["objective_realization_decisions"],
+            [],
+        )
+        self.assertEqual(migrated["planning_lab"]["objective_realizations"], [])
+
+    def test_phase40_precommits_then_realizes_objective_information(self) -> None:
+        state = self._phase32_ready_state()
+        lab = ensure_planning_lab_state(state)
+        self.assertTrue(planning_lab._bootstrap_from_action_lab(state, lab))
+
+        lab["position"] = [0, 0]
+        lab["visit_counts"] = {"0,0": 1}
+        lab["goals"] = [
+            {
+                "id": "PG_PHASE40",
+                "assigned_cycle": 11,
+                "completed_cycle": 14,
+                "status": "completed",
+                "target": [0, 0],
+                "selection": {
+                    "kind": "self_selected_bounded_objective",
+                    "objective_decision_id": "OD_PHASE40",
+                },
+            }
+        ]
+        lab["objective_decisions"] = [
+            {
+                "id": "OD_PHASE40",
+                "cycle": 11,
+                "changed_choice": True,
+                "selected": {
+                    "target": [0, 0],
+                    "unseen_target_actions": 4,
+                    "information_value": 2.0,
+                },
+            }
+        ]
+        lab["active_goal_id"] = None
+        lab["active_plan_id"] = None
+        lab["objective_realization_started_cycle"] = 10
+        lab["objective_realization_decisions"] = []
+        lab["objective_realizations"] = []
+        lab["active_objective_realization_id"] = None
+        lab["status"] = "goal_reached"
+
+        state["cycles"] = 15
+        state["generation"] = 15
+        precommit = step_planning_lab(state)
+
+        self.assertEqual(
+            precommit["execution_kind"],
+            "objective_information_precommit",
+        )
+        self.assertIsNone(precommit["action"])
+        self.assertEqual(lab["position"], [0, 0])
+        self.assertEqual(len(lab["objective_realization_decisions"]), 1)
+        decision = lab["objective_realization_decisions"][0]
+        self.assertEqual(decision["status"], "precommitted")
+        self.assertTrue(decision["hypothesis"])
+        self.assertTrue(decision["falsification"])
+        self.assertEqual(decision["state_samples_before"], 0)
+        self.assertEqual(decision["expected_information_gain"], 1.0)
+
+        state["cycles"] = 16
+        state["generation"] = 16
+        realized = step_planning_lab(state)
+
+        self.assertEqual(
+            realized["execution_kind"],
+            "objective_information_realization",
+        )
+        self.assertIsNotNone(realized["action"])
+        self.assertEqual(len(lab["objective_realizations"]), 1)
+        observation = lab["objective_realizations"][0]
+        self.assertEqual(observation["decision_id"], decision["id"])
+        self.assertEqual(observation["state_samples_before"], 0)
+        self.assertEqual(observation["state_samples_after"], 1)
+        self.assertEqual(observation["realized_information_gain"], 1.0)
+        self.assertIn(
+            observation["interpretation"],
+            {"hypothesis_supported", "hypothesis_refuted"},
+        )
+        self.assertEqual(decision["status"], "completed")
+        self.assertIsNone(lab["active_objective_realization_id"])
 
     def test_phase39_selects_bounded_objective_with_explicit_counterfactual(self) -> None:
         state = self._phase32_ready_state()

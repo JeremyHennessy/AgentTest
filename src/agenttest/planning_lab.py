@@ -14,12 +14,13 @@ from .action_lab import (
     validate_action_lab_history,
 )
 
-PLANNING_LAB_VERSION = "persistent-planning-lab-v7"
+PLANNING_LAB_VERSION = "persistent-planning-lab-v8"
 CURIOSITY_POLICY_VERSION = "evidence-valued-curiosity-v1"
 EPISODIC_MEMORY_VERSION = "episodic-route-memory-v1"
 TRANSFER_POLICY_VERSION = "bounded-transfer-v1"
 SELF_EXPERIMENT_POLICY_VERSION = "self-generated-falsifiable-experiment-v1"
 OBJECTIVE_SELECTION_POLICY_VERSION = "bounded-objective-selection-v1"
+OBJECTIVE_REALIZATION_POLICY_VERSION = "objective-information-realization-v1"
 EPISODIC_MEMORY_MAX_ENTRIES = 64
 EPISODIC_MEMORY_MAX_DECISIONS = 128
 EPISODIC_MEMORY_MAX_ROUTE_CANDIDATES = 24
@@ -34,6 +35,7 @@ SELF_EXPERIMENT_MIN_REMAINING_PLAN_STEPS = 2
 OBJECTIVE_SELECTION_MIN_RECOVERED_EXPERIMENTS = 2
 OBJECTIVE_SELECTION_COOLDOWN_CYCLES = 12
 OBJECTIVE_SELECTION_MAX_DECISIONS = 128
+OBJECTIVE_REALIZATION_MAX_RECORDS = 128
 MIN_MODEL_SAMPLES = 2
 PREFERRED_MIN_PLAN_STEPS = 3
 PREFERRED_MAX_PLAN_STEPS = 4
@@ -65,6 +67,10 @@ def initial_planning_lab_state() -> dict[str, Any]:
         "objective_selection_started_cycle": None,
         "objective_decisions": [],
         "last_objective_selection_cycle": None,
+        "objective_realization_started_cycle": None,
+        "objective_realization_decisions": [],
+        "objective_realizations": [],
+        "active_objective_realization_id": None,
         "world_version": STATEFUL_WORLD_VERSION,
         "goals": [],
         "plans": [],
@@ -1627,6 +1633,265 @@ def _objective_candidate_metrics(
     }
 
 
+def _latest_pending_objective_realization(lab: dict[str, Any]) -> dict[str, Any] | None:
+    active_id = lab.get("active_objective_realization_id")
+    if not active_id:
+        return None
+    return next(
+        (
+            item
+            for item in lab.get("objective_realization_decisions", [])
+            if item.get("id") == active_id and item.get("status") == "precommitted"
+        ),
+        None,
+    )
+
+
+def _select_objective_realization(
+    lab: dict[str, Any],
+    cycle: int,
+) -> dict[str, Any] | None:
+    """Precommit one local information-gathering action after a self-selected goal."""
+
+    started = lab.get("objective_realization_started_cycle")
+    if started is None or cycle <= int(started or 0):
+        return None
+    if lab.get("active_goal_id") is not None:
+        return None
+    if _latest_pending_objective_realization(lab) is not None:
+        return None
+
+    realized_goal_ids = {
+        str(item.get("goal_id") or "")
+        for item in lab.get("objective_realizations", [])
+        if item.get("goal_id")
+    }
+    decisions_by_id = {
+        str(item.get("id") or ""): item
+        for item in lab.get("objective_decisions", [])
+        if item.get("id")
+    }
+    candidates = [
+        goal
+        for goal in lab.get("goals", [])
+        if (
+            goal.get("status") == "completed"
+            and int(goal.get("assigned_cycle", 0) or 0) > int(started or 0)
+            and goal.get("selection", {}).get("kind")
+            == "self_selected_bounded_objective"
+            and str(goal.get("id") or "") not in realized_goal_ids
+        )
+    ]
+    if not candidates:
+        return None
+
+    goal = candidates[-1]
+    selection = goal.get("selection", {})
+    objective_decision = decisions_by_id.get(
+        str(selection.get("objective_decision_id") or "")
+    )
+    if not objective_decision or objective_decision.get("changed_choice") is not True:
+        return None
+
+    _rebuild_model(lab)
+    position = [int(value) for value in lab.get("position", [0, 0])]
+    if position != list(goal.get("target", [])):
+        return None
+
+    learned = lab.get("learned_effects", {})
+    state_effects = lab.get("state_effects", {})
+    bounds = int(lab.get("bounds", BOUNDS))
+    observations = lab.get("transition_observations", [])
+    action_candidates: list[tuple[int, str, list[int], list[str]]] = []
+    for order, action in enumerate(ACTION_ORDER):
+        key = _state_action_key(position, action)
+        if int(state_effects.get(key, {}).get("samples", 0) or 0) != 0:
+            continue
+        general = learned.get(action, {})
+        delta = general.get("modal_delta")
+        if (
+            int(general.get("unblocked_samples", 0) or 0) < MIN_MODEL_SAMPLES
+            or float(general.get("confidence", 0.0) or 0.0) <= 0.0
+            or not isinstance(delta, list)
+            or len(delta) != 2
+        ):
+            continue
+        predicted_after = [
+            position[0] + int(delta[0]),
+            position[1] + int(delta[1]),
+        ]
+        if not _in_bounds((predicted_after[0], predicted_after[1]), bounds):
+            continue
+        refs = [
+            str(item.get("source_id") or "")
+            for item in observations
+            if (
+                item.get("action") == action
+                and item.get("blocked") is False
+                and item.get("delta") == delta
+                and item.get("source_id")
+            )
+        ][-8:]
+        if not refs:
+            continue
+        action_candidates.append((order, action, predicted_after, refs))
+
+    if not action_candidates:
+        return None
+
+    _, action, predicted_after, source_refs = min(action_candidates)
+    key = _state_action_key(position, action)
+    decision = {
+        "id": f"OR{len(lab.get('objective_realization_decisions', [])) + 1:06d}",
+        "cycle": cycle,
+        "policy_version": OBJECTIVE_REALIZATION_POLICY_VERSION,
+        "status": "precommitted",
+        "goal_id": goal.get("id"),
+        "objective_decision_id": objective_decision.get("id"),
+        "state": position,
+        "state_action_key": key,
+        "action": action,
+        "predicted_after": predicted_after,
+        "hypothesis": (
+            f"At {position}, {action} will follow the learned general effect "
+            f"and produce {predicted_after}."
+        ),
+        "falsification": (
+            f"Any observed result other than {predicted_after} falsifies this "
+            "local transfer of the learned general effect."
+        ),
+        "source_observation_refs": source_refs,
+        "state_samples_before": 0,
+        "expected_information_gain": 1.0,
+        "rationale": (
+            "The completed self-selected objective was valuable partly because "
+            "this local action had no state-specific evidence. Test exactly one "
+            "such action before selecting another goal."
+        ),
+    }
+    lab.setdefault("objective_realization_decisions", []).append(decision)
+    lab["objective_realization_decisions"] = lab[
+        "objective_realization_decisions"
+    ][-OBJECTIVE_REALIZATION_MAX_RECORDS:]
+    lab["active_objective_realization_id"] = decision["id"]
+    lab["status"] = "objective_realization_precommitted"
+    return decision
+
+
+def _execute_objective_realization(
+    lab: dict[str, Any],
+    decision: dict[str, Any],
+    cycle: int,
+) -> dict[str, Any]:
+    """Execute a previously persisted Phase 40 precommit and measure realized gain."""
+
+    before = [int(value) for value in lab.get("position", [0, 0])]
+    if before != list(decision.get("state", [])):
+        decision["status"] = "cancelled_position_changed"
+        decision["cancelled_cycle"] = cycle
+        lab["active_objective_realization_id"] = None
+        lab["status"] = "objective_realization_cancelled"
+        return {
+            "lab_version": PLANNING_LAB_VERSION,
+            "execution_kind": "objective_information_realization",
+            "status": lab["status"],
+            "action": None,
+            "objective_realization_decision_id": decision.get("id"),
+            "reason": "Position changed after the Phase 40 precommit; no action executed.",
+        }
+
+    action = str(decision.get("action") or "")
+    predicted_after = list(decision.get("predicted_after", []))
+    key = _state_action_key(before, action)
+    _rebuild_model(lab)
+    samples_before = int(lab.get("state_effects", {}).get(key, {}).get("samples", 0) or 0)
+    outcome = apply_bounded_action(
+        before,
+        action,
+        bounds=int(lab.get("bounds", BOUNDS)),
+        world_version=str(lab.get("world_version") or STATEFUL_WORLD_VERSION),
+    )
+    after = list(outcome["after"])
+    matched_prediction = after == predicted_after
+    realization_id = f"OI{len(lab.get('objective_realizations', [])) + 1:06d}"
+    lab.setdefault("transition_observations", []).append(
+        {
+            "source": "objective_information_realization",
+            "source_id": realization_id,
+            "cycle": cycle,
+            "action": action,
+            "before": before,
+            "after": after,
+            "delta": list(outcome["delta"]),
+            "blocked": bool(outcome["blocked"]),
+            "world_version": str(lab.get("world_version") or STATEFUL_WORLD_VERSION),
+        }
+    )
+    lab["position"] = after
+    position_key = _position_key(after)
+    lab.setdefault("visit_counts", {})[position_key] = (
+        int(lab["visit_counts"].get(position_key, 0) or 0) + 1
+    )
+    lab["last_action_cycle"] = cycle
+    _rebuild_model(lab)
+    samples_after = int(lab.get("state_effects", {}).get(key, {}).get("samples", 0) or 0)
+    realized_information_gain = round(
+        min(1.0, max(0, samples_after - samples_before)),
+        6,
+    )
+    realization = {
+        "id": realization_id,
+        "cycle": cycle,
+        "policy_version": OBJECTIVE_REALIZATION_POLICY_VERSION,
+        "decision_id": decision.get("id"),
+        "goal_id": decision.get("goal_id"),
+        "objective_decision_id": decision.get("objective_decision_id"),
+        "state_action_key": key,
+        "action": action,
+        "before": before,
+        "predicted_after": predicted_after,
+        "after": after,
+        "delta": list(outcome["delta"]),
+        "blocked": bool(outcome["blocked"]),
+        "matched_prediction": matched_prediction,
+        "state_samples_before": samples_before,
+        "state_samples_after": samples_after,
+        "expected_information_gain": float(
+            decision.get("expected_information_gain", 0.0) or 0.0
+        ),
+        "realized_information_gain": realized_information_gain,
+        "interpretation": (
+            "hypothesis_supported"
+            if matched_prediction
+            else "hypothesis_refuted"
+        ),
+    }
+    lab.setdefault("objective_realizations", []).append(realization)
+    lab["objective_realizations"] = lab["objective_realizations"][
+        -OBJECTIVE_REALIZATION_MAX_RECORDS:
+    ]
+    decision["status"] = "completed"
+    decision["completed_cycle"] = cycle
+    decision["realization_id"] = realization_id
+    decision["realized_information_gain"] = realized_information_gain
+    decision["interpretation"] = realization["interpretation"]
+    lab["active_objective_realization_id"] = None
+    lab["status"] = "objective_information_realized"
+    return {
+        **realization,
+        "execution_kind": "objective_information_realization",
+        "lab_version": PLANNING_LAB_VERSION,
+        "status": lab["status"],
+        "goal": list(decision.get("state", [])),
+        "goal_reached": False,
+        "replan_required": False,
+        "remaining_plan_steps": 0,
+        "objective_realization_decision_id": decision.get("id"),
+        "objective_realization_id": realization_id,
+        "learned_effects": json.loads(json.dumps(lab.get("learned_effects", {}))),
+    }
+
+
 def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
     learned = _rebuild_model(lab)
     bounds = int(lab.get("bounds", BOUNDS))
@@ -1932,6 +2197,28 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
         }
 
     _consolidate_episodic_route_memories(state, lab, cycle)
+
+    pending_realization = _latest_pending_objective_realization(lab)
+    if pending_realization is not None:
+        return _execute_objective_realization(lab, pending_realization, cycle)
+
+    if _active_goal(lab) is None:
+        selected_realization = _select_objective_realization(lab, cycle)
+        if selected_realization is not None:
+            return {
+                "lab_version": PLANNING_LAB_VERSION,
+                "execution_kind": "objective_information_precommit",
+                "status": lab.get("status"),
+                "action": None,
+                "goal_id": selected_realization.get("goal_id"),
+                "objective_realization_decision_id": selected_realization.get("id"),
+                "hypothesis": selected_realization.get("hypothesis"),
+                "falsification": selected_realization.get("falsification"),
+                "expected_information_gain": selected_realization.get(
+                    "expected_information_gain"
+                ),
+                "reason": "Phase 40 precommitted a bounded evidence-realization action before acting.",
+            }
 
     goal = _active_goal(lab)
     if goal is None:
