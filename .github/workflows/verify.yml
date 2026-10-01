@@ -66,3 +66,13 @@ jobs:
       - name: Bootstrap notice
         if: steps.gate.outputs.available != 'true'
         run: echo "The base commit predates the preservation gate; comparative enforcement begins after this gate is merged."
+
+  capability-handoff-sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run cross-phase handoff sanity checks
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -p "test_capability_handoffs.py" -v
