@@ -4,11 +4,11 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark">
 <title>AgentTest · Persistent Growth Console</title>
 <style>
-:root{--bg:#06101a;--panel:#0d1d2b;--panel2:#102536;--line:#1d3b52;--text:#eef8ff;--muted:#8ba8bd;--cyan:#5fe0c9;--blue:#7ab9ff;--gold:#f2c978;--green:#7ae3aa;--red:#ff9696}
+:root{--bg:#06101a;--panel:#0d1d2b;--panel2:#102536;--line:#1d3b52;--text:#eef8ff;--muted:#8ba8bd;--cyan:#5fe0c9;--blue:#7ab9ff;--gold:#f2c978;--green:#7ae3aa;--red:#ff9696;--violet:#b7a1ff}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 8% 0,rgba(95,224,201,.12),transparent 30rem),radial-gradient(circle at 92% 0,rgba(122,185,255,.10),transparent 28rem),var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
 a{color:inherit}.shell{width:min(1400px,calc(100% - 28px));margin:auto;padding:28px 0 60px}.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:17px}.eyebrow{color:var(--cyan);font-weight:900;font-size:11px;letter-spacing:.15em;text-transform:uppercase}h1{font-size:clamp(31px,4.7vw,58px);line-height:1;letter-spacing:-.045em;margin:7px 0 10px}.lede{max-width:780px;color:var(--muted);margin:0}.status{border:1px solid var(--line);border-radius:999px;padding:9px 12px;color:var(--muted);background:#091824;white-space:nowrap}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 16px var(--cyan);margin-right:7px}
 .summary{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:15px}.stat,.card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(16,37,54,.95),rgba(8,23,36,.96));box-shadow:0 22px 70px rgba(0,0,0,.25)}.stat{padding:13px 14px;border-radius:15px}.stat .k{font-size:10px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:800}.stat .v{font-size:24px;font-weight:900;letter-spacing:-.03em;margin-top:6px}.stat .s{font-size:10px;color:var(--muted);margin-top:3px}
-.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:15px}.card{border-radius:19px;padding:19px;min-width:0}.s8{grid-column:span 8}.s7{grid-column:span 7}.s5{grid-column:span 5}.s4{grid-column:span 4}.s12{grid-column:1/-1}.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:13px}.head h2{margin:0 0 3px;font-size:18px}.sub,.micro{color:var(--muted);font-size:11px}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 8px;font-size:10px;color:var(--muted);white-space:nowrap}.good{color:var(--green);border-color:rgba(122,227,170,.32)}.warn{color:var(--gold);border-color:rgba(242,201,120,.32)}.blue{color:var(--blue);border-color:rgba(122,185,255,.32)}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:15px}.card{border-radius:19px;padding:19px;min-width:0}.s8{grid-column:span 8}.s7{grid-column:span 7}.s6{grid-column:span 6}.s5{grid-column:span 5}.s4{grid-column:span 4}.s12{grid-column:1/-1}.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:13px}.head h2{margin:0 0 3px;font-size:18px}.sub,.micro{color:var(--muted);font-size:11px}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 8px;font-size:10px;color:var(--muted);white-space:nowrap}.good{color:var(--green);border-color:rgba(122,227,170,.32)}.warn{color:var(--gold);border-color:rgba(242,201,120,.32)}.blue{color:var(--blue);border-color:rgba(122,185,255,.32)}.violet{color:var(--violet);border-color:rgba(183,161,255,.34)}
 .world-layout{display:grid;grid-template-columns:minmax(360px,1.15fr) minmax(260px,.85fr);gap:17px}.board-wrap{position:relative;aspect-ratio:1;max-width:630px;margin:auto}.board{position:absolute;inset:0;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:7px}.trail{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}.cell{position:relative;border:1px solid var(--line);border-radius:13px;background:#071522;display:flex;align-items:center;justify-content:center}.cell.visited{background:linear-gradient(145deg,rgba(122,185,255,.12),rgba(95,224,201,.05));border-color:#2d536a}.cell.active{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(95,224,201,.13),0 0 25px rgba(95,224,201,.12)}.coord{position:absolute;left:6px;top:4px;font-size:9px;color:#58778d}.visits{position:absolute;right:6px;bottom:4px;font-size:9px;color:var(--muted)}.agent{width:14px;height:14px;border-radius:50%;background:var(--cyan);box-shadow:0 0 18px var(--cyan);z-index:3}
 .rows{border-top:1px solid rgba(29,59,82,.7)}.row{display:grid;grid-template-columns:125px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid rgba(29,59,82,.55)}.row .label{color:var(--muted)}.row .value{text-align:right;overflow-wrap:anywhere}.gate{margin-top:13px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#071522}.gate-top{display:flex;justify-content:space-between;gap:10px}.progress{height:7px;background:#04101a;border-radius:999px;overflow:hidden;margin-top:9px}.progress>div{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue));border-radius:999px}
 .models{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.model{border:1px solid var(--line);border-radius:13px;padding:11px;background:#071522}.model.learned{border-color:#2d566e}.model-top{display:flex;justify-content:space-between}.name{font-weight:900;text-transform:capitalize}.effect{font-size:26px;font-weight:900;color:var(--cyan);margin:6px 0 1px}
@@ -18,7 +18,7 @@ a{color:inherit}.shell{width:min(1400px,calc(100% - 28px));margin:auto;padding:2
 .bars{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 13px}.bar{display:grid;grid-template-columns:1fr auto;gap:6px}.track{grid-column:1/-1;height:5px;border-radius:999px;background:#06111c;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue))}.barname,.barval{font-size:10px;color:var(--muted)}
 .changes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.change{border:1px solid var(--line);border-radius:12px;padding:11px;background:#071522}.change b{font-size:11px}.change div{font-size:9px;color:var(--muted);margin-top:3px}
 details{margin-top:15px;border:1px solid var(--line);border-radius:14px;background:#081724}summary{cursor:pointer;padding:13px 15px;color:var(--muted);font-weight:800}.interaction{padding:0 15px 15px}textarea{width:100%;min-height:85px;resize:vertical;border:1px solid var(--line);background:#06131f;color:var(--text);border-radius:11px;padding:11px;font:inherit}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}button,.button{border:1px solid var(--line);background:#112b40;color:var(--text);border-radius:9px;padding:8px 10px;text-decoration:none;font:inherit;font-size:11px;font-weight:800;cursor:pointer}.primary{background:var(--cyan);color:#02231d}.pending{font-size:10px;color:var(--gold);margin-top:7px}footer{display:flex;gap:13px;flex-wrap:wrap;margin-top:17px;color:var(--muted);font-size:10px}.error{color:var(--red)}
-@media(max-width:1080px){.summary{grid-template-columns:repeat(3,1fr)}.s8,.s7,.s5,.s4{grid-column:span 6}.world-layout{grid-template-columns:1fr}}@media(max-width:720px){.shell{width:min(100% - 18px,1400px);padding-top:18px}.top{flex-direction:column}.summary{grid-template-columns:repeat(2,1fr)}.grid{display:block}.card{margin-bottom:11px;padding:14px}.models,.bars,.changes{grid-template-columns:1fr}.timeline .event{grid-template-columns:45px 75px 1fr}.row{grid-template-columns:95px 1fr}}
+@media(max-width:1080px){.summary{grid-template-columns:repeat(3,1fr)}.s8,.s7,.s6,.s5,.s4{grid-column:span 6}.world-layout{grid-template-columns:1fr}}@media(max-width:720px){.shell{width:min(100% - 18px,1400px);padding-top:18px}.top{flex-direction:column}.summary{grid-template-columns:repeat(2,1fr)}.grid{display:block}.card{margin-bottom:11px;padding:14px}.models,.bars,.changes{grid-template-columns:1fr}.timeline .event{grid-template-columns:45px 75px 1fr}.row{grid-template-columns:95px 1fr}}
 </style>
 </head>
 <body>
@@ -39,9 +39,9 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 
 <section class="grid">
 <article class="card s8">
-<div class="head"><div><h2>Bounded Action Lab → planning & curiosity world</h2><div class="sub">Phase 32 causal learning → Phase 33 planning → Phase 34 model revision → Phase 35 bounded curiosity.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
+<div class="head"><div><h2>Bounded Action Lab → planning, memory & transfer worlds</h2><div class="sub">Phase 32 causal learning → Phase 33 planning → Phase 34 model revision → Phase 35 curiosity → Phase 36 episodic memory → Phase 37 bounded transfer.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
 <div class="world-layout">
-<div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="plannedPath" points="" fill="none" stroke="rgba(122,185,255,.45)" stroke-width="5" stroke-dasharray="9 8" stroke-linecap="round" stroke-linejoin="round"></polyline><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g><g id="blockedEdges"></g><g id="curiosityMarks"></g></svg><div class="board" id="worldGrid"></div></div></div>
+<div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="plannedPath" points="" fill="none" stroke="rgba(122,185,255,.45)" stroke-width="5" stroke-dasharray="9 8" stroke-linecap="round" stroke-linejoin="round"></polyline><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g><g id="blockedEdges"></g><g id="curiosityMarks"></g><g id="transferMarks"></g></svg><div class="board" id="worldGrid"></div></div></div>
 <div><div class="rows">
 <div class="row"><span class="label">Latest action</span><span class="value" id="latestAction">—</span></div>
 <div class="row"><span class="label">Observed delta</span><span class="value" id="latestDelta">—</span></div>
@@ -49,7 +49,7 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="row"><span class="label">Decision reason</span><span class="value" id="decisionReason">—</span></div>
 <div class="row"><span class="label">Recent action pace</span><span class="value" id="actionPace">—</span></div>
 </div>
-<div class="gate"><div class="gate-top"><div><b>Phase 32 learned-choice gate</b><div class="micro" id="gateCopy">Gathering causal experience.</div></div><span class="pill blue" id="gatePill">—</span></div><div class="progress"><div id="gateProgress" style="width:0%"></div></div></div><div class="micro" style="margin-top:9px">Map: teal actual · blue dashed planned · red × learned block · gold ? curiosity probe</div>
+<div class="gate"><div class="gate-top"><div><b>Phase 32 learned-choice gate</b><div class="micro" id="gateCopy">Gathering causal experience.</div></div><span class="pill blue" id="gatePill">—</span></div><div class="progress"><div id="gateProgress" style="width:0%"></div></div></div><div class="micro" style="margin-top:9px">Map: teal source-world path · blue dashed plan · red × learned block · gold ? curiosity probe · violet T target-world transfer</div>
 </div>
 </div>
 </article>
@@ -104,6 +104,40 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="preds" id="curiosityHistory"></div>
 </article>
 
+<article class="card s6">
+<div class="head"><div><h2>Phase 36 · episodic route memory</h2><div class="sub">Completed lived routes become citable memories that can alter a later choice between otherwise valid equal-cost plans.</div></div><span class="pill blue" id="memoryStatus">waiting for causal choice</span></div>
+<div class="evidence">
+<div class="ebox"><div class="n" id="routeMemoryCount">0</div><div class="t">Route memories</div></div>
+<div class="ebox"><div class="n" id="memoryDecisionCount">0</div><div class="t">Memory decisions</div></div>
+<div class="ebox"><div class="n" id="memoryChangedCount">0</div><div class="t">Choices changed</div></div>
+</div>
+<div class="rows" style="margin-top:10px">
+<div class="row"><span class="label">Latest decision</span><span class="value" id="memoryLatest">—</span></div>
+<div class="row"><span class="label">No-memory control</span><span class="value" id="memoryCounterfactual">—</span></div>
+<div class="row"><span class="label">Selected route</span><span class="value" id="memorySelected">—</span></div>
+<div class="row"><span class="label">Episode provenance</span><span class="value" id="memoryEvidence">—</span></div>
+<div class="row"><span class="label">Plan outcome</span><span class="value" id="memoryOutcome">—</span></div>
+</div>
+<div class="preds" id="memoryHistory"></div>
+</article>
+
+<article class="card s6">
+<div class="head"><div><h2>Phase 37 · bounded transfer</h2><div class="sub">Source-world experience is separated from a new bounded target world so general action knowledge can be tested against a world-specific exception.</div></div><span class="pill violet" id="transferStatus">waiting for target-world evidence</span></div>
+<div class="evidence">
+<div class="ebox"><div class="n" id="transferDecisionCount">0</div><div class="t">Transfer decisions</div></div>
+<div class="ebox"><div class="n" id="transferProbeCount">0</div><div class="t">Target probes</div></div>
+<div class="ebox"><div class="n" id="transferLatest">—</div><div class="t">Latest transfer</div></div>
+</div>
+<div class="rows" style="margin-top:10px">
+<div class="row"><span class="label">Source evidence</span><span class="value" id="transferSource">—</span></div>
+<div class="row"><span class="label">Counterfactual</span><span class="value" id="transferControl">—</span></div>
+<div class="row"><span class="label">Selected prior</span><span class="value" id="transferPrior">—</span></div>
+<div class="row"><span class="label">Target outcome</span><span class="value" id="transferOutcome">—</span></div>
+<div class="row"><span class="label">Source plan continuity</span><span class="value" id="transferContinuity">—</span></div>
+</div>
+<div class="preds" id="transferHistory"></div>
+</article>
+
 <article class="card s5">
 <div class="head"><div><h2>Current attention</h2><div class="sub">What currently has the strongest claim on foreground behavior.</div></div><span class="pill" id="drivePressure">—</span></div>
 <div class="attention"><div class="micro">Dominant drive</div><div class="main" id="dominantDrive">—</div><div class="micro" id="intentionRationale">—</div></div>
@@ -141,7 +175,7 @@ const RAW_BASE="https://raw.githubusercontent.com/JeremyHennessy/AgentTest";
 const ISSUE_BASE="https://github.com/JeremyHennessy/AgentTest/issues/new",REFRESH_MS=15000,REF_POLL_MS=75000,el=id=>document.getElementById(id);
 let organism=null,resolvedGrowthSha=null,lastRefCheck=0,lastLoadedSha=null;
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
-const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.isArray(v)?v.slice(-n):[],vec=v=>Array.isArray(v)?"["+v.join(", ")+"]":"—";
+const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.isArray(v)?v.slice(-n):[],vec=v=>Array.isArray(v)?"["+v.join(", ")+"]":"—",route=v=>Array.isArray(v)&&v.length?v.join(" → "):"—";
 function age(iso){if(!iso)return"—";const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000));return s<60?s+"s":s<3600?Math.floor(s/60)+"m":(s/3600).toFixed(1)+"h"}
 function arrow(d){if(!Array.isArray(d))return"·";const x=+d[0],y=+d[1];return x===1&&y===0?"→":x===-1&&y===0?"←":x===0&&y===1?"↑":x===0&&y===-1?"↓":x===0&&y===0?"•":vec(d)}
 function renderActionLab(o){
@@ -161,8 +195,10 @@ function renderActionLab(o){
  el("blockedEdges").innerHTML=[...blocked.values()].map(r=>{const a=[(+r.before[0]+b)*cell+cell/2,(b-(+r.before[1]))*cell+cell/2],z=[(+r.predicted_after[0]+b)*cell+cell/2,(b-(+r.predicted_after[1]))*cell+cell/2],mx=(a[0]+z[0])/2,my=(a[1]+z[1])/2;return '<g><line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+z[0]+'" y2="'+z[1]+'" stroke="#ff9696" stroke-width="5" stroke-dasharray="10 8" stroke-linecap="round" opacity=".9"></line><circle cx="'+mx+'" cy="'+my+'" r="11" fill="#071522" stroke="#ff9696" stroke-width="2"></circle><text x="'+mx+'" y="'+(my+5)+'" text-anchor="middle" font-size="16" font-weight="900" fill="#ff9696">×</text></g>'}).join("");
  const curiosityProbes=tail(pl.curiosity_probes||[],4);
  el("curiosityMarks").innerHTML=curiosityProbes.map(q=>{if(!Array.isArray(q.before)||!Array.isArray(q.after))return"";const a=[(+q.before[0]+b)*cell+cell/2,(b-(+q.before[1]))*cell+cell/2],z=[(+q.after[0]+b)*cell+cell/2,(b-(+q.after[1]))*cell+cell/2],same=a[0]===z[0]&&a[1]===z[1];if(same)return '<g><circle cx="'+a[0]+'" cy="'+a[1]+'" r="16" fill="none" stroke="#f2c978" stroke-width="4" opacity=".95"></circle><text x="'+a[0]+'" y="'+(a[1]+5)+'" text-anchor="middle" font-size="17" font-weight="900" fill="#f2c978">?</text></g>';return '<g><line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+z[0]+'" y2="'+z[1]+'" stroke="#f2c978" stroke-width="5" stroke-dasharray="5 7" stroke-linecap="round" opacity=".95"></line><circle cx="'+z[0]+'" cy="'+z[1]+'" r="8" fill="#071522" stroke="#f2c978" stroke-width="3"></circle></g>'}).join("");
+ const transferProbes=tail(pl.transfer_probes||[],2);
+ el("transferMarks").innerHTML=transferProbes.map(q=>{if(!Array.isArray(q.before)||!Array.isArray(q.after))return"";const a=[(+q.before[0]+b)*cell+cell/2,(b-(+q.before[1]))*cell+cell/2],z=[(+q.after[0]+b)*cell+cell/2,(b-(+q.after[1]))*cell+cell/2],mx=(a[0]+z[0])/2,my=(a[1]+z[1])/2;return '<g><line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+z[0]+'" y2="'+z[1]+'" stroke="#b7a1ff" stroke-width="5" stroke-dasharray="3 6" stroke-linecap="round" opacity=".95"></line><rect x="'+(z[0]-8)+'" y="'+(z[1]-8)+'" width="16" height="16" rx="3" fill="#071522" stroke="#b7a1ff" stroke-width="3" transform="rotate(45 '+z[0]+' '+z[1]+')"></rect><text x="'+mx+'" y="'+(my-8)+'" text-anchor="middle" font-size="12" font-weight="900" fill="#b7a1ff">T</text></g>'}).join("");
  const phase32=(lab.history||[]),phase32Last=phase32[phase32.length-1]||{},last=h[h.length-1]||{},plan=(pl.plans||[]).find(p=>p.id===last.plan_id)||{},mode=planningActive?(pl.status||"planning"):phase32Last.decision?.kind||"—";
- const phaseLabel=pl.version==="persistent-planning-lab-v3"?"Phase 35":pl.version==="persistent-planning-lab-v2"?"Phase 34":planningActive?"Phase 33":"";el("worldBadge").textContent=(phaseLabel?phaseLabel+" · ":"")+Object.keys(vis).length+" / "+Math.pow(b*2+1,2)+" cells experienced";
+ const phaseLabel=pl.version==="persistent-planning-lab-v5"?"Phase 37":pl.version==="persistent-planning-lab-v4"?"Phase 36":pl.version==="persistent-planning-lab-v3"?"Phase 35":pl.version==="persistent-planning-lab-v2"?"Phase 34":planningActive?"Phase 33":"";el("worldBadge").textContent=(phaseLabel?phaseLabel+" · ":"")+Object.keys(vis).length+" / "+Math.pow(b*2+1,2)+" cells experienced";
  el("latestAction").textContent=last.action||"—";el("latestDelta").textContent=vec(last.delta);el("latestBlocked").textContent=last.blocked==null?"—":last.blocked?"yes":"no";
  el("decisionReason").textContent=planningActive?(last.plan_id?last.plan_id+" · step "+((+last.step_index||0)+1)+"/"+(+last.plan_length||0)+" · predicted "+vec(last.predicted_after):"Planning bootstrap pending"):phase32Last.decision?.reason||"—";
  const kind=planningActive?"planning_lab":"action_lab",ae=(o.episodes||[]).filter(e=>e.kind===kind&&e.time).slice(-6);let pace="need more observations";if(ae.length>1){const hrs=(new Date(ae[ae.length-1].time)-new Date(ae[0].time))/36e5;if(hrs>0)pace=((ae.length-1)/hrs).toFixed(1)+" actions / hour"}el("actionPace").textContent=pace;
@@ -222,6 +258,37 @@ function renderCuriosity(o){
  el("curiosityPlanEffect").textContent=p.id?(p.goal_reached?"probe reached goal":p.replan_required?"state changed · replan required":"plan preserved · pending step unchanged"):"—";
  el("curiosityHistory").innerHTML=tail(probes,4).map(q=>'<span class="pred '+(q.matched_prior_state_effect===false?'violated':'confirmed')+'">'+esc(q.id)+" · "+esc(q.source_model_revision_id||"MR")+" · "+esc(q.state_action_key||"state/action")+" · "+esc(q.blocked?"blocked":"moved")+"</span>").join("");
 }
+function renderMemory(o){
+ const lab=o.planning_lab||{},memories=lab.episodic_route_memories||[],decisions=lab.memory_decisions||[],plans=lab.plans||[];
+ const d=decisions[decisions.length-1]||{},changed=decisions.filter(x=>x.changed_choice).length;
+ const refs=Array.isArray(d.memory_refs)?d.memory_refs:[],episodes=Array.isArray(d.source_episode_refs)?d.source_episode_refs:[];
+ const plan=plans.slice().reverse().find(p=>p.memory_decision_id===d.id)||{};
+ let status="waiting for causal choice",cls="blue";
+ if(d.id){status=d.changed_choice?"memory changed route":"control retained";cls=d.changed_choice?"good":"blue"}
+ el("memoryStatus").textContent=status;el("memoryStatus").className="pill "+cls;
+ el("routeMemoryCount").textContent=memories.length;el("memoryDecisionCount").textContent=decisions.length;el("memoryChangedCount").textContent=changed;
+ el("memoryLatest").textContent=d.id?d.id+" · "+pretty(d.status||"recorded"):"No episodic decision recorded yet.";
+ el("memoryCounterfactual").textContent=d.id?route(d.counterfactual_actions)+" · replay "+(+d.counterfactual_replay_score||0):"—";
+ el("memorySelected").textContent=d.id?route(d.selected_actions)+" · replay "+(+d.selected_replay_score||0):"—";
+ el("memoryEvidence").textContent=d.id?(refs.length?refs.join(", "):"no memory refs")+" · "+episodes.length+" source episode"+(episodes.length===1?"":"s"):"—";
+ el("memoryOutcome").textContent=plan.id?plan.id+" · "+pretty(plan.status||"—")+(plan.completed_cycle?" · completed C"+plan.completed_cycle:""):"Waiting for a persisted plan linked to the latest memory decision.";
+ el("memoryHistory").innerHTML=tail(decisions,4).map(x=>'<span class="pred '+(x.changed_choice?'confirmed':'pending')+'">'+esc(x.id)+" · "+esc(x.changed_choice?"changed choice":"control retained")+"</span>").join("");
+}
+function renderTransfer(o){
+ const lab=o.planning_lab||{},decisions=lab.transfer_decisions||[],probes=lab.transfer_probes||[];
+ const d=decisions[decisions.length-1]||{},p=probes[probes.length-1]||{};
+ let status="waiting for target-world evidence",cls="violet";
+ if(p.id){status=p.interpretation==="general_effect_transferred_source_exception_did_not"?"general effect transferred":pretty(p.interpretation||"probe observed");cls=p.matched_selected_prior?"good":"warn"}
+ else if(d.id){status="probe selected";cls="violet"}
+ el("transferStatus").textContent=status;el("transferStatus").className="pill "+cls;
+ el("transferDecisionCount").textContent=decisions.length;el("transferProbeCount").textContent=probes.length;el("transferLatest").textContent=p.id||d.id||"—";
+ el("transferSource").textContent=(d.source_model_revision_id||p.source_model_revision_id)?(d.source_model_revision_id||p.source_model_revision_id)+" · "+(d.state_action_key||p.state_action_key||"state/action")+" · "+(+d.source_state_samples||0)+" source samples":"—";
+ el("transferControl").textContent=d.id?pretty(d.counterfactual_prior)+" → "+vec(d.counterfactual_prediction):"—";
+ el("transferPrior").textContent=d.id?pretty(d.selected_prior)+" → "+vec(d.selected_prediction):"—";
+ el("transferOutcome").textContent=p.id?p.id+" · "+vec(p.before)+" + "+(p.action||"—")+" → "+vec(p.after)+" · "+pretty(p.interpretation):"No target-world probe observed yet.";
+ el("transferContinuity").textContent=p.id?(p.source_plan_preserved?"source plan preserved · "+(p.plan_id||"plan")+" step "+(+p.plan_next_step_index||0)+" unchanged":"source plan continuity not preserved"):"—";
+ el("transferHistory").innerHTML=tail(probes,4).map(q=>'<span class="pred '+(q.matched_selected_prior?'confirmed':'violated')+'">'+esc(q.id)+" · "+esc(q.source_model_revision_id||"MR")+" · "+esc(pretty(q.interpretation||"observed"))+"</span>").join("");
+}
 function renderAttention(o){const i=tail(o.intentions,1)[0]||{},d=i.dominant_drive||"—",pressure=Number((o.drives||{})[d]);el("dominantDrive").textContent=pretty(d);el("intentionKind").textContent=pretty(i.kind);el("intentionTarget").textContent=i.target||"—";el("intentionRationale").textContent=i.rationale||"—";el("drivePressure").textContent=Number.isFinite(pressure)?pressure.toFixed(2)+" pressure":"—";
  const q=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0];el("currentQuestion").textContent=q?.text||"—";
  const active=(o.experiments||[]).filter(x=>!["completed","closed","rejected"].includes(x.status)).slice(-1)[0];el("activeExperiment").textContent=active?active.id+" · "+pretty(active.readiness||active.status):"—";
@@ -232,6 +299,8 @@ function renderEvidence(o){const fs=Object.values(o.empirical_learning?.families
 function bars(id,obj){el(id).innerHTML=Object.entries(obj||{}).sort((a,b)=>+b[1]-+a[1]).map(([n,v])=>{const x=Math.max(0,Math.min(1,+v||0));return'<div class="bar"><span class="barname">'+esc(pretty(n))+'</span><span class="barval">'+x.toFixed(2)+'</span><div class="track"><div class="fill" style="width:'+Math.round(x*100)+'%"></div></div></div>'}).join("")}
 function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind==="action_lab").forEach(e=>at[e.cycle]=e.time);tail(o.action_lab?.history,7).forEach(a=>out.push({c:+a.cycle||0,k:"action",t:at[a.cycle],b:"<strong>"+esc(a.action)+"</strong> produced "+esc(vec(a.delta))+". Decision: "+esc(pretty(a.decision?.kind))+"."}));tail(o.planning_lab?.executions,7).forEach(x=>out.push({c:+x.cycle||0,k:"plan step",b:"<strong>"+esc(x.action)+"</strong> predicted "+esc(vec(x.predicted_after))+" and observed "+esc(vec(x.after))+(x.matched_prediction?" · matched.":" · mismatch; replan required.")}));
  tail(o.planning_lab?.curiosity_probes,3).forEach(q=>out.push({c:+q.cycle||0,k:"curiosity probe",b:"<strong>"+esc(q.action)+"</strong> at "+esc(vec(q.before))+" tested "+esc(q.source_model_revision_id||"prior evidence")+" · "+esc(q.blocked?"blocked":"moved")+" · samples "+esc(q.state_samples_before)+"→"+esc(q.state_samples_after)+"."}));
+ tail(o.planning_lab?.memory_decisions,3).filter(x=>x.changed_choice).forEach(x=>out.push({c:+x.cycle||0,k:"memory choice",b:"<strong>"+esc(x.id)+"</strong> changed route from "+esc(route(x.counterfactual_actions))+" to "+esc(route(x.selected_actions))+" using "+esc((x.memory_refs||[]).join(", ")||"episodic memory")+"."}));
+ tail(o.planning_lab?.transfer_probes,3).forEach(q=>out.push({c:+q.cycle||0,k:"transfer probe",b:"<strong>"+esc(q.id)+"</strong> tested "+esc(q.source_model_revision_id||"source evidence")+" in "+esc(pretty(q.target_world_version||"target world"))+" · "+esc(vec(q.before))+" → "+esc(vec(q.after))+" · "+esc(pretty(q.interpretation||"observed"))+"."}));
  tail(o.intentions,6).forEach((i,n,a)=>{const p=n?a[n-1]:null;if(!p||p.dominant_drive!==i.dominant_drive||p.kind!==i.kind)out.push({c:+i.cycle||0,k:"attention",b:"Selected <strong>"+esc(pretty(i.dominant_drive))+"</strong> via "+esc(pretty(i.kind))+"."})});
  tail(eps.filter(e=>e.kind==="stimulus"&&e.source==="human_interaction"),2).forEach(e=>out.push({c:+e.cycle||0,k:"interaction",t:e.time,b:"Human input: “"+esc(String(e.content||"").slice(0,130))+"”"}));
  tail(o.surprises,2).forEach(s=>out.push({c:+s.cycle||0,k:"surprise",t:s.time,b:"Observed changes across <strong>"+Object.keys(s.changes||{}).length+"</strong> measured repository fields."}));
@@ -239,7 +308,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function resolveGrowthSha(){
  const now=Date.now();
  if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
