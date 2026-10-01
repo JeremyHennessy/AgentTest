@@ -17,8 +17,10 @@ a{color:inherit}.shell{width:min(1400px,calc(100% - 28px));margin:auto;padding:2
 .timeline .event{display:grid;grid-template-columns:58px 95px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid rgba(29,59,82,.5)}.cycle{color:var(--muted);font:10px ui-monospace,monospace}.kind{color:var(--blue);font-size:9px;text-transform:uppercase;letter-spacing:.09em;font-weight:900}.body{font-size:11px}.body strong{color:var(--text)}
 .bars{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 13px}.bar{display:grid;grid-template-columns:1fr auto;gap:6px}.track{grid-column:1/-1;height:5px;border-radius:999px;background:#06111c;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue))}.barname,.barval{font-size:10px;color:var(--muted)}
 .changes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.change{border:1px solid var(--line);border-radius:12px;padding:11px;background:#071522}.change b{font-size:11px}.change div{font-size:9px;color:var(--muted);margin-top:3px}
+.now-card{padding:17px 19px}.now-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.now-item{border:1px solid var(--line);border-radius:13px;padding:11px 12px;background:#071522;min-width:0}.now-item .t{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:800}.now-item .v{font-size:14px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.ladder{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.phase-chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:9px;color:var(--muted);background:#071522}.phase-chip .p-dot{width:6px;height:6px;border-radius:50%;background:#58778d}.phase-chip.done{color:var(--green);border-color:rgba(122,227,170,.28)}.phase-chip.done .p-dot{background:var(--green);box-shadow:0 0 10px rgba(122,227,170,.45)}.phase-chip.active{color:var(--blue);border-color:rgba(122,185,255,.3)}.phase-chip.active .p-dot{background:var(--blue);box-shadow:0 0 10px rgba(122,185,255,.45)}
+.evidence-drawer{padding:0;overflow:hidden;margin-top:0}.evidence-drawer>summary{list-style:none;padding:17px 19px;display:flex;justify-content:space-between;gap:15px;align-items:center;color:var(--text)}.evidence-drawer>summary::-webkit-details-marker{display:none}.evidence-drawer>summary:after{content:"Open";font-size:10px;color:var(--blue);border:1px solid var(--line);border-radius:999px;padding:5px 8px}.evidence-drawer[open]>summary:after{content:"Close"}.drawer-title{font-weight:900}.drawer-copy{display:block;color:var(--muted);font-size:11px;font-weight:400;margin-top:2px}.detail-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:15px;padding:0 15px 15px}.detail-grid>.card{box-shadow:none;margin:0;background:#081724}
 details{margin-top:15px;border:1px solid var(--line);border-radius:14px;background:#081724}summary{cursor:pointer;padding:13px 15px;color:var(--muted);font-weight:800}.interaction{padding:0 15px 15px}textarea{width:100%;min-height:85px;resize:vertical;border:1px solid var(--line);background:#06131f;color:var(--text);border-radius:11px;padding:11px;font:inherit}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}button,.button{border:1px solid var(--line);background:#112b40;color:var(--text);border-radius:9px;padding:8px 10px;text-decoration:none;font:inherit;font-size:11px;font-weight:800;cursor:pointer}.primary{background:var(--cyan);color:#02231d}.pending{font-size:10px;color:var(--gold);margin-top:7px}footer{display:flex;gap:13px;flex-wrap:wrap;margin-top:17px;color:var(--muted);font-size:10px}.error{color:var(--red)}
-@media(max-width:1080px){.summary{grid-template-columns:repeat(3,1fr)}.s8,.s7,.s6,.s5,.s4{grid-column:span 6}.world-layout{grid-template-columns:1fr}}@media(max-width:720px){.shell{width:min(100% - 18px,1400px);padding-top:18px}.top{flex-direction:column}.summary{grid-template-columns:repeat(2,1fr)}.grid{display:block}.card{margin-bottom:11px;padding:14px}.models,.bars,.changes{grid-template-columns:1fr}.timeline .event{grid-template-columns:45px 75px 1fr}.row{grid-template-columns:95px 1fr}}
+@media(max-width:1080px){.summary{grid-template-columns:repeat(3,1fr)}.s8,.s7,.s6,.s5,.s4{grid-column:span 6}.world-layout{grid-template-columns:1fr}.now-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.shell{width:min(100% - 18px,1400px);padding-top:18px}.top{flex-direction:column}.summary{grid-template-columns:repeat(2,1fr)}.grid,.detail-grid{display:block}.card{margin-bottom:11px;padding:14px}.evidence-drawer{padding:0}.evidence-drawer>summary{padding:14px}.detail-grid{padding:0 10px 10px}.now-grid,.models,.bars,.changes{grid-template-columns:1fr}.timeline .event{grid-template-columns:45px 75px 1fr}.row{grid-template-columns:95px 1fr}}
 </style>
 </head>
 <body>
@@ -30,14 +32,27 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 
 <section class="summary">
 <div class="stat"><div class="k">Generation</div><div class="v" id="generation">—</div><div class="s" id="generationSub">persistent state</div></div>
-<div class="stat"><div class="k">Action Lab</div><div class="v" id="actionCount">—</div><div class="s" id="actionSub">persisted actions</div></div>
-<div class="stat"><div class="k">Decision</div><div class="v" id="decisionMode">—</div><div class="s" id="decisionSub">latest policy</div></div>
-<div class="stat"><div class="k">Position</div><div class="v" id="position">—</div><div class="s">bounded micro-world</div></div>
-<div class="stat"><div class="k">Empirical stability</div><div class="v" id="stability">—</div><div class="s">stable / evaluable</div></div>
+<div class="stat"><div class="k">Experience</div><div class="v" id="actionCount">—</div><div class="s" id="actionSub">persisted actions</div></div>
+<div class="stat"><div class="k">Current mode</div><div class="v" id="decisionMode">—</div><div class="s" id="decisionSub">latest policy</div></div>
+<div class="stat"><div class="k">World position</div><div class="v" id="position">—</div><div class="s">bounded micro-world</div></div>
+<div class="stat"><div class="k">Learning evidence</div><div class="v" id="stability">—</div><div class="s">stable / evaluable</div></div>
 <div class="stat"><div class="k">State age</div><div class="v" id="stateAge">—</div><div class="s" id="stateAgeSub">last update</div></div>
 </section>
 
 <section class="grid">
+<article class="card s12 now-card">
+<div class="head"><div><h2>Right now</h2><div class="sub">The organism in one glance. Detailed phase evidence is still available below.</div></div><span class="pill blue" id="nowStatus">loading</span></div>
+<div class="now-grid">
+<div class="now-item"><div class="t">Where it is going</div><div class="v" id="nowGoal">—</div></div>
+<div class="now-item"><div class="t">What it is doing</div><div class="v" id="nowPlan">—</div></div>
+<div class="now-item"><div class="t">Why</div><div class="v" id="nowWhy">—</div></div>
+<div class="now-item"><div class="t">What it remembers</div><div class="v" id="nowMemory">—</div></div>
+<div class="now-item"><div class="t">What it just learned</div><div class="v" id="nowLearning">—</div></div>
+<div class="now-item"><div class="t">What it is wondering about</div><div class="v" id="nowQuestion">—</div></div>
+</div>
+<div class="ladder" id="capabilityLadder"></div>
+</article>
+
 <article class="card s8">
 <div class="head"><div><h2>Bounded Action Lab → planning, memory & transfer worlds</h2><div class="sub">Phase 32 causal learning → Phase 33 planning → Phase 34 model revision → Phase 35 curiosity → Phase 36 episodic memory → Phase 37 bounded transfer.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
 <div class="world-layout">
@@ -56,6 +71,9 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 
 <aside class="card s4"><div class="head"><div><h2>Learned causal model</h2><div class="sub">Effects are learned from outcomes, not inferred from action names.</div></div></div><div class="models" id="causalModel"></div></aside>
 
+<details class="card s12 evidence-drawer">
+<summary><span><span class="drawer-title">Evidence & history</span><span class="drawer-copy">Open the scientific trail for planning, surprise, curiosity, memory, transfer, attention and empirical learning.</span></span></summary>
+<div class="detail-grid">
 <article class="card s12">
 <div class="head"><div><h2>Phase 33 · persistent planning</h2><div class="sub">Goal, persisted multi-step plan, predicted intermediate states, and execution evidence across heartbeats.</div></div><span class="pill blue" id="planningStatus">not started</span></div>
 <div class="evidence">
@@ -151,15 +169,22 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="rows" style="margin-top:10px"><div class="row"><span class="label">Learning family</span><span class="value" id="learningFamily">—</span></div><div class="row"><span class="label">Stability rate</span><span class="value" id="stabilityRate">—</span></div><div class="row"><span class="label">Inconclusive</span><span class="value" id="inconclusiveTrials">—</span></div></div>
 <div class="preds" id="predictionList"></div>
 </article>
+</div>
+</details>
 
-<article class="card s8"><div class="head"><div><h2>Recent activity</h2><div class="sub">Actions, attention changes, human input, surprises, and verified changes.</div></div><span class="pill" id="eventCount">—</span></div><div class="timeline" id="timeline"></div></article>
+<article class="card s12"><div class="head"><div><h2>Recent activity</h2><div class="sub">Actions, attention changes, human input, surprises, and verified changes.</div></div><span class="pill" id="eventCount">—</span></div><div class="timeline" id="timeline"></div></article>
 
+<details class="card s12 evidence-drawer">
+<summary><span><span class="drawer-title">System internals & verified changes</span><span class="drawer-copy">Drive pressures, capability metrics and independently admitted repository changes.</span></span></summary>
+<div class="detail-grid">
 <aside class="card s4">
 <div class="head"><div><h2>Drive pressures</h2><div class="sub">Pressure feeding the next intention selection.</div></div></div><div class="bars" id="driveBars"></div>
 <div class="head" style="margin-top:19px"><div><h2>Capabilities</h2><div class="sub">Persisted metrics; not claims of consciousness.</div></div></div><div class="bars" id="metricBars"></div>
 </aside>
 
-<article class="card s12"><div class="head"><div><h2>Verified self-development</h2><div class="sub">Changes admitted only after verification and preservation gates.</div></div><span class="pill good" id="acceptedCount">—</span></div><div class="changes" id="changeHistory"></div></article>
+<article class="card s8"><div class="head"><div><h2>Verified self-development</h2><div class="sub">Changes admitted only after verification and preservation gates.</div></div><span class="pill good" id="acceptedCount">—</span></div><div class="changes" id="changeHistory"></div></article>
+</div>
+</details>
 </section>
 
 <details><summary>Optional owner interaction · hidden by default</summary><div class="interaction"><div class="sub" style="margin-bottom:8px">Existing authenticated GitHub handoff; no token is stored in this page.</div><textarea id="message" maxlength="1200" placeholder="Send an evidence-linked interaction…"></textarea><div class="actions"><button class="primary" id="send">Open secure GitHub handoff</button><button id="refresh">Refresh now</button><a class="button" href="https://github.com/JeremyHennessy/AgentTest/actions/workflows/interact.yml" target="_blank" rel="noopener">Advanced workflow</a></div><div class="pending" id="pending"></div><div class="question"><b>Latest response</b><span id="latestResponse">No persisted response yet.</span></div></div></details>
@@ -178,6 +203,38 @@ const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;"
 const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.isArray(v)?v.slice(-n):[],vec=v=>Array.isArray(v)?"["+v.join(", ")+"]":"—",route=v=>Array.isArray(v)&&v.length?v.join(" → "):"—";
 function age(iso){if(!iso)return"—";const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000));return s<60?s+"s":s<3600?Math.floor(s/60)+"m":(s/3600).toFixed(1)+"h"}
 function arrow(d){if(!Array.isArray(d))return"·";const x=+d[0],y=+d[1];return x===1&&y===0?"→":x===-1&&y===0?"←":x===0&&y===1?"↑":x===0&&y===-1?"↓":x===0&&y===0?"•":vec(d)}
+function renderNow(o){
+ const lab=o.planning_lab||{},goals=lab.goals||[],plans=lab.plans||[],execs=lab.executions||[];
+ const goal=goals.find(g=>g.id===lab.active_goal_id)||goals[goals.length-1]||{};
+ const plan=plans.find(p=>p.id===lab.active_plan_id)||plans[plans.length-1]||{};
+ const last=execs[execs.length-1]||{},intent=tail(o.intentions,1)[0]||{};
+ const decisions=lab.memory_decisions||[],changed=decisions.filter(x=>x.changed_choice),md=changed[changed.length-1]||decisions[decisions.length-1]||{};
+ const memories=lab.episodic_route_memories||[],tp=tail(lab.transfer_probes,1)[0]||{},cp=tail(lab.curiosity_probes,1)[0]||{},mr=tail(lab.model_revisions,1)[0]||{};
+ const question=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0]||{};
+ const step=+plan.next_step_index||0,len=Array.isArray(plan.actions)?plan.actions.length:0;
+ el("nowStatus").textContent=pretty(lab.status||"observing");el("nowStatus").className="pill "+(["executing_plan","goal_reached","plan_active"].includes(lab.status)?"good":["needs_replan","blocked_no_plan"].includes(lab.status)?"warn":"blue");
+ el("nowGoal").textContent=goal.id?goal.id+" · "+vec(goal.target)+" · "+pretty(goal.status||"active"):"Waiting for a planning goal.";
+ el("nowPlan").textContent=plan.id?plan.id+" · step "+Math.min(step+1,Math.max(1,len))+"/"+len+(last.action?" · latest "+last.action:""):"No active persisted plan.";
+ let why="Following the learned transition model.";
+ if(plan.memory_influenced)why="Past episodic memory changed this route.";
+ else if(last.model_revision_id)why="A surprise changed the model and forced replanning.";
+ else if(intent.kind)why="Attention: "+pretty(intent.kind)+".";
+ el("nowWhy").textContent=why;
+ el("nowMemory").textContent=memories.length+" route memories · "+changed.length+" later choice"+(changed.length===1?"":"s")+" changed"+(md.id?" · latest "+md.id:"");
+ if(tp.id)el("nowLearning").textContent=tp.id+" · "+pretty(tp.interpretation||"target-world result");
+ else if(cp.id)el("nowLearning").textContent=cp.id+" · curiosity "+(cp.blocked?"confirmed a block":"observed movement");
+ else if(mr.id)el("nowLearning").textContent=mr.id+" · revised "+(mr.state_action_key||"a state/action model");
+ else el("nowLearning").textContent="Accumulating ordinary experience.";
+ el("nowQuestion").textContent=question.text||"No active question.";
+ const phase32=(o.action_lab?.history||[]).some(x=>x.decision?.kind==="use_learned_transition");
+ const phase33=(lab.plans||[]).some(x=>x.status==="completed");
+ const phase34=(lab.model_revisions||[]).length>0;
+ const phase35=(lab.curiosity_probes||[]).length>0;
+ const phase36=changed.length>0;
+ const phase37=(lab.transfer_probes||[]).length>0;
+ const chips=[[32,"learned actions",phase32],[33,"persistent plans",phase33],[34,"revised model",phase34],[35,"tested uncertainty",phase35],[36,"memory changed choice",phase36],[37,"transferred knowledge",phase37]];
+ el("capabilityLadder").innerHTML=chips.map(([n,label,done])=>'<span class="phase-chip '+(done?'done':'active')+'"><span class="p-dot"></span>Phase '+n+' · '+esc(label)+'</span>').join("");
+}
 function renderActionLab(o){
  const lab=o.action_lab||{},pl=o.planning_lab||{},planningActive=pl.bootstrapped_cycle!=null||(pl.executions||[]).length>0;
  const w=planningActive?pl:lab,b=+(w.bounds??2),pos=w.position||[0,0],vis=w.visit_counts||{},h=planningActive?(pl.executions||[]):(lab.history||[]),pathEvents=planningActive?[...(pl.executions||[]),...(pl.curiosity_probes||[])].sort((a,b)=>(+a.cycle||0)-(+b.cycle||0)):(lab.history||[]),cells=[],side=b*2+1;
@@ -308,7 +365,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderAttention(o);renderEvidence(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function resolveGrowthSha(){
  const now=Date.now();
  if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
