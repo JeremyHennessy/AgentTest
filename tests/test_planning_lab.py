@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -440,6 +441,180 @@ class PlanningLabTests(unittest.TestCase):
             "MR000001",
         )
 
+    def test_completed_route_consolidates_citable_episodic_memory(self) -> None:
+        state = self._phase32_ready_state()
+        reached = None
+        for cycle in range(9, 20):
+            state["cycles"] = cycle
+            state["generation"] = cycle
+            result = step_planning_lab(state)
+            if result.get("goal_reached"):
+                reached = result
+                break
+
+        self.assertIsNotNone(reached)
+        lab = ensure_planning_lab_state(state)
+        completed_plan = next(
+            plan
+            for plan in lab["plans"]
+            if plan.get("id") == reached["plan_id"]
+        )
+        executions = [
+            item
+            for item in lab["executions"]
+            if item.get("plan_id") == completed_plan["id"]
+        ]
+        state["episodes"] = [
+            {
+                "id": f"E_TEST_{index}",
+                "cycle": item["cycle"],
+                "time": "2026-01-01T00:00:00+00:00",
+                "kind": "planning_lab",
+                "content": json.dumps(
+                    {
+                        "action": item["action"],
+                        "before": item["before"],
+                        "after": item["after"],
+                        "plan_id": item["plan_id"],
+                    }
+                ),
+                "concepts": ["planning_lab"],
+            }
+            for index, item in enumerate(executions, start=1)
+        ]
+        lab["episodic_memory_started_cycle"] = min(
+            int(item["cycle"]) for item in executions
+        )
+
+        next_cycle = int(completed_plan["completed_cycle"]) + 1
+        state["cycles"] = next_cycle
+        state["generation"] = next_cycle
+        step_planning_lab(state)
+
+        memories = lab["episodic_route_memories"]
+        memory = next(
+            item
+            for item in memories
+            if item["source_plan_id"] == completed_plan["id"]
+        )
+        self.assertEqual(memory["outcome"], "goal_completed")
+        self.assertEqual(
+            memory["source_execution_ids"],
+            [item["id"] for item in executions],
+        )
+        self.assertEqual(
+            memory["source_episode_ids"],
+            [f"E_TEST_{index}" for index in range(1, len(executions) + 1)],
+        )
+        self.assertTrue(memory["state_action_keys"])
+
+    def test_episodic_memory_changes_equal_cost_route_choice_with_counterfactual(self) -> None:
+        state = self._phase32_ready_state()
+        state["cycles"] = 9
+        state["generation"] = 9
+        step_planning_lab(state)
+        lab = ensure_planning_lab_state(state)
+
+        lab["position"] = [0, 0]
+        lab["goals"] = [
+            {
+                "id": "PG_MEMORY",
+                "assigned_cycle": 10,
+                "target": [1, 1],
+                "status": "active",
+                "selection": {
+                    "kind": "test_fixture",
+                    "prior_visits": 0,
+                    "planned_distance": 2,
+                    "preferred_step_range": [3, 4],
+                },
+            }
+        ]
+        lab["plans"] = []
+        lab["active_goal_id"] = "PG_MEMORY"
+        lab["active_plan_id"] = None
+        lab["status"] = "goal_assigned"
+        lab["episodic_memory_started_cycle"] = 9
+        lab["episodic_route_memories"] = [
+            {
+                "id": "EM_TEST",
+                "policy_version": "episodic-route-memory-v1",
+                "created_cycle": 9,
+                "source_plan_id": "PP_OLD",
+                "source_goal_id": "PG_OLD",
+                "source_episode_ids": ["E_MEMORY"],
+                "source_execution_ids": ["PX_MEMORY"],
+                "start": [0, 0],
+                "goal": [1, 1],
+                "actions": ["north", "west"],
+                "state_action_keys": ["0,0|north", "1,0|west"],
+                "action_bigrams": ["north>west"],
+                "completed_cycle": 9,
+                "outcome": "goal_completed",
+                "world_version": lab["world_version"],
+            }
+        ]
+
+        state["cycles"] = 10
+        state["generation"] = 10
+        result = step_planning_lab(state)
+        plan = lab["plans"][0]
+        decision = lab["memory_decisions"][0]
+
+        self.assertTrue(result["memory_influenced"])
+        self.assertEqual(plan["reason"], "initial_goal_plan")
+        self.assertEqual(
+            plan["memory_selection_reason"],
+            "episodic_memory_tiebreak",
+        )
+        self.assertEqual(decision["status"], "memory_changed_choice")
+        self.assertEqual(decision["counterfactual_actions"], ["north", "west"])
+        self.assertEqual(decision["selected_actions"], ["west", "north"])
+        self.assertGreater(
+            decision["counterfactual_replay_score"],
+            decision["selected_replay_score"],
+        )
+        self.assertEqual(decision["memory_refs"], ["EM_TEST"])
+        self.assertEqual(decision["source_episode_refs"], ["E_MEMORY"])
+        self.assertEqual(result["action"], "west")
+
+    def test_episodic_memory_and_decision_persist_across_reload(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = StateStore(Path(temp) / "organism.json")
+            state = self._phase32_ready_state()
+            state["planning_lab"]["episodic_memory_started_cycle"] = 8
+            state["planning_lab"]["episodic_route_memories"] = [
+                {
+                    "id": "EM_PERSIST",
+                    "policy_version": "episodic-route-memory-v1",
+                    "source_plan_id": "PP_PERSIST",
+                    "source_episode_ids": ["E_PERSIST"],
+                    "state_action_keys": ["0,0|north"],
+                    "action_bigrams": [],
+                    "outcome": "goal_completed",
+                    "world_version": state["planning_lab"]["world_version"],
+                }
+            ]
+            state["planning_lab"]["memory_decisions"] = [
+                {
+                    "id": "MD_PERSIST",
+                    "changed_choice": True,
+                    "memory_refs": ["EM_PERSIST"],
+                    "source_episode_refs": ["E_PERSIST"],
+                }
+            ]
+            store.save(state)
+            reloaded = store.load()
+
+            self.assertEqual(
+                reloaded["planning_lab"]["episodic_route_memories"][0]["id"],
+                "EM_PERSIST",
+            )
+            self.assertEqual(
+                reloaded["planning_lab"]["memory_decisions"][0]["id"],
+                "MD_PERSIST",
+            )
+
     def test_planner_does_not_reference_hidden_environment_transition_map(self) -> None:
         source = inspect.getsource(planning_lab)
         self.assertNotIn("_HIDDEN_ACTION_DELTAS", source)
@@ -456,7 +631,7 @@ class PlanningLabTests(unittest.TestCase):
 
         self.assertTrue(
             imports.issubset(
-                {"__future__", "collections", "typing", "action_lab"}
+                {"__future__", "json", "collections", "typing", "action_lab"}
             )
         )
 

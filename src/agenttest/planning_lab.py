@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections import Counter, defaultdict, deque
 from typing import Any
 
@@ -12,8 +13,12 @@ from .action_lab import (
     validate_action_lab_history,
 )
 
-PLANNING_LAB_VERSION = "persistent-planning-lab-v3"
+PLANNING_LAB_VERSION = "persistent-planning-lab-v4"
 CURIOSITY_POLICY_VERSION = "evidence-valued-curiosity-v1"
+EPISODIC_MEMORY_VERSION = "episodic-route-memory-v1"
+EPISODIC_MEMORY_MAX_ENTRIES = 64
+EPISODIC_MEMORY_MAX_DECISIONS = 128
+EPISODIC_MEMORY_MAX_ROUTE_CANDIDATES = 24
 CURIOSITY_TARGET_STATE_SAMPLES = 2
 CURIOSITY_MAX_PROBES_PER_REVISION = 1
 MIN_MODEL_SAMPLES = 2
@@ -34,6 +39,9 @@ def initial_planning_lab_state() -> dict[str, Any]:
         "model_revisions": [],
         "curiosity_decisions": [],
         "curiosity_probes": [],
+        "episodic_memory_started_cycle": None,
+        "episodic_route_memories": [],
+        "memory_decisions": [],
         "world_version": STATEFUL_WORLD_VERSION,
         "goals": [],
         "plans": [],
@@ -575,6 +583,308 @@ def _execute_curiosity_probe(
     }
 
 
+def _planning_episode_payload(episode: dict[str, Any]) -> dict[str, Any] | None:
+    if episode.get("kind") != "planning_lab":
+        return None
+    content = episode.get("content")
+    if not isinstance(content, str):
+        return None
+    try:
+        payload = json.loads(content)
+    except (TypeError, ValueError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _consolidate_episodic_route_memories(
+    state: dict[str, Any],
+    lab: dict[str, Any],
+    cycle: int,
+) -> None:
+    started = lab.get("episodic_memory_started_cycle")
+    if started is None:
+        lab["episodic_memory_started_cycle"] = cycle
+        return
+    started_cycle = int(started or 0)
+    world_version = str(lab.get("world_version") or STATEFUL_WORLD_VERSION)
+    completed = [
+        plan
+        for plan in lab.get("plans", [])
+        if plan.get("status") == "completed"
+        and int(plan.get("completed_cycle", 0) or 0) >= started_cycle
+        and str(plan.get("world_version") or world_version) == world_version
+    ]
+    completed.sort(key=lambda plan: int(plan.get("completed_cycle", 0) or 0))
+    completed = completed[-EPISODIC_MEMORY_MAX_ENTRIES:]
+    memories = list(lab.get("episodic_route_memories", []))
+    existing = {str(item.get("source_plan_id") or "") for item in memories}
+    episodes = state.get("episodes", [])
+
+    for plan in completed:
+        plan_id = str(plan.get("id") or "")
+        if not plan_id or plan_id in existing:
+            continue
+        executions = sorted(
+            [
+                item
+                for item in lab.get("executions", [])
+                if item.get("plan_id") == plan_id
+                and item.get("matched_prediction") is True
+            ],
+            key=lambda item: (
+                int(item.get("step_index", 0) or 0),
+                int(item.get("cycle", 0) or 0),
+            ),
+        )
+        if not executions:
+            continue
+        if any(
+            int(item.get("cycle", 0) or 0) < started_cycle
+            for item in executions
+        ):
+            continue
+        execution_cycles = {int(item.get("cycle", 0) or 0) for item in executions}
+        source_episode_ids: list[str] = []
+        for episode in episodes:
+            if int(episode.get("cycle", 0) or 0) not in execution_cycles:
+                continue
+            payload = _planning_episode_payload(episode)
+            if payload is None or payload.get("plan_id") != plan_id:
+                continue
+            episode_id = str(episode.get("id") or "")
+            if episode_id:
+                source_episode_ids.append(episode_id)
+        if len(source_episode_ids) != len(execution_cycles):
+            continue
+
+        state_action_keys = [
+            _state_action_key(item.get("before", [0, 0]), str(item.get("action") or ""))
+            for item in executions
+            if str(item.get("action") or "") in ACTION_ORDER
+        ]
+        actions = [str(item.get("action") or "") for item in executions]
+        action_bigrams = [
+            f"{actions[index]}>{actions[index + 1]}"
+            for index in range(len(actions) - 1)
+        ]
+        suffix = plan_id[2:] if plan_id.startswith("PP") else plan_id
+        memory = {
+            "id": f"EM{suffix}",
+            "policy_version": EPISODIC_MEMORY_VERSION,
+            "created_cycle": cycle,
+            "source_plan_id": plan_id,
+            "source_goal_id": plan.get("goal_id"),
+            "source_episode_ids": source_episode_ids,
+            "source_execution_ids": [item.get("id") for item in executions],
+            "start": list(plan.get("start", [])),
+            "goal": list(plan.get("goal", [])),
+            "actions": actions,
+            "state_action_keys": state_action_keys,
+            "action_bigrams": action_bigrams,
+            "completed_cycle": int(plan.get("completed_cycle", 0) or 0),
+            "outcome": "goal_completed",
+            "world_version": world_version,
+        }
+        memories.append(memory)
+        existing.add(plan_id)
+
+    lab["episodic_route_memories"] = memories[-EPISODIC_MEMORY_MAX_ENTRIES:]
+
+
+def _shortest_plan_candidates(
+    start: tuple[int, int],
+    goal: tuple[int, int],
+    learned: dict[str, Any],
+    state_effects: dict[str, Any],
+    bounds: int,
+) -> list[tuple[list[str], list[list[int]]]]:
+    counterfactual = _shortest_plan(start, goal, learned, state_effects, bounds)
+    if counterfactual is None:
+        return []
+    target_length = len(counterfactual[0])
+    if target_length == 0:
+        return [counterfactual]
+
+    queue = deque([(start, [], [], {start})])
+    found: list[tuple[list[str], list[list[int]]]] = []
+    seen_actions: set[tuple[str, ...]] = set()
+    while queue and len(found) < EPISODIC_MEMORY_MAX_ROUTE_CANDIDATES:
+        position, actions, predicted_states, visited = queue.popleft()
+        if len(actions) >= target_length:
+            continue
+        for action in ACTION_ORDER:
+            state_effect = state_effects.get(
+                _state_action_key(position, action),
+                {},
+            )
+            if state_effect.get("blocked"):
+                continue
+            delta = state_effect.get("modal_delta")
+            if not isinstance(delta, list) or len(delta) != 2:
+                delta = learned.get(action, {}).get("modal_delta")
+            if not isinstance(delta, list) or len(delta) != 2:
+                continue
+            target = (
+                int(position[0]) + int(delta[0]),
+                int(position[1]) + int(delta[1]),
+            )
+            if not _in_bounds(target, bounds) or target in visited:
+                continue
+            next_actions = [*actions, action]
+            next_states = [*predicted_states, [target[0], target[1]]]
+            if target == goal:
+                if len(next_actions) == target_length:
+                    signature = tuple(next_actions)
+                    if signature not in seen_actions:
+                        found.append((next_actions, next_states))
+                        seen_actions.add(signature)
+                continue
+            if len(next_actions) < target_length:
+                queue.append(
+                    (
+                        target,
+                        next_actions,
+                        next_states,
+                        {*visited, target},
+                    )
+                )
+
+    signature = tuple(counterfactual[0])
+    if signature not in seen_actions:
+        found.insert(0, counterfactual)
+    else:
+        found.sort(key=lambda item: 0 if tuple(item[0]) == signature else 1)
+    return found[:EPISODIC_MEMORY_MAX_ROUTE_CANDIDATES]
+
+
+def _route_memory_features(
+    start: tuple[int, int],
+    actions: list[str],
+    predicted_states: list[list[int]],
+) -> tuple[list[str], list[str]]:
+    before = [int(start[0]), int(start[1])]
+    keys: list[str] = []
+    for index, action in enumerate(actions):
+        keys.append(_state_action_key(before, action))
+        if index < len(predicted_states):
+            before = [int(value) for value in predicted_states[index]]
+    bigrams = [
+        f"{actions[index]}>{actions[index + 1]}"
+        for index in range(len(actions) - 1)
+    ]
+    return keys, bigrams
+
+
+def _select_plan_with_episodic_memory(
+    lab: dict[str, Any],
+    goal: dict[str, Any],
+    cycle: int,
+    learned: dict[str, Any],
+) -> tuple[list[str], list[list[int]], dict[str, Any] | None] | None:
+    start = tuple(int(value) for value in lab.get("position", [0, 0]))
+    target = tuple(int(value) for value in goal.get("target", [0, 0]))
+    bounds = int(lab.get("bounds", BOUNDS))
+    state_effects = lab.get("state_effects", {})
+    counterfactual = _shortest_plan(start, target, learned, state_effects, bounds)
+    if counterfactual is None:
+        return None
+
+    memories = [
+        item
+        for item in lab.get("episodic_route_memories", [])
+        if item.get("outcome") == "goal_completed"
+        and item.get("world_version")
+        == str(lab.get("world_version") or STATEFUL_WORLD_VERSION)
+    ]
+    candidates = _shortest_plan_candidates(
+        start,
+        target,
+        learned,
+        state_effects,
+        bounds,
+    )
+    if len(candidates) < 2 or not memories:
+        return counterfactual[0], counterfactual[1], None
+
+    edge_counts: Counter[str] = Counter()
+    bigram_counts: Counter[str] = Counter()
+    for memory in memories:
+        edge_counts.update(str(key) for key in memory.get("state_action_keys", []))
+        bigram_counts.update(str(key) for key in memory.get("action_bigrams", []))
+
+    scored: list[
+        tuple[int, int, list[str], list[list[int]], list[str], list[str]]
+    ] = []
+    for index, (actions, predicted_states) in enumerate(candidates):
+        keys, bigrams = _route_memory_features(start, actions, predicted_states)
+        replay_score = (
+            2 * sum(int(edge_counts[key]) for key in keys)
+            + sum(int(bigram_counts[key]) for key in bigrams)
+        )
+        scored.append(
+            (replay_score, index, actions, predicted_states, keys, bigrams)
+        )
+    counterfactual_actions = list(counterfactual[0])
+    counterfactual_item = next(
+        item for item in scored if item[2] == counterfactual_actions
+    )
+    selected = min(scored, key=lambda item: (item[0], item[1]))
+    changed_choice = (
+        selected[2] != counterfactual_actions
+        and selected[0] < counterfactual_item[0]
+    )
+
+    counterfactual_keys = set(counterfactual_item[4])
+    counterfactual_bigrams = set(counterfactual_item[5])
+    relevant_memories = [
+        memory
+        for memory in memories
+        if counterfactual_keys.intersection(memory.get("state_action_keys", []))
+        or counterfactual_bigrams.intersection(memory.get("action_bigrams", []))
+    ][-8:]
+    memory_refs = [str(item.get("id")) for item in relevant_memories if item.get("id")]
+    episode_refs: list[str] = []
+    for memory in relevant_memories:
+        for ref in memory.get("source_episode_ids", []):
+            ref = str(ref)
+            if ref and ref not in episode_refs:
+                episode_refs.append(ref)
+
+    decision_id = f"MD{len(lab.get('plans', [])) + 1:06d}"
+    decision = {
+        "id": decision_id,
+        "cycle": cycle,
+        "policy_version": EPISODIC_MEMORY_VERSION,
+        "goal_id": goal.get("id"),
+        "start": [start[0], start[1]],
+        "goal": [target[0], target[1]],
+        "candidate_count": len(candidates),
+        "counterfactual_actions": counterfactual_actions,
+        "counterfactual_predicted_states": counterfactual[1],
+        "counterfactual_replay_score": int(counterfactual_item[0]),
+        "selected_actions": list(selected[2]),
+        "selected_predicted_states": selected[3],
+        "selected_replay_score": int(selected[0]),
+        "changed_choice": changed_choice,
+        "memory_refs": memory_refs,
+        "source_episode_refs": episode_refs,
+        "status": (
+            "memory_changed_choice"
+            if changed_choice
+            else "counterfactual_retained"
+        ),
+        "rationale": (
+            "Prefer an equally short valid route with less replayed episodic route history."
+        ),
+    }
+    lab.setdefault("memory_decisions", []).append(decision)
+    lab["memory_decisions"] = lab["memory_decisions"][
+        -EPISODIC_MEMORY_MAX_DECISIONS:
+    ]
+    chosen = selected if changed_choice else counterfactual_item
+    return list(chosen[2]), chosen[3], decision
+
+
 def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
     learned = _rebuild_model(lab)
     bounds = int(lab.get("bounds", BOUNDS))
@@ -662,18 +972,20 @@ def _create_plan(
     learned = _rebuild_model(lab)
     start = tuple(int(value) for value in lab.get("position", [0, 0]))
     target = tuple(int(value) for value in goal.get("target", [0, 0]))
-    planned = _shortest_plan(
-        start,
-        target,
+    planned = _select_plan_with_episodic_memory(
+        lab,
+        goal,
+        cycle,
         learned,
-        lab.get("state_effects", {}),
-        int(lab.get("bounds", BOUNDS)),
     )
     if planned is None:
         lab["status"] = "blocked_no_plan"
         return None
 
-    actions, predicted_states = planned
+    actions, predicted_states, memory_decision = planned
+    memory_influenced = bool(
+        memory_decision and memory_decision.get("changed_choice")
+    )
     plan = {
         "id": f"PP{len(lab.get('plans', [])) + 1:06d}",
         "goal_id": goal["id"],
@@ -685,6 +997,11 @@ def _create_plan(
         "next_step_index": 0,
         "status": "active",
         "reason": reason,
+        "memory_selection_reason": (
+            "episodic_memory_tiebreak"
+            if memory_influenced
+            else None
+        ),
         "world_version": str(
             lab.get("world_version") or STATEFUL_WORLD_VERSION
         ),
@@ -694,6 +1011,35 @@ def _create_plan(
             )
             for action in ACTION_ORDER
         },
+        "memory_decision_id": (
+            memory_decision.get("id") if memory_decision else None
+        ),
+        "memory_influenced": memory_influenced,
+        "memory_refs": (
+            list(memory_decision.get("memory_refs", []))
+            if memory_decision
+            else []
+        ),
+        "memory_episode_refs": (
+            list(memory_decision.get("source_episode_refs", []))
+            if memory_decision
+            else []
+        ),
+        "counterfactual_actions": (
+            list(memory_decision.get("counterfactual_actions", []))
+            if memory_decision
+            else actions
+        ),
+        "counterfactual_replay_score": (
+            memory_decision.get("counterfactual_replay_score")
+            if memory_decision
+            else None
+        ),
+        "selected_replay_score": (
+            memory_decision.get("selected_replay_score")
+            if memory_decision
+            else None
+        ),
     }
     lab.setdefault("plans", []).append(plan)
     lab["active_plan_id"] = plan["id"]
@@ -713,6 +1059,8 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
             "action": None,
             "reason": "Phase 32 transition model does not yet meet the planning evidence threshold.",
         }
+
+    _consolidate_episodic_route_memories(state, lab, cycle)
 
     goal = _active_goal(lab)
     if goal is None:
@@ -890,5 +1238,12 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
             if goal_reached or not matched_prediction
             else len(actions) - int(plan.get("next_step_index", 0) or 0)
         ),
+        "memory_decision_id": plan.get("memory_decision_id"),
+        "memory_influenced": bool(plan.get("memory_influenced")),
+        "memory_refs": list(plan.get("memory_refs", [])),
+        "memory_episode_refs": list(plan.get("memory_episode_refs", [])),
+        "counterfactual_actions": list(plan.get("counterfactual_actions", [])),
+        "counterfactual_replay_score": plan.get("counterfactual_replay_score"),
+        "selected_replay_score": plan.get("selected_replay_score"),
         "learned_effects": learned,
     }
