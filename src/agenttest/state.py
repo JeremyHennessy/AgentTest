@@ -8,7 +8,7 @@ from typing import Any
 from .action_lab import initial_action_lab_state
 from .planning_lab import initial_planning_lab_state
 
-SCHEMA_VERSION = 20
+SCHEMA_VERSION = 21
 
 DIMENSIONS = (
     "continuity",
@@ -145,6 +145,7 @@ def initial_state() -> dict[str, Any]:
 
 
 def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
+    prior_schema_version = int(state.get("schema_version", 0) or 0)
     for key, default in (
         ("semantic_memory", _empty_semantic_memory()),
         ("environment_snapshots", []),
@@ -200,6 +201,14 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     planning_lab = state["planning_lab"]
     for key, value in initial_planning_lab_state().items():
         planning_lab.setdefault(key, value)
+    if (
+        prior_schema_version < 21
+        and planning_lab.get("self_experiment_started_cycle") is None
+        and int(state.get("cycles", 0) or 0) > 0
+    ):
+        planning_lab["self_experiment_started_cycle"] = int(
+            state.get("cycles", 0) or 0
+        )
 
     metrics = state.setdefault("metrics", {})
     for dimension in DIMENSIONS:
