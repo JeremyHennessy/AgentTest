@@ -14,7 +14,7 @@ from agenttest.planning_lab import (
     ensure_planning_lab_state,
     step_planning_lab,
 )
-from agenttest.state import StateStore, initial_state
+from agenttest.state import StateStore, initial_state, migrate_state
 
 
 class PlanningLabTests(unittest.TestCase):
@@ -607,6 +607,289 @@ class PlanningLabTests(unittest.TestCase):
             self.assertEqual(
                 reloaded["planning_lab"]["last_transfer_probe_cycle"],
                 42,
+            )
+
+    def test_phase38_migration_activates_only_existing_persisted_state(self) -> None:
+        fresh = initial_state()
+        self.assertIsNone(
+            fresh["planning_lab"]["self_experiment_started_cycle"]
+        )
+
+        old = initial_state()
+        old["schema_version"] = 20
+        old["cycles"] = 50
+        old["generation"] = 50
+        old["planning_lab"]["self_experiment_started_cycle"] = None
+        migrated = migrate_state(old)
+
+        self.assertEqual(migrated["schema_version"], 21)
+        self.assertEqual(
+            migrated["planning_lab"]["self_experiment_started_cycle"],
+            50,
+        )
+
+    def test_self_generated_experiment_forms_falsifiable_hypothesis_and_replans(self) -> None:
+        state = self._phase32_ready_state()
+        state["cycles"] = 9
+        state["generation"] = 9
+        step_planning_lab(state)
+        lab = ensure_planning_lab_state(state)
+
+        lab["transition_observations"] = [
+            item
+            for item in lab["transition_observations"]
+            if item.get("world_version") != lab["world_version"]
+        ]
+        lab["position"] = [1, 0]
+        lab["visit_counts"]["1,0"] = int(
+            lab["visit_counts"].get("1,0", 0) or 0
+        ) + 1
+        lab["goals"] = [
+            {
+                "id": "PG_SELF",
+                "assigned_cycle": 9,
+                "target": [1, 2],
+                "status": "active",
+                "selection": {
+                    "kind": "test_fixture",
+                    "prior_visits": 0,
+                    "planned_distance": 3,
+                    "preferred_step_range": [3, 4],
+                },
+            }
+        ]
+        lab["plans"] = [
+            {
+                "id": "PP_SELF",
+                "goal_id": "PG_SELF",
+                "created_cycle": 9,
+                "start": [0, 0],
+                "goal": [1, 2],
+                "actions": ["north", "west", "west"],
+                "predicted_states": [[1, 0], [1, 1], [1, 2]],
+                "next_step_index": 1,
+                "status": "active",
+                "reason": "test_fixture",
+                "world_version": lab["world_version"],
+                "model_samples": {},
+            }
+        ]
+        lab["active_goal_id"] = "PG_SELF"
+        lab["active_plan_id"] = "PP_SELF"
+        lab["status"] = "executing_plan"
+        lab["self_experiment_started_cycle"] = 8
+
+        state["cycles"] = 10
+        state["generation"] = 10
+        experiment = step_planning_lab(state)
+
+        self.assertEqual(
+            experiment["execution_kind"],
+            "self_generated_experiment",
+        )
+        self.assertEqual(
+            experiment["self_experiment_decision_id"],
+            "SED000001",
+        )
+        self.assertEqual(experiment["self_experiment_id"], "SE000001")
+        self.assertEqual(experiment["action"], "north")
+        self.assertEqual(experiment["before"], [1, 0])
+        self.assertEqual(experiment["predicted_after"], [2, 0])
+        self.assertEqual(experiment["after"], [2, 0])
+        self.assertTrue(experiment["matched_prediction"])
+        self.assertEqual(
+            experiment["interpretation"],
+            "hypothesis_supported",
+        )
+        self.assertEqual(experiment["state_samples_before"], 0)
+        self.assertEqual(experiment["state_samples_after"], 1)
+        self.assertTrue(experiment["source_observation_refs"])
+        self.assertIn("At state [1, 0], action north", experiment["hypothesis"])
+        self.assertIn(
+            "Any observed result other than [2, 0]",
+            experiment["falsification"],
+        )
+        self.assertGreater(
+            experiment["information_value"],
+            experiment["goal_delay_cost"],
+        )
+        self.assertTrue(experiment["replan_required"])
+        self.assertEqual(lab["status"], "needs_replan")
+        self.assertIsNone(lab["active_plan_id"])
+        self.assertEqual(
+            lab["plans"][0]["invalidation_reason"],
+            "self_experiment_changed_state",
+        )
+
+        state["cycles"] = 11
+        state["generation"] = 11
+        resumed = step_planning_lab(state)
+        replacement = next(
+            item
+            for item in lab["plans"]
+            if item.get("id") == resumed.get("plan_id")
+        )
+
+        self.assertNotEqual(
+            resumed.get("execution_kind"),
+            "self_generated_experiment",
+        )
+        self.assertEqual(resumed["goal_id"], "PG_SELF")
+        self.assertEqual(replacement["reason"], "replan_after_invalidation")
+        self.assertEqual(len(lab["self_experiments"]), 1)
+
+    def test_self_generated_experiment_accepts_refutation_and_preserves_valid_plan(self) -> None:
+        state = self._phase32_ready_state()
+        state["cycles"] = 9
+        state["generation"] = 9
+        step_planning_lab(state)
+        lab = ensure_planning_lab_state(state)
+
+        lab["transition_observations"] = [
+            item
+            for item in lab["transition_observations"]
+            if item.get("world_version") != lab["world_version"]
+        ]
+        lab["transition_observations"].extend(
+            [
+                {
+                    "source": "test_fixture",
+                    "source_id": "N_EXTRA",
+                    "cycle": 9,
+                    "action": "north",
+                    "before": [0, 0],
+                    "after": [1, 0],
+                    "delta": [1, 0],
+                    "blocked": False,
+                    "world_version": "bounded-world-v1",
+                },
+                {
+                    "source": "test_fixture",
+                    "source_id": "W_EXTRA",
+                    "cycle": 9,
+                    "action": "west",
+                    "before": [0, 0],
+                    "after": [0, 1],
+                    "delta": [0, 1],
+                    "blocked": False,
+                    "world_version": "bounded-world-v1",
+                },
+            ]
+        )
+        lab["position"] = [0, 2]
+        lab["visit_counts"]["0,2"] = int(
+            lab["visit_counts"].get("0,2", 0) or 0
+        ) + 1
+        lab["goals"] = [
+            {
+                "id": "PG_REFUTE",
+                "assigned_cycle": 9,
+                "target": [0, 0],
+                "status": "active",
+                "selection": {
+                    "kind": "test_fixture",
+                    "prior_visits": 0,
+                    "planned_distance": 3,
+                    "preferred_step_range": [3, 4],
+                },
+            }
+        ]
+        lab["plans"] = [
+            {
+                "id": "PP_REFUTE",
+                "goal_id": "PG_REFUTE",
+                "created_cycle": 9,
+                "start": [-1, 2],
+                "goal": [0, 0],
+                "actions": ["north", "east", "east"],
+                "predicted_states": [[0, 2], [0, 1], [0, 0]],
+                "next_step_index": 1,
+                "status": "active",
+                "reason": "test_fixture",
+                "world_version": lab["world_version"],
+                "model_samples": {},
+            }
+        ]
+        lab["active_goal_id"] = "PG_REFUTE"
+        lab["active_plan_id"] = "PP_REFUTE"
+        lab["status"] = "executing_plan"
+        lab["self_experiment_started_cycle"] = 8
+
+        state["cycles"] = 10
+        state["generation"] = 10
+        experiment = step_planning_lab(state)
+
+        self.assertEqual(
+            experiment["execution_kind"],
+            "self_generated_experiment",
+        )
+        self.assertEqual(experiment["action"], "south")
+        self.assertEqual(experiment["before"], [0, 2])
+        self.assertEqual(experiment["predicted_after"], [-1, 2])
+        self.assertEqual(experiment["after"], [0, 2])
+        self.assertFalse(experiment["matched_prediction"])
+        self.assertEqual(
+            experiment["interpretation"],
+            "hypothesis_refuted",
+        )
+        self.assertFalse(experiment["replan_required"])
+        self.assertEqual(experiment["model_revision_id"], "MR000001")
+        self.assertEqual(lab["active_plan_id"], "PP_REFUTE")
+        self.assertEqual(lab["plans"][0]["next_step_index"], 1)
+        self.assertTrue(lab["state_effects"]["0,2|south"]["blocked"])
+        self.assertEqual(
+            lab["model_revisions"][0]["trigger_self_experiment_id"],
+            "SE000001",
+        )
+
+        state["cycles"] = 11
+        state["generation"] = 11
+        resumed = step_planning_lab(state)
+
+        self.assertNotEqual(
+            resumed.get("execution_kind"),
+            "self_generated_experiment",
+        )
+        self.assertEqual(resumed["plan_id"], "PP_REFUTE")
+        self.assertEqual(resumed["step_index"], 1)
+        self.assertEqual(resumed["action"], "east")
+        self.assertEqual(len(lab["self_experiments"]), 1)
+
+    def test_self_generated_experiment_state_persists_across_reload(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = StateStore(Path(temp) / "organism.json")
+            state = self._phase32_ready_state()
+            lab = ensure_planning_lab_state(state)
+            lab["self_experiment_started_cycle"] = 8
+            lab["self_experiment_decisions"] = [
+                {
+                    "id": "SED_PERSIST",
+                    "hypothesis": "persist me",
+                    "falsification": "persist falsifier",
+                }
+            ]
+            lab["self_experiments"] = [
+                {
+                    "id": "SE_PERSIST",
+                    "decision_id": "SED_PERSIST",
+                    "interpretation": "hypothesis_supported",
+                }
+            ]
+            lab["last_self_experiment_cycle"] = 9
+            store.save(state)
+            reloaded = store.load()
+
+            self.assertEqual(
+                reloaded["planning_lab"]["self_experiment_decisions"][0]["id"],
+                "SED_PERSIST",
+            )
+            self.assertEqual(
+                reloaded["planning_lab"]["self_experiments"][0]["id"],
+                "SE_PERSIST",
+            )
+            self.assertEqual(
+                reloaded["planning_lab"]["last_self_experiment_cycle"],
+                9,
             )
 
     def test_completed_route_consolidates_citable_episodic_memory(self) -> None:

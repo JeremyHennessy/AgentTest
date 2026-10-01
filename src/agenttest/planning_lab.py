@@ -14,10 +14,11 @@ from .action_lab import (
     validate_action_lab_history,
 )
 
-PLANNING_LAB_VERSION = "persistent-planning-lab-v5"
+PLANNING_LAB_VERSION = "persistent-planning-lab-v6"
 CURIOSITY_POLICY_VERSION = "evidence-valued-curiosity-v1"
 EPISODIC_MEMORY_VERSION = "episodic-route-memory-v1"
 TRANSFER_POLICY_VERSION = "bounded-transfer-v1"
+SELF_EXPERIMENT_POLICY_VERSION = "self-generated-falsifiable-experiment-v1"
 EPISODIC_MEMORY_MAX_ENTRIES = 64
 EPISODIC_MEMORY_MAX_DECISIONS = 128
 EPISODIC_MEMORY_MAX_ROUTE_CANDIDATES = 24
@@ -25,6 +26,10 @@ CURIOSITY_TARGET_STATE_SAMPLES = 2
 CURIOSITY_MAX_PROBES_PER_REVISION = 1
 TRANSFER_MAX_PROBES_PER_REVISION = 1
 TRANSFER_MIN_SOURCE_STATE_SAMPLES = 2
+SELF_EXPERIMENT_COOLDOWN_CYCLES = 12
+SELF_EXPERIMENT_MAX_PER_GOAL = 1
+SELF_EXPERIMENT_MIN_COMPLETED_PLAN_STEPS = 1
+SELF_EXPERIMENT_MIN_REMAINING_PLAN_STEPS = 2
 MIN_MODEL_SAMPLES = 2
 PREFERRED_MIN_PLAN_STEPS = 3
 PREFERRED_MAX_PLAN_STEPS = 4
@@ -49,6 +54,10 @@ def initial_planning_lab_state() -> dict[str, Any]:
         "transfer_decisions": [],
         "transfer_probes": [],
         "last_transfer_probe_cycle": None,
+        "self_experiment_started_cycle": None,
+        "self_experiment_decisions": [],
+        "self_experiments": [],
+        "last_self_experiment_cycle": None,
         "world_version": STATEFUL_WORLD_VERSION,
         "goals": [],
         "plans": [],
@@ -867,6 +876,373 @@ def _execute_transfer_probe(
     }
 
 
+
+def _select_self_generated_experiment(
+    lab: dict[str, Any],
+    goal: dict[str, Any],
+    plan: dict[str, Any],
+    cycle: int,
+) -> dict[str, Any] | None:
+    """Choose one falsifiable local experiment from accumulated evidence."""
+
+    started = lab.get("self_experiment_started_cycle")
+    if started is None or cycle <= int(started or 0):
+        return None
+    if str(lab.get("world_version") or STATEFUL_WORLD_VERSION) != STATEFUL_WORLD_VERSION:
+        return None
+    if plan.get("status") != "active":
+        return None
+
+    step_index = int(plan.get("next_step_index", 0) or 0)
+    actions = list(plan.get("actions", []))
+    remaining_goal_steps = max(0, len(actions) - step_index)
+    if (
+        step_index < SELF_EXPERIMENT_MIN_COMPLETED_PLAN_STEPS
+        or remaining_goal_steps < SELF_EXPERIMENT_MIN_REMAINING_PLAN_STEPS
+        or step_index >= len(actions)
+    ):
+        return None
+
+    if any(
+        item.get("goal_id") == goal.get("id")
+        for item in lab.get("self_experiments", [])
+    ):
+        return None
+
+    last_cycle = lab.get("last_self_experiment_cycle")
+    if (
+        last_cycle is not None
+        and cycle - int(last_cycle or 0) < SELF_EXPERIMENT_COOLDOWN_CYCLES
+    ):
+        return None
+
+    latest_curiosity_probe = (
+        lab.get("curiosity_probes", [])[-1]
+        if lab.get("curiosity_probes")
+        else None
+    )
+    if (
+        isinstance(latest_curiosity_probe, dict)
+        and latest_curiosity_probe.get("plan_id") == plan.get("id")
+        and int(latest_curiosity_probe.get("cycle", -1) or -1) == cycle - 1
+        and latest_curiosity_probe.get("resulting_status") == "executing_plan"
+        and latest_curiosity_probe.get("after")
+        == latest_curiosity_probe.get("before")
+    ):
+        return None
+
+    latest_transfer_probe = (
+        lab.get("transfer_probes", [])[-1]
+        if lab.get("transfer_probes")
+        else None
+    )
+    if (
+        isinstance(latest_transfer_probe, dict)
+        and latest_transfer_probe.get("plan_id") == plan.get("id")
+        and int(latest_transfer_probe.get("cycle", -1) or -1) == cycle - 1
+        and latest_transfer_probe.get("source_plan_preserved") is True
+    ):
+        return None
+
+    position = [int(value) for value in lab.get("position", [0, 0])]
+    next_goal_action = str(actions[step_index])
+    bounds = int(lab.get("bounds", BOUNDS))
+    learned = lab.get("learned_effects", {})
+    state_effects = lab.get("state_effects", {})
+    observations = lab.get("transition_observations", [])
+    prior_keys = {
+        str(item.get("state_action_key") or "")
+        for item in lab.get("self_experiments", [])
+    }
+
+    candidates: list[tuple[int, int, str, dict[str, Any]]] = []
+    for action in ACTION_ORDER:
+        if action == next_goal_action:
+            continue
+        key = _state_action_key(position, action)
+        if key in prior_keys:
+            continue
+        state_effect = state_effects.get(key, {})
+        state_samples = int(state_effect.get("samples", 0) or 0)
+        if state_samples != 0:
+            continue
+
+        general_effect = learned.get(action, {})
+        delta = general_effect.get("modal_delta")
+        general_samples = int(general_effect.get("unblocked_samples", 0) or 0)
+        confidence = float(general_effect.get("confidence", 0.0) or 0.0)
+        if (
+            general_samples < MIN_MODEL_SAMPLES
+            or confidence <= 0.0
+            or not isinstance(delta, list)
+            or len(delta) != 2
+        ):
+            continue
+
+        predicted_after = [
+            position[0] + int(delta[0]),
+            position[1] + int(delta[1]),
+        ]
+        if not _in_bounds(
+            (predicted_after[0], predicted_after[1]),
+            bounds,
+        ):
+            continue
+
+        source_refs = [
+            str(item.get("source_id") or "")
+            for item in observations
+            if (
+                item.get("action") == action
+                and item.get("blocked") is False
+                and item.get("delta") == delta
+                and item.get("source_id")
+            )
+        ][-8:]
+        if not source_refs:
+            continue
+
+        information_value = round(1.0 / (state_samples + 1), 6)
+        goal_delay_cost = round(1.0 / (remaining_goal_steps + 1), 6)
+        decision_margin = round(information_value - goal_delay_cost, 6)
+        if decision_margin <= 0.0:
+            continue
+
+        payload = {
+            "state_action_key": key,
+            "state": position,
+            "action": action,
+            "predicted_after": predicted_after,
+            "state_samples_before": state_samples,
+            "general_action_samples": general_samples,
+            "general_confidence": round(confidence, 6),
+            "source_observation_refs": source_refs,
+            "information_value": information_value,
+            "goal_delay_cost": goal_delay_cost,
+            "decision_margin": decision_margin,
+        }
+        candidates.append(
+            (
+                state_samples,
+                general_samples,
+                ACTION_ORDER.index(action),
+                payload,
+            )
+        )
+
+    if not candidates:
+        return None
+
+    _, _, _, selected = min(candidates)
+    decision = {
+        "id": f"SED{len(lab.get('self_experiment_decisions', [])) + 1:06d}",
+        "cycle": cycle,
+        "policy_version": SELF_EXPERIMENT_POLICY_VERSION,
+        "goal_id": goal.get("id"),
+        "plan_id": plan.get("id"),
+        "plan_next_step_index": step_index,
+        "next_goal_action": next_goal_action,
+        **selected,
+        "hypothesis": (
+            f"At state {selected['state']}, action {selected['action']} will "
+            f"follow the learned general effect and reach "
+            f"{selected['predicted_after']}."
+        ),
+        "falsification": (
+            f"Any observed result other than {selected['predicted_after']} "
+            "falsifies this local prediction."
+        ),
+        "status": "experiment_selected",
+        "rationale": (
+            "This current-state action has no state-specific evidence, while "
+            "the general action effect is evidence-backed; one bounded action "
+            "can test the prediction at lower cost than its information value."
+        ),
+    }
+    lab.setdefault("self_experiment_decisions", []).append(decision)
+    return decision
+
+
+def _execute_self_generated_experiment(
+    lab: dict[str, Any],
+    goal: dict[str, Any],
+    plan: dict[str, Any],
+    decision: dict[str, Any],
+    cycle: int,
+) -> dict[str, Any]:
+    """Run exactly one internally selected falsifiable bounded-world action."""
+
+    before = [int(value) for value in decision["state"]]
+    action = str(decision["action"])
+    predicted_after = [int(value) for value in decision["predicted_after"]]
+    world_version = str(lab.get("world_version") or STATEFUL_WORLD_VERSION)
+
+    outcome = apply_bounded_action(
+        before,
+        action,
+        bounds=int(lab.get("bounds", BOUNDS)),
+        world_version=world_version,
+    )
+    after = list(outcome["after"])
+    matched_prediction = after == predicted_after
+    interpretation = (
+        "hypothesis_supported"
+        if matched_prediction
+        else "hypothesis_refuted"
+    )
+    experiment = {
+        "id": f"SE{len(lab.get('self_experiments', [])) + 1:06d}",
+        "cycle": cycle,
+        "policy_version": SELF_EXPERIMENT_POLICY_VERSION,
+        "decision_id": decision["id"],
+        "goal_id": goal.get("id"),
+        "plan_id": plan.get("id"),
+        "plan_next_step_index": int(plan.get("next_step_index", 0) or 0),
+        "state_action_key": decision["state_action_key"],
+        "action": action,
+        "before": before,
+        "predicted_after": predicted_after,
+        "after": after,
+        "delta": list(outcome["delta"]),
+        "blocked": bool(outcome["blocked"]),
+        "matched_prediction": matched_prediction,
+        "hypothesis": decision["hypothesis"],
+        "falsification": decision["falsification"],
+        "source_observation_refs": list(
+            decision.get("source_observation_refs", [])
+        ),
+        "state_samples_before": int(decision["state_samples_before"]),
+        "information_value": float(decision["information_value"]),
+        "goal_delay_cost": float(decision["goal_delay_cost"]),
+        "decision_margin": float(decision["decision_margin"]),
+        "interpretation": interpretation,
+        "world_version": world_version,
+    }
+    lab.setdefault("self_experiments", []).append(experiment)
+    lab["last_self_experiment_cycle"] = cycle
+    decision["experiment_id"] = experiment["id"]
+    decision["outcome"] = interpretation
+
+    lab["position"] = after
+    position_key = _position_key(after)
+    lab.setdefault("visit_counts", {})[position_key] = (
+        int(lab["visit_counts"].get(position_key, 0) or 0) + 1
+    )
+    lab["last_action_cycle"] = cycle
+    lab.setdefault("transition_observations", []).append(
+        {
+            "source": "self_generated_experiment",
+            "source_id": experiment["id"],
+            "cycle": cycle,
+            "action": action,
+            "before": before,
+            "after": after,
+            "delta": list(outcome["delta"]),
+            "blocked": bool(outcome["blocked"]),
+            "world_version": world_version,
+        }
+    )
+    learned = _rebuild_model(lab)
+    effect_after = lab.get("state_effects", {}).get(
+        decision["state_action_key"],
+        {},
+    )
+    experiment["state_samples_after"] = int(
+        effect_after.get("samples", 0) or 0
+    )
+
+    revision_id = None
+    if not matched_prediction:
+        revision = {
+            "id": f"MR{len(lab.get('model_revisions', [])) + 1:06d}",
+            "cycle": cycle,
+            "trigger_self_experiment_id": experiment["id"],
+            "goal_id": goal.get("id"),
+            "plan_id": plan.get("id"),
+            "state_action_key": decision["state_action_key"],
+            "before": before,
+            "action": action,
+            "predicted_after": predicted_after,
+            "observed_after": after,
+            "observed_delta": list(outcome["delta"]),
+            "observed_blocked": bool(outcome["blocked"]),
+            "world_version": world_version,
+            "status": "state_evidence_recorded",
+        }
+        lab.setdefault("model_revisions", []).append(revision)
+        revision_id = revision["id"]
+
+    goal_reached = after == list(goal.get("target", []))
+    if goal_reached:
+        plan["status"] = "completed"
+        plan["completed_cycle"] = cycle
+        plan["completion_reason"] = "self_experiment_reached_goal"
+        goal["status"] = "completed"
+        goal["completed_cycle"] = cycle
+        goal["completed_plan_id"] = plan["id"]
+        lab["active_plan_id"] = None
+        lab["active_goal_id"] = None
+        lab["status"] = "goal_reached"
+    elif after != before:
+        plan["status"] = "invalidated"
+        plan["invalidated_cycle"] = cycle
+        plan["invalidation_reason"] = "self_experiment_changed_state"
+        plan["self_experiment_id"] = experiment["id"]
+        lab["active_plan_id"] = None
+        lab["status"] = "needs_replan"
+    else:
+        lab["status"] = "executing_plan"
+
+    experiment["resulting_status"] = lab["status"]
+    experiment["goal_reached"] = goal_reached
+    experiment["replan_required"] = bool(
+        after != before and not goal_reached
+    )
+    return {
+        "id": experiment["id"],
+        "execution_kind": "self_generated_experiment",
+        "cycle": cycle,
+        "goal_id": goal.get("id"),
+        "plan_id": plan.get("id"),
+        "step_index": int(decision["plan_next_step_index"]),
+        "plan_length": len(plan.get("actions", [])),
+        "action": action,
+        "before": before,
+        "predicted_after": predicted_after,
+        "after": after,
+        "delta": list(outcome["delta"]),
+        "blocked": bool(outcome["blocked"]),
+        "matched_prediction": matched_prediction,
+        "world_version": world_version,
+        "lab_version": PLANNING_LAB_VERSION,
+        "status": lab["status"],
+        "goal": list(goal.get("target", [])),
+        "goal_reached": goal_reached,
+        "replan_required": experiment["replan_required"],
+        "model_revision_id": revision_id,
+        "self_experiment_decision_id": decision["id"],
+        "self_experiment_id": experiment["id"],
+        "hypothesis": decision["hypothesis"],
+        "falsification": decision["falsification"],
+        "source_observation_refs": list(
+            decision.get("source_observation_refs", [])
+        ),
+        "information_value": decision["information_value"],
+        "goal_delay_cost": decision["goal_delay_cost"],
+        "decision_margin": decision["decision_margin"],
+        "state_samples_before": decision["state_samples_before"],
+        "state_samples_after": experiment["state_samples_after"],
+        "interpretation": interpretation,
+        "remaining_plan_steps": (
+            0
+            if goal_reached or experiment["replan_required"]
+            else len(plan.get("actions", []))
+            - int(plan.get("next_step_index", 0) or 0)
+        ),
+        "learned_effects": learned,
+    }
+
+
 def _planning_episode_payload(episode: dict[str, Any]) -> dict[str, Any] | None:
     if episode.get("kind") != "planning_lab":
         return None
@@ -1405,6 +1781,21 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
             goal,
             plan,
             transfer_decision,
+            cycle,
+        )
+
+    self_experiment_decision = _select_self_generated_experiment(
+        lab,
+        goal,
+        plan,
+        cycle,
+    )
+    if self_experiment_decision is not None:
+        return _execute_self_generated_experiment(
+            lab,
+            goal,
+            plan,
+            self_experiment_decision,
             cycle,
         )
 
