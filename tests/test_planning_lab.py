@@ -902,7 +902,7 @@ class PlanningLabTests(unittest.TestCase):
 
         migrated = migrate_state(state)
 
-        self.assertEqual(migrated["schema_version"], 22)
+        self.assertEqual(migrated["schema_version"], 23)
         self.assertEqual(
             migrated["planning_lab"]["objective_selection_started_cycle"],
             50,
