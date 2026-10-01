@@ -9176,12 +9176,25 @@
       "response_id": null,
       "status": "unavailable",
       "usage": null
+    },
+    {
+      "context_hash": "d7513c7c495e92dda090ad7d174d7b2d4d47525b4ee6562096cbcf977e770760",
+      "created_at": "2026-10-01T12:02:05.189420+00:00",
+      "cycle": 620,
+      "id": "G000610",
+      "model": null,
+      "prompt_version": "cognition-v2",
+      "provider": null,
+      "rejection_reason": "no cognition provider configured",
+      "response_id": null,
+      "status": "unavailable",
+      "usage": null
     }
   ],
   "concept_counts": {
     "action_lab": 20,
     "anything": 2,
-    "autonomous": 611,
+    "autonomous": 612,
     "baseline_fingerprint": 66,
     "best": 2,
     "causal_action": 20,
@@ -9198,9 +9211,9 @@
     "evolve": 2,
     "experment": 1,
     "favorite": 1,
-    "goal_directed_action": 503,
+    "goal_directed_action": 504,
     "gone": 1,
-    "heartbeat": 612,
+    "heartbeat": 613,
     "heartbeats": 1,
     "investigating": 2,
     "jeremy": 2,
@@ -9208,17 +9221,17 @@
     "learn": 1,
     "many": 1,
     "mind": 1,
-    "model_based_planning": 503,
+    "model_based_planning": 504,
     "movement": 20,
     "need": 2,
     "north": 5,
-    "observation": 544,
-    "persistent_plan": 503,
-    "planning_lab": 503,
+    "observation": 545,
+    "persistent_plan": 504,
+    "planning_lab": 504,
     "python_files": 17,
     "python_source_lines": 54,
     "reduce": 1,
-    "repository": 544,
+    "repository": 545,
     "results": 1,
     "south": 6,
     "test_files": 7,
@@ -9233,13 +9246,13 @@
     "your": 3
   },
   "created_at": "2026-09-29T03:45:00+00:00",
-  "cycles": 619,
+  "cycles": 620,
   "drives": {
     "calibration_gap": 0.0,
     "continuity_repair": 0.0,
     "empirical_frontier": 0.7,
     "evidence_hunger": 0.0,
-    "novelty_hunger": 0.4806138933764136,
+    "novelty_hunger": 0.4806451612903226,
     "prediction_error": 0.0,
     "specification_pressure": 0.0,
     "uncertainty": 0.0
@@ -9248,11 +9261,9 @@
     "families": {
       "repository_stability_without_intervention": {
         "change_observations": 0,
-        "completed_trials": 568,
-        "evaluable_trials": 537,
+        "completed_trials": 569,
+        "evaluable_trials": 538,
         "evidence_refs": [
-          "P000587",
-          "R000587",
           "P000588",
           "R000588",
           "P000589",
@@ -9314,11 +9325,12 @@
           "P000617",
           "R000617",
           "P000618",
-          "R000618"
+          "R000618",
+          "P000619",
+          "R000619"
         ],
         "evidence_state": "provisional_stability",
         "experiment_refs": [
-          "X000533",
           "X000534",
           "X000535",
           "X000536",
@@ -9381,17 +9393,18 @@
           "X000593",
           "X000594",
           "X000595",
-          "X000596"
+          "X000596",
+          "X000597"
         ],
         "family": "repository_stability_without_intervention",
         "inconclusive_trials": 31,
-        "last_completed_cycle": 618,
+        "last_completed_cycle": 619,
         "next_expected_status": "confirmed",
         "stability_rate": 1.0,
-        "stable_observations": 537
+        "stable_observations": 538
       }
     },
-    "updated_cycle": 619,
+    "updated_cycle": 620,
     "version": "empirical-learning-v1"
   },
   "environment_snapshots": [
@@ -18665,6 +18678,21 @@
       "git_available": true,
       "head": "1871dc24de59cadc011305c818e83c0655869c82",
       "observed_at": "2026-10-01T12:00:28.649655+00:00",
+      "python_files": 39,
+      "python_source_lines": 17165,
+      "sensor": "repository-v2",
+      "test_files": 8,
+      "tracked_files": 67,
+      "working_tree_clean": true
+    },
+    {
+      "baseline_fingerprint": "4c09c83ab7a816e0",
+      "branch": "autonomous/growth",
+      "cycle": 620,
+      "fingerprint": "f0eff8391dca4c98",
+      "git_available": true,
+      "head": "1774cf40746f72e45db3bbdfa324ad6a17e4ac96",
+      "observed_at": "2026-10-01T12:02:05.095177+00:00",
       "python_files": 39,
       "python_source_lines": 17165,
       "sensor": "repository-v2",
@@ -39161,6 +39189,41 @@
       "id": "E001761",
       "kind": "planning_lab",
       "time": "2026-10-01T12:00:28.701743+00:00"
+    },
+    {
+      "concepts": [
+        "repository",
+        "observation"
+      ],
+      "content": "{\"baseline_fingerprint\": \"4c09c83ab7a816e0\", \"branch\": \"autonomous/growth\", \"cycle\": 620, \"fingerprint\": \"f0eff8391dca4c98\", \"git_available\": true, \"head\": \"1774cf40746f72e45db3bbdfa324ad6a17e4ac96\", \"observed_at\": \"2026-10-01T12:02:05.095177+00:00\", \"python_files\": 39, \"python_source_lines\": 17165, \"sensor\": \"repository-v2\", \"test_files\": 8, \"tracked_files\": 67, \"working_tree_clean\": true}",
+      "cycle": 620,
+      "id": "E001762",
+      "kind": "environment",
+      "time": "2026-10-01T12:02:05.168325+00:00"
+    },
+    {
+      "concepts": [
+        "autonomous",
+        "heartbeat"
+      ],
+      "content": "autonomous heartbeat",
+      "cycle": 620,
+      "id": "E001763",
+      "kind": "stimulus",
+      "time": "2026-10-01T12:02:05.168325+00:00"
+    },
+    {
+      "concepts": [
+        "planning_lab",
+        "goal_directed_action",
+        "persistent_plan",
+        "model_based_planning"
+      ],
+      "content": "{\"action\": \"west\", \"after\": [-2, -1], \"before\": [-2, -2], \"goal\": [-1, 0], \"goal_reached\": false, \"matched_prediction\": true, \"plan_id\": \"PP000131\", \"predicted_after\": [-2, -1]}",
+      "cycle": 620,
+      "id": "E001764",
+      "kind": "planning_lab",
+      "time": "2026-10-01T12:02:05.168325+00:00"
     }
   ],
   "experiments": [
@@ -105105,6 +105168,8 @@
     },
     {
       "cognition_candidate_id": null,
+      "completed_at": "2026-10-01T12:02:05.168325+00:00",
+      "completion_source": "prediction_status_contract",
       "created_at": "2026-10-01T12:00:28.701743+00:00",
       "cycle": 619,
       "empirical_basis": {
@@ -105138,11 +105203,122 @@
         "kind": "prediction_status",
         "prediction_id": "P000619"
       },
+      "evidence_refs": [
+        "P000619",
+        "R000619"
+      ],
+      "evidence_strength": 1.0,
       "falsification": "Any change in a measured comparable field violates this prediction.",
       "hypothesis": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
       "id": "X000597",
       "intention_id": null,
       "last_selected_cycle": 619,
+      "learning_family": "repository_stability_without_intervention",
+      "method": "Compare the next repository self-observation with the pending prediction. A changed baseline invalidates the test rather than counting as support or falsification.",
+      "observed_prediction_status": "confirmed",
+      "outcome": "supported",
+      "predicted_observation": "The next comparable repository self-observation matches the prediction's measured fields.",
+      "question_id": "Q000021",
+      "readiness": "resolved",
+      "readiness_reason": "A structured prediction-status evidence contract is present.",
+      "source": "repository_stability_prediction",
+      "specification": {
+        "actionability": "evidence_ready",
+        "available_fields": [
+          "observable",
+          "evidence_source",
+          "resolution_rule"
+        ],
+        "blocking_reason": null,
+        "current_grounded_evidence_can_supply": true,
+        "evaluated_cycle": 620,
+        "evidence_source": {
+          "kind": "prediction",
+          "refs": [
+            "P000619"
+          ]
+        },
+        "grounded_evidence_refs": [
+          "P000619"
+        ],
+        "missing_fields": [],
+        "observable": {
+          "kind": "prediction_status",
+          "prediction_id": "P000619"
+        },
+        "resolution_rule": {
+          "expected_status": "confirmed",
+          "kind": "expected_prediction_status"
+        },
+        "source_candidate_id": null,
+        "version": "experiment-specification-v1"
+      },
+      "specification_history": [
+        {
+          "actionability": "evidence_ready",
+          "cycle": 620,
+          "grounded_evidence_refs": [
+            "P000619"
+          ],
+          "missing_fields": []
+        }
+      ],
+      "status": "completed",
+      "status_history": [
+        {
+          "cycle": 620,
+          "evidence_refs": [
+            "P000619",
+            "R000619"
+          ],
+          "from": "proposed",
+          "outcome": "supported",
+          "reason": "prediction_status_contract_resolved",
+          "to": "completed"
+        }
+      ],
+      "times_selected": 1
+    },
+    {
+      "cognition_candidate_id": null,
+      "created_at": "2026-10-01T12:02:05.168325+00:00",
+      "cycle": 620,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 538,
+        "evidence_refs": [
+          "P000612",
+          "R000612",
+          "P000613",
+          "R000613",
+          "P000614",
+          "R000614",
+          "P000615",
+          "R000615",
+          "P000616",
+          "R000616",
+          "P000617",
+          "R000617",
+          "P000618",
+          "R000618",
+          "P000619",
+          "R000619"
+        ],
+        "inconclusive_trials": 31,
+        "stability_rate": 1.0,
+        "stable_observations": 538,
+        "version": "empirical-learning-v1"
+      },
+      "evidence_contract": {
+        "expected_status": "confirmed",
+        "kind": "prediction_status",
+        "prediction_id": "P000620"
+      },
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "hypothesis": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "id": "X000598",
+      "intention_id": null,
+      "last_selected_cycle": 620,
       "learning_family": "repository_stability_without_intervention",
       "method": "Compare the next repository self-observation with the pending prediction. A changed baseline invalidates the test rather than counting as support or falsification.",
       "predicted_observation": "The next comparable repository self-observation matches the prediction's measured fields.",
@@ -105154,7 +105330,7 @@
       "times_selected": 1
     }
   ],
-  "generation": 619,
+  "generation": 620,
   "identity": {
     "chosen_name": null,
     "description": "A persistent experimental process, not a claim of consciousness.",
@@ -135252,6 +135428,61 @@
       "rationale": "empirical_frontier had the highest current pressure (0.700); empirical family repository_stability_without_intervention has 537 evaluable trials with saturation 1.000. Replication continues separately while foreground attention may move toward a distinct empirical frontier.",
       "strength": 0.7,
       "target": "repository_stability_without_intervention"
+    },
+    {
+      "cycle": 620,
+      "dominant_drive": "empirical_frontier",
+      "empirical_transfer": {
+        "change_observations": 0,
+        "evaluable_trials": 538,
+        "evidence_refs": [
+          "P000612",
+          "R000612",
+          "P000613",
+          "R000613",
+          "P000614",
+          "R000614",
+          "P000615",
+          "R000615",
+          "P000616",
+          "R000616",
+          "P000617",
+          "R000617",
+          "P000618",
+          "R000618",
+          "P000619",
+          "R000619"
+        ],
+        "evidence_state": "provisional_stability",
+        "family": "repository_stability_without_intervention",
+        "pressure": 0.7,
+        "saturation": 1.0,
+        "stability_rate": 1.0,
+        "stable_observations": 538
+      },
+      "evidence_refs": [
+        "P000612",
+        "R000612",
+        "P000613",
+        "R000613",
+        "P000614",
+        "R000614",
+        "P000615",
+        "R000615",
+        "P000616",
+        "R000616",
+        "P000617",
+        "R000617",
+        "P000618",
+        "R000618",
+        "P000619",
+        "R000619"
+      ],
+      "id": "I000620",
+      "kind": "explore_empirical_frontier",
+      "rationale": "empirical_frontier had the highest current pressure (0.700); empirical family repository_stability_without_intervention has 538 evaluable trials with saturation 1.000. Replication continues separately while foreground attention may move toward a distinct empirical frontier.",
+      "strength": 0.7,
+      "target": "repository_stability_without_intervention"
     }
   ],
   "interactions": [
@@ -135512,7 +135743,7 @@
     "curiosity": 1.0,
     "learning": 1.0,
     "memory": 1.0,
-    "open_endedness": 0.01938610662358643,
+    "open_endedness": 0.01935483870967742,
     "perception": 1.0,
     "reflection": 1.0,
     "reproducibility": 1.0,
@@ -135521,8 +135752,8 @@
     "world_model": 1.0
   },
   "planning_lab": {
-    "active_goal_id": null,
-    "active_plan_id": null,
+    "active_goal_id": "PG000130",
+    "active_plan_id": "PP000131",
     "bootstrapped_cycle": 117,
     "bootstrapped_from_action_count": 20,
     "bounds": 2,
@@ -135594,53 +135825,6 @@
     ],
     "episodic_memory_started_cycle": 283,
     "episodic_route_memories": [
-      {
-        "action_bigrams": [
-          "east>south",
-          "south>east",
-          "east>south"
-        ],
-        "actions": [
-          "east",
-          "south",
-          "east",
-          "south"
-        ],
-        "completed_cycle": 371,
-        "created_cycle": 372,
-        "goal": [
-          -1,
-          -2
-        ],
-        "id": "EM000066",
-        "outcome": "goal_completed",
-        "policy_version": "episodic-route-memory-v1",
-        "source_episode_ids": [
-          "E001008",
-          "E001011",
-          "E001014",
-          "E001017"
-        ],
-        "source_execution_ids": [
-          "PX000251",
-          "PX000252",
-          "PX000253",
-          "PX000254"
-        ],
-        "source_goal_id": "PG000065",
-        "source_plan_id": "PP000066",
-        "start": [
-          1,
-          0
-        ],
-        "state_action_keys": [
-          "1,0|east",
-          "1,-1|south",
-          "0,-1|east",
-          "0,-2|south"
-        ],
-        "world_version": "bounded-stateful-world-v1"
-      },
       {
         "action_bigrams": [
           "west>west",
@@ -138554,6 +138738,53 @@
           "2,1|east",
           "2,0|east",
           "2,-1|east"
+        ],
+        "world_version": "bounded-stateful-world-v1"
+      },
+      {
+        "action_bigrams": [
+          "south>south",
+          "south>south",
+          "south>south"
+        ],
+        "actions": [
+          "south",
+          "south",
+          "south",
+          "south"
+        ],
+        "completed_cycle": 619,
+        "created_cycle": 620,
+        "goal": [
+          -2,
+          -2
+        ],
+        "id": "EM000130",
+        "outcome": "goal_completed",
+        "policy_version": "episodic-route-memory-v1",
+        "source_episode_ids": [
+          "E001752",
+          "E001755",
+          "E001758",
+          "E001761"
+        ],
+        "source_execution_ids": [
+          "PX000498",
+          "PX000499",
+          "PX000500",
+          "PX000501"
+        ],
+        "source_goal_id": "PG000129",
+        "source_plan_id": "PP000130",
+        "start": [
+          2,
+          -2
+        ],
+        "state_action_keys": [
+          "2,-2|south",
+          "1,-2|south",
+          "0,-2|south",
+          "-1,-2|south"
         ],
         "world_version": "bounded-stateful-world-v1"
       }
@@ -152552,6 +152783,34 @@
         ],
         "step_index": 3,
         "world_version": "bounded-stateful-world-v1"
+      },
+      {
+        "action": "west",
+        "after": [
+          -2,
+          -1
+        ],
+        "before": [
+          -2,
+          -2
+        ],
+        "blocked": false,
+        "cycle": 620,
+        "delta": [
+          0,
+          1
+        ],
+        "goal_id": "PG000130",
+        "id": "PX000502",
+        "matched_prediction": true,
+        "plan_id": "PP000131",
+        "plan_length": 3,
+        "predicted_after": [
+          -2,
+          -1
+        ],
+        "step_index": 0,
+        "world_version": "bounded-stateful-world-v1"
       }
     ],
     "goals": [
@@ -155134,9 +155393,27 @@
           -2,
           -2
         ]
+      },
+      {
+        "assigned_cycle": 620,
+        "id": "PG000130",
+        "selection": {
+          "kind": "least_visited_farthest_reachable",
+          "planned_distance": 3,
+          "preferred_step_range": [
+            3,
+            4
+          ],
+          "prior_visits": 19
+        },
+        "status": "active",
+        "target": [
+          -1,
+          0
+        ]
       }
     ],
-    "last_action_cycle": 619,
+    "last_action_cycle": 620,
     "last_transfer_probe_cycle": 565,
     "learned_effects": {
       "east": {
@@ -155173,7 +155450,7 @@
           0,
           1
         ],
-        "unblocked_samples": 141
+        "unblocked_samples": 142
       }
     },
     "memory_decisions": [
@@ -159404,6 +159681,106 @@
         "start": [
           1,
           -1
+        ],
+        "status": "memory_changed_choice"
+      },
+      {
+        "candidate_count": 3,
+        "changed_choice": true,
+        "counterfactual_actions": [
+          "north",
+          "west",
+          "west"
+        ],
+        "counterfactual_predicted_states": [
+          [
+            -1,
+            -2
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "counterfactual_replay_score": 53,
+        "cycle": 620,
+        "goal": [
+          -1,
+          0
+        ],
+        "goal_id": "PG000130",
+        "id": "MD000131",
+        "memory_refs": [
+          "EM000107",
+          "EM000111",
+          "EM000115",
+          "EM000116",
+          "EM000118",
+          "EM000123",
+          "EM000124",
+          "EM000127"
+        ],
+        "policy_version": "episodic-route-memory-v1",
+        "rationale": "Prefer an equally short valid route with less replayed episodic route history.",
+        "selected_actions": [
+          "west",
+          "north",
+          "west"
+        ],
+        "selected_predicted_states": [
+          [
+            -2,
+            -1
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "selected_replay_score": 42,
+        "source_episode_refs": [
+          "E001479",
+          "E001482",
+          "E001485",
+          "E001488",
+          "E001527",
+          "E001530",
+          "E001533",
+          "E001536",
+          "E001575",
+          "E001578",
+          "E001581",
+          "E001584",
+          "E001587",
+          "E001590",
+          "E001608",
+          "E001611",
+          "E001614",
+          "E001617",
+          "E001668",
+          "E001671",
+          "E001674",
+          "E001677",
+          "E001680",
+          "E001683",
+          "E001686",
+          "E001689",
+          "E001716",
+          "E001719",
+          "E001722",
+          "E001725"
+        ],
+        "start": [
+          -2,
+          -2
         ],
         "status": "memory_changed_choice"
       }
@@ -168162,11 +168539,105 @@
         ],
         "status": "completed",
         "world_version": "bounded-stateful-world-v1"
+      },
+      {
+        "actions": [
+          "west",
+          "north",
+          "west"
+        ],
+        "counterfactual_actions": [
+          "north",
+          "west",
+          "west"
+        ],
+        "counterfactual_replay_score": 53,
+        "created_cycle": 620,
+        "goal": [
+          -1,
+          0
+        ],
+        "goal_id": "PG000130",
+        "id": "PP000131",
+        "memory_decision_id": "MD000131",
+        "memory_episode_refs": [
+          "E001479",
+          "E001482",
+          "E001485",
+          "E001488",
+          "E001527",
+          "E001530",
+          "E001533",
+          "E001536",
+          "E001575",
+          "E001578",
+          "E001581",
+          "E001584",
+          "E001587",
+          "E001590",
+          "E001608",
+          "E001611",
+          "E001614",
+          "E001617",
+          "E001668",
+          "E001671",
+          "E001674",
+          "E001677",
+          "E001680",
+          "E001683",
+          "E001686",
+          "E001689",
+          "E001716",
+          "E001719",
+          "E001722",
+          "E001725"
+        ],
+        "memory_influenced": true,
+        "memory_refs": [
+          "EM000107",
+          "EM000111",
+          "EM000115",
+          "EM000116",
+          "EM000118",
+          "EM000123",
+          "EM000124",
+          "EM000127"
+        ],
+        "memory_selection_reason": "episodic_memory_tiebreak",
+        "model_samples": {
+          "east": 143,
+          "north": 117,
+          "south": 119,
+          "west": 141
+        },
+        "next_step_index": 1,
+        "predicted_states": [
+          [
+            -2,
+            -1
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "reason": "initial_goal_plan",
+        "selected_replay_score": 42,
+        "start": [
+          -2,
+          -2
+        ],
+        "status": "active",
+        "world_version": "bounded-stateful-world-v1"
       }
     ],
     "position": [
       -2,
-      -2
+      -1
     ],
     "state_effects": {
       "-1,-1|east": {
@@ -168419,8 +168890,8 @@
           0,
           1
         ],
-        "samples": 14,
-        "unblocked_samples": 14
+        "samples": 15,
+        "unblocked_samples": 15
       },
       "-2,0|east": {
         "blocked": false,
@@ -169003,7 +169474,7 @@
         "unblocked_samples": 3
       }
     },
-    "status": "goal_reached",
+    "status": "executing_plan",
     "transfer_decisions": [
       {
         "action": "south",
@@ -179053,6 +179524,26 @@
         "source": "planning_lab",
         "source_id": "PX000501",
         "world_version": "bounded-stateful-world-v1"
+      },
+      {
+        "action": "west",
+        "after": [
+          -2,
+          -1
+        ],
+        "before": [
+          -2,
+          -2
+        ],
+        "blocked": false,
+        "cycle": 620,
+        "delta": [
+          0,
+          1
+        ],
+        "source": "planning_lab",
+        "source_id": "PX000502",
+        "world_version": "bounded-stateful-world-v1"
       }
     ],
     "version": "persistent-planning-lab-v5",
@@ -179062,7 +179553,7 @@
       "-1,0": 19,
       "-1,1": 20,
       "-1,2": 22,
-      "-2,-1": 23,
+      "-2,-1": 24,
       "-2,-2": 20,
       "-2,0": 20,
       "-2,1": 22,
@@ -209357,6 +209848,9 @@
         "stable_observations": 537,
         "version": "empirical-learning-v1"
       },
+      "errors": {},
+      "evaluated_at": "2026-10-01T12:02:05.168325+00:00",
+      "evidence_strength": 1.0,
       "expected": {
         "baseline_fingerprint": "4c09c83ab7a816e0",
         "branch": "autonomous/growth",
@@ -209369,6 +209863,54 @@
       "expected_status": "confirmed",
       "falsification": "Any change in a measured comparable field violates this prediction.",
       "id": "P000619",
+      "learning_family": "repository_stability_without_intervention",
+      "resolved_experiment_ids": [
+        "X000597"
+      ],
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "status": "confirmed"
+    },
+    {
+      "created_at": "2026-10-01T12:02:05.168325+00:00",
+      "cycle": 620,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 538,
+        "evidence_refs": [
+          "P000612",
+          "R000612",
+          "P000613",
+          "R000613",
+          "P000614",
+          "R000614",
+          "P000615",
+          "R000615",
+          "P000616",
+          "R000616",
+          "P000617",
+          "R000617",
+          "P000618",
+          "R000618",
+          "P000619",
+          "R000619"
+        ],
+        "inconclusive_trials": 31,
+        "stability_rate": 1.0,
+        "stable_observations": 538,
+        "version": "empirical-learning-v1"
+      },
+      "expected": {
+        "baseline_fingerprint": "4c09c83ab7a816e0",
+        "branch": "autonomous/growth",
+        "python_files": 39,
+        "python_source_lines": 17165,
+        "test_files": 8,
+        "tracked_files": 67,
+        "working_tree_clean": true
+      },
+      "expected_status": "confirmed",
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "id": "P000620",
       "learning_family": "repository_stability_without_intervention",
       "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
       "status": "pending"
@@ -213612,20 +214154,18 @@
     {
       "created_cycle": 51,
       "id": "Q000021",
-      "last_selected_cycle": 619,
+      "last_selected_cycle": 620,
       "source": "repository_stability_prediction",
       "status": "open",
       "text": "Will measured repository fields remain unchanged until the next self-observation unless an intervening code change alters the baseline?",
-      "times_selected": 569
+      "times_selected": 570
     },
     {
       "created_cycle": 86,
       "id": "Q000022",
-      "last_selected_cycle": 619,
+      "last_selected_cycle": 620,
       "source": "empirical_frontier_transfer",
       "source_evidence_refs": [
-        "P000611",
-        "R000611",
         "P000612",
         "R000612",
         "P000613",
@@ -213639,12 +214179,14 @@
         "P000617",
         "R000617",
         "P000618",
-        "R000618"
+        "R000618",
+        "P000619",
+        "R000619"
       ],
       "source_learning_family": "repository_stability_without_intervention",
       "status": "open",
       "text": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?",
-      "times_selected": 527
+      "times_selected": 528
     }
   ],
   "reflections": [
@@ -219209,12 +219751,21 @@
       "outcome": "confirmed",
       "prediction_id": "P000618",
       "source": "prediction"
+    },
+    {
+      "cycle": 620,
+      "evidence_strength": 1.0,
+      "id": "R000619",
+      "lesson": "Measured repository stability prediction was confirmed; use the observed error fields rather than inventing a cause.",
+      "outcome": "confirmed",
+      "prediction_id": "P000619",
+      "source": "prediction"
     }
   ],
   "schema_version": 20,
   "self_model": {
     "calibration": {
-      "calibrated_cycle": 619,
+      "calibrated_cycle": 620,
       "coverage": 1.0,
       "grounded": 19,
       "observed": 11,
@@ -219246,41 +219797,41 @@
     ],
     "capability_claims": {
       "append-only event journal": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [],
         "reason": "The live state does not currently expose a citable journal-write evidence ID.",
         "status": "unverified"
       },
       "baseline-scoped diagnostic re-evaluation after interventions": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "deterministic semantic consolidation with source episode references": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
-          "E001751",
           "E001754",
           "E001757",
-          "E001760"
+          "E001760",
+          "E001763"
         ],
         "rationale": "Semantic memory entries retain source episode references.",
         "status": "observed"
       },
       "endogenous evidence-driven intention selection": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
-          "I000616",
           "I000617",
           "I000618",
-          "I000619"
+          "I000619",
+          "I000620"
         ],
         "rationale": "Persisted intention selections are present.",
         "status": "observed"
       },
       "evidence-backed self-authored change manifests without code execution": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
           "V000025",
           "V000026",
@@ -219291,41 +219842,41 @@
         "status": "observed"
       },
       "evidence-grounded self-model calibration with explicit uncertainty": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "intervention-aware prediction using a non-state repository baseline fingerprint": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "narrow repository self-perception through auditable sensors": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
-          "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "rationale": "Environment episodes record repository sensor observations.",
         "status": "observed"
       },
       "one-step prediction of measured repository state": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
-          "P000616",
           "P000617",
           "P000618",
-          "P000619"
+          "P000619",
+          "P000620"
         ],
         "rationale": "Persisted repository predictions are present.",
         "status": "observed"
       },
       "persistent human interaction surface with evidence-linked responses": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
           "E000066",
           "E000100",
@@ -219336,16 +219887,16 @@
         "status": "observed"
       },
       "persistent structured state": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
-          "E001760",
-          "E001761"
+          "E001763",
+          "E001764"
         ],
         "rationale": "Persistent episodes are present in the loaded state across the current history.",
         "status": "observed"
       },
       "proposal review that distinguishes direct problem evidence from measurement gaps": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
           "V000025",
           "V000026",
@@ -219356,7 +219907,7 @@
         "status": "observed"
       },
       "question generation from accumulated concepts": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
           "Q000019",
           "Q000020",
@@ -219367,53 +219918,53 @@
         "status": "observed"
       },
       "selection of explicit falsifiable experiments": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
-          "X000594",
           "X000595",
           "X000596",
-          "X000597"
+          "X000597",
+          "X000598"
         ],
         "rationale": "Persisted experiments with falsification criteria are present.",
         "status": "observed"
       },
       "temporal world claims that preserve superseded observed values": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [
-          "W001363",
-          "W001364",
           "W001365",
-          "W001366"
+          "W001366",
+          "W001367",
+          "W001368"
         ],
         "rationale": "Current provenance-backed world claims are present.",
         "status": "observed"
       },
       "validated boundary for optional model-generated candidate thoughts": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [],
         "reason": "No accepted live cognition candidate exists; provider-unavailable events do not verify grounding acceptance.",
         "status": "unverified"
       },
       "verified non-mutating diagnostics that can resolve measurement gaps": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "verified read-only inquiry-family diagnostics": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       },
       "verified read-only self-model grounding diagnostics": {
-        "calibrated_cycle": 619,
+        "calibrated_cycle": 620,
         "evidence_refs": [],
         "reason": "No explicit calibration rule has been defined for this capability claim.",
         "status": "unverified"
       }
     },
-    "last_updated_cycle": 619,
+    "last_updated_cycle": 620,
     "limitations": [
       "Perception is limited to explicitly implemented auditable sensors.",
       "Environmental actions are not independently executed.",
@@ -219683,9 +220234,8 @@
           "autonomous",
           "heartbeat"
         ],
-        "count": 611,
+        "count": 612,
         "episode_refs": [
-          "E001667",
           "E001670",
           "E001673",
           "E001676",
@@ -219716,10 +220266,11 @@
           "E001751",
           "E001754",
           "E001757",
-          "E001760"
+          "E001760",
+          "E001763"
         ],
         "first_cycle": 1,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "baseline_fingerprint|python_files": {
         "concepts": [
@@ -220684,9 +221235,8 @@
           "goal_directed_action",
           "model_based_planning"
         ],
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -220717,19 +221267,19 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "goal_directed_action|persistent_plan": {
         "concepts": [
           "goal_directed_action",
           "persistent_plan"
         ],
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -220760,19 +221310,19 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "goal_directed_action|planning_lab": {
         "concepts": [
           "goal_directed_action",
           "planning_lab"
         ],
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -220803,10 +221353,11 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "gone|heartbeats": {
         "concepts": [
@@ -221097,9 +221648,8 @@
           "model_based_planning",
           "persistent_plan"
         ],
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -221130,19 +221680,19 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "model_based_planning|planning_lab": {
         "concepts": [
           "model_based_planning",
           "planning_lab"
         ],
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -221173,10 +221723,11 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "movement|north": {
         "concepts": [
@@ -221258,9 +221809,8 @@
           "observation",
           "repository"
         ],
-        "count": 544,
+        "count": 545,
         "episode_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -221291,19 +221841,19 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "first_cycle": 1,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "persistent_plan|planning_lab": {
         "concepts": [
           "persistent_plan",
           "planning_lab"
         ],
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -221334,10 +221884,11 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "python_files|python_source_lines": {
         "concepts": [
@@ -221610,9 +222161,8 @@
       },
       "autonomous": {
         "concept": "autonomous",
-        "count": 611,
+        "count": 612,
         "episode_refs": [
-          "E001667",
           "E001670",
           "E001673",
           "E001676",
@@ -221643,10 +222193,11 @@
           "E001751",
           "E001754",
           "E001757",
-          "E001760"
+          "E001760",
+          "E001763"
         ],
         "first_cycle": 1,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "baseline_fingerprint": {
         "concept": "baseline_fingerprint",
@@ -221853,9 +222404,8 @@
       },
       "goal_directed_action": {
         "concept": "goal_directed_action",
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -221886,10 +222436,11 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "gone": {
         "concept": "gone",
@@ -221902,9 +222453,8 @@
       },
       "heartbeat": {
         "concept": "heartbeat",
-        "count": 612,
+        "count": 613,
         "episode_refs": [
-          "E001667",
           "E001670",
           "E001673",
           "E001676",
@@ -221935,10 +222485,11 @@
           "E001751",
           "E001754",
           "E001757",
-          "E001760"
+          "E001760",
+          "E001763"
         ],
         "first_cycle": 1,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "heartbeats": {
         "concept": "heartbeats",
@@ -222008,9 +222559,8 @@
       },
       "model_based_planning": {
         "concept": "model_based_planning",
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -222041,10 +222591,11 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "movement": {
         "concept": "movement",
@@ -222099,9 +222650,8 @@
       },
       "observation": {
         "concept": "observation",
-        "count": 544,
+        "count": 545,
         "episode_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -222132,16 +222682,16 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "first_cycle": 1,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "persistent_plan": {
         "concept": "persistent_plan",
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -222172,16 +222722,16 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "planning_lab": {
         "concept": "planning_lab",
-        "count": 503,
+        "count": 504,
         "episode_refs": [
-          "E001668",
           "E001671",
           "E001674",
           "E001677",
@@ -222212,10 +222762,11 @@
           "E001752",
           "E001755",
           "E001758",
-          "E001761"
+          "E001761",
+          "E001764"
         ],
         "first_cycle": 117,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "python_files": {
         "concept": "python_files",
@@ -222293,9 +222844,8 @@
       },
       "repository": {
         "concept": "repository",
-        "count": 544,
+        "count": 545,
         "episode_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -222326,10 +222876,11 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "first_cycle": 1,
-        "last_cycle": 619
+        "last_cycle": 620
       },
       "results": {
         "concept": "results",
@@ -222597,7 +223148,7 @@
         }
       ],
       "family_count": 12,
-      "open_endedness": 0.01938610662358643,
+      "open_endedness": 0.01935483870967742,
       "question_count": 22,
       "question_to_family": {
         "Q000001": "F005",
@@ -222624,10 +223175,10 @@
         "Q000022": "F012"
       },
       "similarity_threshold": 0.72,
-      "updated_cycle": 619,
+      "updated_cycle": 620,
       "version": "inquiry-family-state-v1"
     },
-    "last_episode_index": 1761
+    "last_episode_index": 1764
   },
   "surprises": [
     {
@@ -274472,9 +275023,92 @@
       },
       "source_state_mutated": false,
       "status": "completed"
+    },
+    {
+      "baseline_fingerprint": "4c09c83ab7a816e0",
+      "context_hash": "bdeaec009fd256c3d5fffa04c37ca089d1deb1b5cc0f2f2e7755bab70783ea54",
+      "created_at": "2026-10-01T12:02:06.417339+00:00",
+      "created_cycle": 620,
+      "diagnostic_version": "experiment-design-v3",
+      "id": "SD001158",
+      "kind": "experiment_design",
+      "outcome": "evidence_ready",
+      "result": {
+        "actionable_specification_count": 0,
+        "actionable_specification_ids": [],
+        "active_experiment_count": 1,
+        "active_question_count": 1,
+        "active_question_groups": {
+          "Q000021": [
+            "X000598"
+          ]
+        },
+        "blocked_specification_count": 0,
+        "blocked_specification_ids": [],
+        "contracted_count": 1,
+        "contracted_experiment_ids": [
+          "X000598"
+        ],
+        "contracted_ratio": 1.0,
+        "diagnostic_version": "experiment-design-v3",
+        "duplicate_cluster_count": 0,
+        "duplicate_clusters": [],
+        "executable_experiment_count": 1,
+        "largest_duplicate_cluster": 0,
+        "largest_question_group": 1,
+        "outcome": "evidence_ready",
+        "readiness_counts": {
+          "evidence_ready": 1
+        },
+        "source_state_mutated": false,
+        "specification_backlog_count": 0,
+        "specification_backlog_ids": [],
+        "uncontracted_count": 0,
+        "uncontracted_experiment_ids": [],
+        "unresolved_experiment_count": 1,
+        "unresolved_question_count": 1,
+        "unresolved_question_groups": {
+          "Q000021": [
+            "X000598"
+          ]
+        },
+        "untriaged_specification_count": 0,
+        "untriaged_specification_ids": []
+      },
+      "source_state_mutated": false,
+      "status": "completed"
+    },
+    {
+      "baseline_fingerprint": "4c09c83ab7a816e0",
+      "context_hash": "49db4c1b66c36e180b8b21b715c8b08a6b5c5f4de5f435807343100fe49c49e5",
+      "created_at": "2026-10-01T12:02:06.780040+00:00",
+      "created_cycle": 620,
+      "diagnostic_version": "blocked-attention-v2",
+      "id": "SD001159",
+      "kind": "attention_control",
+      "outcome": "no_blocked_work",
+      "result": {
+        "blocked_experiment_count": 0,
+        "blocked_experiment_ids": [],
+        "diagnostic_version": "blocked-attention-v2",
+        "historical_reselected_after_block_count": 0,
+        "historical_reselected_after_block_ids": [],
+        "latest_relevant_intervention_cycle": 44,
+        "loop_count": 0,
+        "loop_experiment_ids": [],
+        "loop_records": [],
+        "max_blocked_experiment_times_selected": 0,
+        "max_blocked_question_times_selected": 0,
+        "outcome": "no_blocked_work",
+        "reselected_after_block_count": 0,
+        "reselected_after_block_ids": [],
+        "source_state_mutated": false
+      },
+      "source_state_mutated": false,
+      "status": "completed"
     }
   ],
-  "updated_at": "2026-10-01T12:00:30.482928+00:00",
+  "updated_at": "2026-10-01T12:02:06.780075+00:00",
   "world_model": {
     "claims": [
       {
@@ -274482,7 +275116,6 @@
         "created_at": "2026-09-29T04:14:28.159944+00:00",
         "created_cycle": 4,
         "evidence_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -274513,11 +275146,12 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "id": "W000001",
-        "last_seen_cycle": 619,
-        "observed_at": "2026-10-01T12:00:28.649655+00:00",
+        "last_seen_cycle": 620,
+        "observed_at": "2026-10-01T12:02:05.095177+00:00",
         "predicate": "branch",
         "source_type": "observed_sensor",
         "status": "current",
@@ -276149,7 +276783,6 @@
         "created_at": "2026-09-29T14:47:21.838690+00:00",
         "created_cycle": 24,
         "evidence_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -276180,11 +276813,12 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "id": "W000086",
-        "last_seen_cycle": 619,
-        "observed_at": "2026-10-01T12:00:28.649655+00:00",
+        "last_seen_cycle": 620,
+        "observed_at": "2026-10-01T12:02:05.095177+00:00",
         "predicate": "working_tree_clean",
         "source_type": "observed_sensor",
         "status": "current",
@@ -281154,7 +281788,6 @@
         "created_at": "2026-09-30T20:35:12.261232+00:00",
         "created_cycle": 117,
         "evidence_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -281185,11 +281818,12 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "id": "W000339",
-        "last_seen_cycle": 619,
-        "observed_at": "2026-10-01T12:00:28.649655+00:00",
+        "last_seen_cycle": 620,
+        "observed_at": "2026-10-01T12:02:05.095177+00:00",
         "predicate": "tracked_files",
         "source_type": "observed_sensor",
         "status": "current",
@@ -281203,7 +281837,6 @@
         "created_at": "2026-09-30T20:35:12.261253+00:00",
         "created_cycle": 117,
         "evidence_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -281234,11 +281867,12 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "id": "W000340",
-        "last_seen_cycle": 619,
-        "observed_at": "2026-10-01T12:00:28.649655+00:00",
+        "last_seen_cycle": 620,
+        "observed_at": "2026-10-01T12:02:05.095177+00:00",
         "predicate": "python_files",
         "source_type": "observed_sensor",
         "status": "current",
@@ -281301,7 +281935,6 @@
         "created_at": "2026-09-30T20:35:12.261297+00:00",
         "created_cycle": 117,
         "evidence_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -281332,11 +281965,12 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "id": "W000342",
-        "last_seen_cycle": 619,
-        "observed_at": "2026-10-01T12:00:28.649655+00:00",
+        "last_seen_cycle": 620,
+        "observed_at": "2026-10-01T12:02:05.095177+00:00",
         "predicate": "test_files",
         "source_type": "observed_sensor",
         "status": "current",
@@ -299326,7 +299960,6 @@
         "created_at": "2026-10-01T11:08:18.605003+00:00",
         "created_cycle": 587,
         "evidence_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -299357,11 +299990,12 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "id": "W001299",
-        "last_seen_cycle": 619,
-        "observed_at": "2026-10-01T12:00:28.649655+00:00",
+        "last_seen_cycle": 620,
+        "observed_at": "2026-10-01T12:02:05.095177+00:00",
         "predicate": "baseline_fingerprint",
         "source_type": "observed_sensor",
         "status": "current",
@@ -299375,7 +300009,6 @@
         "created_at": "2026-10-01T11:08:18.605085+00:00",
         "created_cycle": 587,
         "evidence_refs": [
-          "E001666",
           "E001669",
           "E001672",
           "E001675",
@@ -299406,11 +300039,12 @@
           "E001750",
           "E001753",
           "E001756",
-          "E001759"
+          "E001759",
+          "E001762"
         ],
         "id": "W001300",
-        "last_seen_cycle": 619,
-        "observed_at": "2026-10-01T12:00:28.649655+00:00",
+        "last_seen_cycle": 620,
+        "observed_at": "2026-10-01T12:02:05.095177+00:00",
         "predicate": "python_source_lines",
         "source_type": "observed_sensor",
         "status": "current",
@@ -300639,6 +301273,43 @@
         "superseded_by": null,
         "supersedes": null,
         "value": "supported"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-01T12:02:05.177225+00:00",
+        "created_cycle": 620,
+        "evidence_refs": [
+          "P000619",
+          "R000619"
+        ],
+        "id": "W001367",
+        "last_seen_cycle": 620,
+        "observed_at": "2026-10-01T12:02:05.168325+00:00",
+        "predicate": "status",
+        "source_type": "prediction_evaluation",
+        "status": "current",
+        "subject": "prediction.P000619",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "confirmed"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-01T12:02:05.178774+00:00",
+        "created_cycle": 620,
+        "evidence_refs": [
+          "X000597"
+        ],
+        "id": "W001368",
+        "last_seen_cycle": 620,
+        "observed_at": "2026-10-01T12:02:05.168325+00:00",
+        "predicate": "outcome",
+        "source_type": "experiment_outcome",
+        "status": "current",
+        "subject": "experiment.X000597",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "supported"
       }
     ],
     "current": {
@@ -301210,6 +301881,7 @@
       "experiment.X000594::outcome": "W001362",
       "experiment.X000595::outcome": "W001364",
       "experiment.X000596::outcome": "W001366",
+      "experiment.X000597::outcome": "W001368",
       "prediction.P000001::status": "W000015",
       "prediction.P000002::status": "W000016",
       "prediction.P000003::status": "W000017",
@@ -301828,6 +302500,7 @@
       "prediction.P000616::status": "W001361",
       "prediction.P000617::status": "W001363",
       "prediction.P000618::status": "W001365",
+      "prediction.P000619::status": "W001367",
       "repository::baseline_fingerprint": "W001299",
       "repository::branch": "W000001",
       "repository::python_files": "W000340",
@@ -301836,7 +302509,7 @@
       "repository::tracked_files": "W000339",
       "repository::working_tree_clean": "W000086"
     },
-    "last_snapshot_index": 619,
+    "last_snapshot_index": 620,
     "seen_experiment_status": {
       "X000026": "[\"completed\", \"supported\", 1.0]",
       "X000028": "[\"completed\", \"inconclusive\", 1.0]",
@@ -302405,7 +303078,8 @@
       "X000593": "[\"completed\", \"supported\", 1.0]",
       "X000594": "[\"completed\", \"supported\", 1.0]",
       "X000595": "[\"completed\", \"supported\", 1.0]",
-      "X000596": "[\"completed\", \"supported\", 1.0]"
+      "X000596": "[\"completed\", \"supported\", 1.0]",
+      "X000597": "[\"completed\", \"supported\", 1.0]"
     },
     "seen_prediction_status": {
       "P000001": "violated",
@@ -303025,7 +303699,8 @@
       "P000615": "confirmed",
       "P000616": "confirmed",
       "P000617": "confirmed",
-      "P000618": "confirmed"
+      "P000618": "confirmed",
+      "P000619": "confirmed"
     }
   }
 }
