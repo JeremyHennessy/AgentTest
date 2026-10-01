@@ -1587,13 +1587,45 @@ def _objective_candidate_metrics(
     distance: int,
 ) -> dict[str, Any]:
     state_effects = lab.get("state_effects", {})
+    learned = lab.get("learned_effects", {})
+    observations = lab.get("transition_observations", [])
+    bounds = int(lab.get("bounds", BOUNDS))
     unseen_actions = 0
     state_samples = 0
     for action in ACTION_ORDER:
         effect = state_effects.get(_state_action_key(target, action), {})
         samples = int(effect.get("samples", 0) or 0)
         state_samples += samples
-        if samples == 0:
+        if samples != 0:
+            continue
+
+        general = learned.get(action, {})
+        delta = general.get("modal_delta")
+        if (
+            int(general.get("unblocked_samples", 0) or 0) < MIN_MODEL_SAMPLES
+            or float(general.get("confidence", 0.0) or 0.0) <= 0.0
+            or not isinstance(delta, list)
+            or len(delta) != 2
+        ):
+            continue
+
+        predicted_after = (
+            int(target[0]) + int(delta[0]),
+            int(target[1]) + int(delta[1]),
+        )
+        if not _in_bounds(predicted_after, bounds):
+            continue
+
+        has_source_evidence = any(
+            (
+                item.get("action") == action
+                and item.get("blocked") is False
+                and item.get("delta") == delta
+                and item.get("source_id")
+            )
+            for item in observations
+        )
+        if has_source_evidence:
             unseen_actions += 1
 
     target_list = [int(target[0]), int(target[1])]
