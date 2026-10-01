@@ -332,21 +332,6 @@ def _select_curiosity_probe(
 ) -> dict[str, Any] | None:
     position = [int(value) for value in lab.get("position", [0, 0])]
     actions = list(plan.get("actions", []))
-    curiosity_decision = _select_curiosity_probe(
-        lab,
-        goal,
-        plan,
-        cycle,
-    )
-    if curiosity_decision is not None:
-        return _execute_curiosity_probe(
-            lab,
-            goal,
-            plan,
-            curiosity_decision,
-            cycle,
-        )
-
     step_index = int(plan.get("next_step_index", 0) or 0)
     remaining_goal_steps = max(0, len(actions) - step_index)
     if remaining_goal_steps <= 0:
@@ -759,6 +744,21 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
             "goal_id": goal.get("id"),
             "reason": "No learned multi-step plan reaches the active goal.",
         }
+
+    curiosity_decision = _select_curiosity_probe(
+        lab,
+        goal,
+        plan,
+        cycle,
+    )
+    if curiosity_decision is not None:
+        return _execute_curiosity_probe(
+            lab,
+            goal,
+            plan,
+            curiosity_decision,
+            cycle,
+        )
 
     step_index = int(plan.get("next_step_index", 0) or 0)
     actions = list(plan.get("actions", []))
