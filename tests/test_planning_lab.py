@@ -228,6 +228,218 @@ class PlanningLabTests(unittest.TestCase):
         self.assertTrue(recovered["matched_prediction"])
         self.assertEqual(lab["status"], "executing_plan")
 
+    def test_evidence_valued_curiosity_retests_single_sample_exception_once(self) -> None:
+        state = self._phase32_ready_state()
+        state["cycles"] = 9
+        state["generation"] = 9
+        step_planning_lab(state)
+        lab = ensure_planning_lab_state(state)
+
+        lab["position"] = [0, 2]
+        lab["visit_counts"]["0,2"] = int(
+            lab["visit_counts"].get("0,2", 0) or 0
+        ) + 1
+        lab["transition_observations"].append(
+            {
+                "source": "planning_lab",
+                "source_id": "PX_TEST_BLOCK",
+                "cycle": 9,
+                "action": "south",
+                "before": [0, 2],
+                "after": [0, 2],
+                "delta": [0, 0],
+                "blocked": True,
+                "world_version": lab["world_version"],
+            }
+        )
+        lab["model_revisions"] = [
+            {
+                "id": "MR000001",
+                "cycle": 9,
+                "trigger_execution_id": "PX_TEST_BLOCK",
+                "goal_id": "PG000001",
+                "plan_id": "PP000001",
+                "state_action_key": "0,2|south",
+                "before": [0, 2],
+                "action": "south",
+                "predicted_after": [-1, 2],
+                "observed_after": [0, 2],
+                "observed_delta": [0, 0],
+                "observed_blocked": True,
+                "world_version": lab["world_version"],
+                "status": "state_evidence_recorded",
+            }
+        ]
+        lab["goals"] = [
+            {
+                "id": "PG000001",
+                "assigned_cycle": 9,
+                "target": [-2, 2],
+                "status": "active",
+                "selection": {
+                    "kind": "test_fixture",
+                    "prior_visits": 0,
+                    "planned_distance": 4,
+                    "preferred_step_range": [3, 4],
+                },
+            }
+        ]
+        lab["plans"] = [
+            {
+                "id": "PP000001",
+                "goal_id": "PG000001",
+                "created_cycle": 9,
+                "start": [0, 2],
+                "goal": [-2, 2],
+                "actions": ["east", "south", "south", "west"],
+                "predicted_states": [[0, 1], [-1, 1], [-2, 1], [-2, 2]],
+                "next_step_index": 0,
+                "status": "active",
+                "reason": "replan_after_invalidation",
+                "world_version": lab["world_version"],
+                "model_samples": {
+                    action: int(
+                        lab["learned_effects"].get(action, {}).get(
+                            "unblocked_samples",
+                            0,
+                        )
+                    )
+                    for action in ("north", "east", "south", "west")
+                },
+            }
+        ]
+        lab["active_goal_id"] = "PG000001"
+        lab["active_plan_id"] = "PP000001"
+        lab["status"] = "executing_plan"
+
+        state["cycles"] = 10
+        state["generation"] = 10
+        probe = step_planning_lab(state)
+
+        self.assertEqual(probe["execution_kind"], "curiosity_probe")
+        self.assertEqual(probe["curiosity_probe_id"], "CP000001")
+        self.assertEqual(probe["source_model_revision_id"], "MR000001")
+        self.assertEqual(probe["action"], "south")
+        self.assertTrue(probe["blocked"])
+        self.assertEqual(probe["before"], [0, 2])
+        self.assertEqual(probe["after"], [0, 2])
+        self.assertTrue(probe["matched_prediction"])
+        self.assertGreater(probe["information_value"], probe["goal_delay_cost"])
+        self.assertEqual(probe["state_samples_before"], 1)
+        self.assertEqual(probe["state_samples_after"], 2)
+        self.assertEqual(lab["plans"][0]["next_step_index"], 0)
+        self.assertEqual(lab["active_plan_id"], "PP000001")
+        self.assertEqual(lab["model_revisions"][0]["curiosity_status"], "probe_confirmed")
+
+        state["cycles"] = 11
+        state["generation"] = 11
+        resumed = step_planning_lab(state)
+
+        self.assertNotEqual(resumed.get("execution_kind"), "curiosity_probe")
+        self.assertEqual(resumed["plan_id"], "PP000001")
+        self.assertEqual(resumed["action"], "east")
+        self.assertEqual(resumed["step_index"], 0)
+        self.assertEqual(len(lab["curiosity_probes"]), 1)
+
+    def test_curiosity_probe_refutation_invalidates_plan_and_preserves_prior_evidence(self) -> None:
+        state = self._phase32_ready_state()
+        state["cycles"] = 9
+        state["generation"] = 9
+        step_planning_lab(state)
+        lab = ensure_planning_lab_state(state)
+
+        lab["position"] = [0, 1]
+        lab["transition_observations"].append(
+            {
+                "source": "planning_lab",
+                "source_id": "PX_TEST_FALSE_BLOCK",
+                "cycle": 9,
+                "action": "south",
+                "before": [0, 1],
+                "after": [0, 1],
+                "delta": [0, 0],
+                "blocked": True,
+                "world_version": lab["world_version"],
+            }
+        )
+        lab["model_revisions"] = [
+            {
+                "id": "MR000001",
+                "cycle": 9,
+                "trigger_execution_id": "PX_TEST_FALSE_BLOCK",
+                "goal_id": "PG000001",
+                "plan_id": "PP000001",
+                "state_action_key": "0,1|south",
+                "before": [0, 1],
+                "action": "south",
+                "predicted_after": [-1, 1],
+                "observed_after": [0, 1],
+                "observed_delta": [0, 0],
+                "observed_blocked": True,
+                "world_version": lab["world_version"],
+                "status": "state_evidence_recorded",
+            }
+        ]
+        lab["goals"] = [
+            {
+                "id": "PG000001",
+                "assigned_cycle": 9,
+                "target": [0, -2],
+                "status": "active",
+                "selection": {
+                    "kind": "test_fixture",
+                    "prior_visits": 0,
+                    "planned_distance": 3,
+                    "preferred_step_range": [3, 4],
+                },
+            }
+        ]
+        lab["plans"] = [
+            {
+                "id": "PP000001",
+                "goal_id": "PG000001",
+                "created_cycle": 9,
+                "start": [0, 1],
+                "goal": [0, -2],
+                "actions": ["east", "east", "east"],
+                "predicted_states": [[0, 0], [0, -1], [0, -2]],
+                "next_step_index": 0,
+                "status": "active",
+                "reason": "test_fixture",
+                "world_version": lab["world_version"],
+                "model_samples": {},
+            }
+        ]
+        lab["active_goal_id"] = "PG000001"
+        lab["active_plan_id"] = "PP000001"
+        lab["status"] = "executing_plan"
+
+        state["cycles"] = 10
+        state["generation"] = 10
+        probe = step_planning_lab(state)
+
+        self.assertEqual(probe["execution_kind"], "curiosity_probe")
+        self.assertFalse(probe["matched_prediction"])
+        self.assertEqual(probe["after"], [-1, 1])
+        self.assertTrue(probe["replan_required"])
+        self.assertEqual(probe["model_revision_id"], "MR000002")
+        self.assertEqual(lab["status"], "needs_replan")
+        self.assertIsNone(lab["active_plan_id"])
+        self.assertEqual(lab["plans"][0]["invalidation_reason"], "curiosity_probe_changed_state")
+        self.assertEqual(len(lab["model_revisions"]), 2)
+        self.assertEqual(
+            lab["model_revisions"][0]["curiosity_status"],
+            "probe_refuted",
+        )
+        self.assertEqual(
+            lab["model_revisions"][1]["trigger_curiosity_probe_id"],
+            "CP000001",
+        )
+        self.assertEqual(
+            lab["model_revisions"][1]["source_model_revision_id"],
+            "MR000001",
+        )
+
     def test_planner_does_not_reference_hidden_environment_transition_map(self) -> None:
         source = inspect.getsource(planning_lab)
         self.assertNotIn("_HIDDEN_ACTION_DELTAS", source)
