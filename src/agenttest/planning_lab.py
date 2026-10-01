@@ -12,7 +12,10 @@ from .action_lab import (
     validate_action_lab_history,
 )
 
-PLANNING_LAB_VERSION = "persistent-planning-lab-v2"
+PLANNING_LAB_VERSION = "persistent-planning-lab-v3"
+CURIOSITY_POLICY_VERSION = "evidence-valued-curiosity-v1"
+CURIOSITY_TARGET_STATE_SAMPLES = 2
+CURIOSITY_MAX_PROBES_PER_REVISION = 1
 MIN_MODEL_SAMPLES = 2
 PREFERRED_MIN_PLAN_STEPS = 3
 PREFERRED_MAX_PLAN_STEPS = 4
@@ -29,6 +32,8 @@ def initial_planning_lab_state() -> dict[str, Any]:
         "learned_effects": {},
         "state_effects": {},
         "model_revisions": [],
+        "curiosity_decisions": [],
+        "curiosity_probes": [],
         "world_version": STATEFUL_WORLD_VERSION,
         "goals": [],
         "plans": [],
@@ -294,6 +299,294 @@ def _active_plan(lab: dict[str, Any]) -> dict[str, Any] | None:
         (item for item in lab.get("plans", []) if item.get("id") == plan_id),
         None,
     )
+
+
+def _state_effect_prediction(
+    lab: dict[str, Any],
+    position: list[int] | tuple[int, int],
+    action: str,
+) -> list[int] | None:
+    effect = lab.get("state_effects", {}).get(
+        _state_action_key(position, action),
+        {},
+    )
+    if int(effect.get("samples", 0) or 0) <= 0:
+        return None
+    before = [int(position[0]), int(position[1])]
+    if effect.get("blocked"):
+        return before
+    delta = effect.get("modal_delta")
+    if not isinstance(delta, list) or len(delta) != 2:
+        return None
+    return [
+        before[0] + int(delta[0]),
+        before[1] + int(delta[1]),
+    ]
+
+
+def _select_curiosity_probe(
+    lab: dict[str, Any],
+    goal: dict[str, Any],
+    plan: dict[str, Any],
+    cycle: int,
+) -> dict[str, Any] | None:
+    position = [int(value) for value in lab.get("position", [0, 0])]
+    actions = list(plan.get("actions", []))
+    curiosity_decision = _select_curiosity_probe(
+        lab,
+        goal,
+        plan,
+        cycle,
+    )
+    if curiosity_decision is not None:
+        return _execute_curiosity_probe(
+            lab,
+            goal,
+            plan,
+            curiosity_decision,
+            cycle,
+        )
+
+    step_index = int(plan.get("next_step_index", 0) or 0)
+    remaining_goal_steps = max(0, len(actions) - step_index)
+    if remaining_goal_steps <= 0:
+        return None
+    next_goal_action = str(actions[step_index])
+
+    probes = lab.get("curiosity_probes", [])
+    for revision in reversed(lab.get("model_revisions", [])):
+        revision_id = str(revision.get("id") or "")
+        action = str(revision.get("action") or "")
+        before = revision.get("before")
+        if (
+            not revision_id
+            or action not in ACTION_ORDER
+            or not isinstance(before, list)
+            or before != position
+            or action == next_goal_action
+        ):
+            continue
+        prior_probe_count = sum(
+            1
+            for probe in probes
+            if probe.get("source_model_revision_id") == revision_id
+        )
+        if prior_probe_count >= CURIOSITY_MAX_PROBES_PER_REVISION:
+            continue
+
+        key = _state_action_key(position, action)
+        effect = lab.get("state_effects", {}).get(key, {})
+        state_samples = int(effect.get("samples", 0) or 0)
+        if (
+            state_samples <= 0
+            or state_samples >= CURIOSITY_TARGET_STATE_SAMPLES
+        ):
+            continue
+        expected_after = _state_effect_prediction(lab, position, action)
+        if expected_after is None:
+            continue
+
+        information_value = round(1.0 / state_samples, 6)
+        goal_delay_cost = round(1.0 / (remaining_goal_steps + 1), 6)
+        decision_margin = round(information_value - goal_delay_cost, 6)
+        decision = {
+            "id": f"CD{len(lab.get('curiosity_decisions', [])) + 1:06d}",
+            "cycle": cycle,
+            "policy_version": CURIOSITY_POLICY_VERSION,
+            "source_model_revision_id": revision_id,
+            "goal_id": goal.get("id"),
+            "plan_id": plan.get("id"),
+            "state_action_key": key,
+            "state": position,
+            "action": action,
+            "expected_after": expected_after,
+            "state_samples": state_samples,
+            "information_value": information_value,
+            "goal_delay_cost": goal_delay_cost,
+            "decision_margin": decision_margin,
+            "remaining_goal_steps": remaining_goal_steps,
+            "status": (
+                "probe_selected"
+                if decision_margin > 0.0
+                else "continue_goal"
+            ),
+        }
+        lab.setdefault("curiosity_decisions", []).append(decision)
+        return decision if decision["status"] == "probe_selected" else None
+    return None
+
+
+def _execute_curiosity_probe(
+    lab: dict[str, Any],
+    goal: dict[str, Any],
+    plan: dict[str, Any],
+    decision: dict[str, Any],
+    cycle: int,
+) -> dict[str, Any]:
+    before = [int(value) for value in decision["state"]]
+    action = str(decision["action"])
+    expected_after = [int(value) for value in decision["expected_after"]]
+    world_version = str(
+        lab.get("world_version") or STATEFUL_WORLD_VERSION
+    )
+    outcome = apply_bounded_action(
+        before,
+        action,
+        bounds=int(lab.get("bounds", BOUNDS)),
+        world_version=world_version,
+    )
+    after = list(outcome["after"])
+    matched_prior_state_effect = after == expected_after
+
+    probe = {
+        "id": f"CP{len(lab.get('curiosity_probes', [])) + 1:06d}",
+        "cycle": cycle,
+        "policy_version": CURIOSITY_POLICY_VERSION,
+        "decision_id": decision["id"],
+        "source_model_revision_id": decision["source_model_revision_id"],
+        "goal_id": goal.get("id"),
+        "plan_id": plan.get("id"),
+        "state_action_key": decision["state_action_key"],
+        "action": action,
+        "before": before,
+        "predicted_after": expected_after,
+        "after": after,
+        "delta": list(outcome["delta"]),
+        "blocked": bool(outcome["blocked"]),
+        "matched_prior_state_effect": matched_prior_state_effect,
+        "state_samples_before": int(decision["state_samples"]),
+        "information_value": float(decision["information_value"]),
+        "goal_delay_cost": float(decision["goal_delay_cost"]),
+        "decision_margin": float(decision["decision_margin"]),
+        "world_version": world_version,
+    }
+    lab.setdefault("curiosity_probes", []).append(probe)
+    lab["position"] = after
+    position_key = _position_key(after)
+    lab.setdefault("visit_counts", {})[position_key] = (
+        int(lab["visit_counts"].get(position_key, 0) or 0) + 1
+    )
+    lab["last_action_cycle"] = cycle
+    lab.setdefault("transition_observations", []).append(
+        {
+            "source": "curiosity_probe",
+            "source_id": probe["id"],
+            "cycle": cycle,
+            "action": action,
+            "before": before,
+            "after": after,
+            "delta": list(outcome["delta"]),
+            "blocked": bool(outcome["blocked"]),
+            "world_version": world_version,
+        }
+    )
+    learned = _rebuild_model(lab)
+    effect_after = lab.get("state_effects", {}).get(
+        decision["state_action_key"],
+        {},
+    )
+    probe["state_samples_after"] = int(effect_after.get("samples", 0) or 0)
+
+    source_revision = next(
+        (
+            revision
+            for revision in lab.get("model_revisions", [])
+            if revision.get("id") == decision["source_model_revision_id"]
+        ),
+        None,
+    )
+    if source_revision is not None:
+        source_revision.setdefault("curiosity_probe_ids", []).append(probe["id"])
+        source_revision["curiosity_status"] = (
+            "probe_confirmed"
+            if matched_prior_state_effect
+            else "probe_refuted"
+        )
+
+    new_revision_id = None
+    if not matched_prior_state_effect:
+        revision = {
+            "id": f"MR{len(lab.get('model_revisions', [])) + 1:06d}",
+            "cycle": cycle,
+            "trigger_curiosity_probe_id": probe["id"],
+            "source_model_revision_id": decision["source_model_revision_id"],
+            "goal_id": goal.get("id"),
+            "plan_id": plan.get("id"),
+            "state_action_key": decision["state_action_key"],
+            "before": before,
+            "action": action,
+            "predicted_after": expected_after,
+            "observed_after": after,
+            "observed_delta": list(outcome["delta"]),
+            "observed_blocked": bool(outcome["blocked"]),
+            "world_version": world_version,
+            "status": "state_evidence_recorded",
+        }
+        lab.setdefault("model_revisions", []).append(revision)
+        new_revision_id = revision["id"]
+
+    goal_reached = after == list(goal.get("target", []))
+    if goal_reached:
+        plan["status"] = "completed"
+        plan["completed_cycle"] = cycle
+        plan["completion_reason"] = "curiosity_probe_reached_goal"
+        goal["status"] = "completed"
+        goal["completed_cycle"] = cycle
+        goal["completed_plan_id"] = plan["id"]
+        lab["active_plan_id"] = None
+        lab["active_goal_id"] = None
+        lab["status"] = "goal_reached"
+    elif after != before:
+        plan["status"] = "invalidated"
+        plan["invalidated_cycle"] = cycle
+        plan["invalidation_reason"] = "curiosity_probe_changed_state"
+        plan["curiosity_probe_id"] = probe["id"]
+        lab["active_plan_id"] = None
+        lab["status"] = "needs_replan"
+    else:
+        lab["status"] = "executing_plan"
+
+    probe["resulting_status"] = lab["status"]
+    probe["goal_reached"] = goal_reached
+    probe["replan_required"] = bool(after != before and not goal_reached)
+    return {
+        "id": probe["id"],
+        "execution_kind": "curiosity_probe",
+        "cycle": cycle,
+        "goal_id": goal.get("id"),
+        "plan_id": plan.get("id"),
+        "step_index": int(plan.get("next_step_index", 0) or 0),
+        "plan_length": len(plan.get("actions", [])),
+        "action": action,
+        "before": before,
+        "predicted_after": expected_after,
+        "after": after,
+        "delta": list(outcome["delta"]),
+        "blocked": bool(outcome["blocked"]),
+        "matched_prediction": matched_prior_state_effect,
+        "world_version": world_version,
+        "lab_version": PLANNING_LAB_VERSION,
+        "status": lab["status"],
+        "goal": list(goal.get("target", [])),
+        "goal_reached": goal_reached,
+        "replan_required": probe["replan_required"],
+        "model_revision_id": new_revision_id,
+        "source_model_revision_id": decision["source_model_revision_id"],
+        "curiosity_decision_id": decision["id"],
+        "curiosity_probe_id": probe["id"],
+        "information_value": decision["information_value"],
+        "goal_delay_cost": decision["goal_delay_cost"],
+        "decision_margin": decision["decision_margin"],
+        "state_samples_before": decision["state_samples"],
+        "state_samples_after": probe["state_samples_after"],
+        "remaining_plan_steps": (
+            0
+            if goal_reached or probe["replan_required"]
+            else len(plan.get("actions", []))
+            - int(plan.get("next_step_index", 0) or 0)
+        ),
+        "learned_effects": learned,
+    }
 
 
 def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
