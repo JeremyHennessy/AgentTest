@@ -562,7 +562,11 @@ class PlanningLabTests(unittest.TestCase):
         decision = lab["memory_decisions"][0]
 
         self.assertTrue(result["memory_influenced"])
-        self.assertEqual(plan["reason"], "episodic_memory_tiebreak")
+        self.assertEqual(plan["reason"], "initial_goal_plan")
+        self.assertEqual(
+            plan["memory_selection_reason"],
+            "episodic_memory_tiebreak",
+        )
         self.assertEqual(decision["status"], "memory_changed_choice")
         self.assertEqual(decision["counterfactual_actions"], ["north", "west"])
         self.assertEqual(decision["selected_actions"], ["west", "north"])
