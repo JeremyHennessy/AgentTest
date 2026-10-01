@@ -14,11 +14,12 @@ from .action_lab import (
     validate_action_lab_history,
 )
 
-PLANNING_LAB_VERSION = "persistent-planning-lab-v6"
+PLANNING_LAB_VERSION = "persistent-planning-lab-v7"
 CURIOSITY_POLICY_VERSION = "evidence-valued-curiosity-v1"
 EPISODIC_MEMORY_VERSION = "episodic-route-memory-v1"
 TRANSFER_POLICY_VERSION = "bounded-transfer-v1"
 SELF_EXPERIMENT_POLICY_VERSION = "self-generated-falsifiable-experiment-v1"
+OBJECTIVE_SELECTION_POLICY_VERSION = "bounded-objective-selection-v1"
 EPISODIC_MEMORY_MAX_ENTRIES = 64
 EPISODIC_MEMORY_MAX_DECISIONS = 128
 EPISODIC_MEMORY_MAX_ROUTE_CANDIDATES = 24
@@ -30,6 +31,9 @@ SELF_EXPERIMENT_COOLDOWN_CYCLES = 12
 SELF_EXPERIMENT_MAX_PER_GOAL = 1
 SELF_EXPERIMENT_MIN_COMPLETED_PLAN_STEPS = 1
 SELF_EXPERIMENT_MIN_REMAINING_PLAN_STEPS = 2
+OBJECTIVE_SELECTION_MIN_RECOVERED_EXPERIMENTS = 2
+OBJECTIVE_SELECTION_COOLDOWN_CYCLES = 12
+OBJECTIVE_SELECTION_MAX_DECISIONS = 128
 MIN_MODEL_SAMPLES = 2
 PREFERRED_MIN_PLAN_STEPS = 3
 PREFERRED_MAX_PLAN_STEPS = 4
@@ -58,6 +62,9 @@ def initial_planning_lab_state() -> dict[str, Any]:
         "self_experiment_decisions": [],
         "self_experiments": [],
         "last_self_experiment_cycle": None,
+        "objective_selection_started_cycle": None,
+        "objective_decisions": [],
+        "last_objective_selection_cycle": None,
         "world_version": STATEFUL_WORLD_VERSION,
         "goals": [],
         "plans": [],
@@ -1545,6 +1552,81 @@ def _select_plan_with_episodic_memory(
     return list(chosen[2]), chosen[3], decision
 
 
+def _recovered_self_experiment_refs(lab: dict[str, Any]) -> list[str]:
+    """Return Phase 38 experiments whose interrupted goals later completed."""
+
+    completed_goal_ids = {
+        str(goal.get("id") or "")
+        for goal in lab.get("goals", [])
+        if goal.get("status") == "completed" and goal.get("id")
+    }
+    refs = [
+        str(experiment.get("id") or "")
+        for experiment in lab.get("self_experiments", [])
+        if (
+            experiment.get("goal_id") in completed_goal_ids
+            and experiment.get("interpretation")
+            in {"hypothesis_supported", "hypothesis_refuted"}
+            and experiment.get("id")
+        )
+    ]
+    return refs
+
+
+def _objective_candidate_metrics(
+    lab: dict[str, Any],
+    *,
+    target: tuple[int, int],
+    visit_count: int,
+    distance: int,
+) -> dict[str, Any]:
+    state_effects = lab.get("state_effects", {})
+    unseen_actions = 0
+    state_samples = 0
+    for action in ACTION_ORDER:
+        effect = state_effects.get(_state_action_key(target, action), {})
+        samples = int(effect.get("samples", 0) or 0)
+        state_samples += samples
+        if samples == 0:
+            unseen_actions += 1
+
+    target_list = [int(target[0]), int(target[1])]
+    memory_refs = [
+        str(memory.get("id") or "")
+        for memory in lab.get("episodic_route_memories", [])
+        if (
+            memory.get("outcome") == "goal_completed"
+            and memory.get("goal") == target_list
+            and memory.get("id")
+        )
+    ][-8:]
+
+    novelty_value = round(1.0 / (visit_count + 1), 6)
+    uncertainty_value = round(unseen_actions / max(1, len(ACTION_ORDER)), 6)
+    memory_novelty_value = round(1.0 / (len(memory_refs) + 1), 6)
+    information_value = round(
+        novelty_value + uncertainty_value + memory_novelty_value,
+        6,
+    )
+    max_bounded_distance = max(1, 4 * int(lab.get("bounds", BOUNDS)))
+    action_cost = round(distance / max_bounded_distance, 6)
+    objective_score = round(information_value - action_cost, 6)
+    return {
+        "target": target_list,
+        "prior_visits": int(visit_count),
+        "planned_distance": int(distance),
+        "target_state_samples": int(state_samples),
+        "unseen_target_actions": int(unseen_actions),
+        "novelty_value": novelty_value,
+        "uncertainty_value": uncertainty_value,
+        "memory_novelty_value": memory_novelty_value,
+        "information_value": information_value,
+        "action_cost": action_cost,
+        "objective_score": objective_score,
+        "memory_refs": memory_refs,
+    }
+
+
 def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
     learned = _rebuild_model(lab)
     bounds = int(lab.get("bounds", BOUNDS))
@@ -1592,7 +1674,7 @@ def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
         if PREFERRED_MIN_PLAN_STEPS <= item[1] <= PREFERRED_MAX_PLAN_STEPS
     ]
     pool = preferred or candidates
-    visit_count, distance, x, y, _, _ = min(
+    counterfactual = min(
         pool,
         key=lambda item: (
             item[0],
@@ -1601,19 +1683,148 @@ def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
             item[3],
         ),
     )
+    chosen = counterfactual
+    objective_decision = None
+
+    recovered_experiment_refs = _recovered_self_experiment_refs(lab)
+    started = lab.get("objective_selection_started_cycle")
+    last_selection_cycle = lab.get("last_objective_selection_cycle")
+    objective_selection_ready = (
+        started is not None
+        and cycle > int(started or 0)
+        and len(recovered_experiment_refs)
+        >= OBJECTIVE_SELECTION_MIN_RECOVERED_EXPERIMENTS
+        and (
+            last_selection_cycle is None
+            or cycle - int(last_selection_cycle or 0)
+            >= OBJECTIVE_SELECTION_COOLDOWN_CYCLES
+        )
+    )
+
+    if objective_selection_ready:
+        scored: list[
+            tuple[
+                float,
+                int,
+                int,
+                int,
+                int,
+                tuple[int, int, int, int, list[str], list[list[int]]],
+                dict[str, Any],
+            ]
+        ] = []
+        for item in pool:
+            visit_count, distance, x, y, _, _ = item
+            metrics = _objective_candidate_metrics(
+                lab,
+                target=(x, y),
+                visit_count=visit_count,
+                distance=distance,
+            )
+            scored.append(
+                (
+                    -float(metrics["objective_score"]),
+                    visit_count,
+                    -distance,
+                    x,
+                    y,
+                    item,
+                    metrics,
+                )
+            )
+        scored.sort(key=lambda item: item[:5])
+        selected_item = scored[0][5]
+        selected_metrics = scored[0][6]
+        counterfactual_metrics = _objective_candidate_metrics(
+            lab,
+            target=(counterfactual[2], counterfactual[3]),
+            visit_count=counterfactual[0],
+            distance=counterfactual[1],
+        )
+        decision_margin = round(
+            float(selected_metrics["objective_score"])
+            - float(counterfactual_metrics["objective_score"]),
+            6,
+        )
+        changed_choice = (
+            [selected_item[2], selected_item[3]]
+            != [counterfactual[2], counterfactual[3]]
+            and decision_margin > 0.0
+        )
+        if changed_choice:
+            chosen = selected_item
+
+        top_candidates = [
+            entry[6]
+            for entry in scored[: min(5, len(scored))]
+        ]
+        objective_decision = {
+            "id": f"OD{len(lab.get('objective_decisions', [])) + 1:06d}",
+            "cycle": cycle,
+            "policy_version": OBJECTIVE_SELECTION_POLICY_VERSION,
+            "status": (
+                "objective_changed_choice"
+                if changed_choice
+                else "counterfactual_retained"
+            ),
+            "changed_choice": changed_choice,
+            "candidate_count": len(pool),
+            "counterfactual_policy": "least_visited_farthest_reachable",
+            "counterfactual": counterfactual_metrics,
+            "selected": (
+                selected_metrics
+                if changed_choice
+                else counterfactual_metrics
+            ),
+            "best_scored_candidate": selected_metrics,
+            "decision_margin": decision_margin,
+            "phase38_recovery_refs": recovered_experiment_refs[
+                -OBJECTIVE_SELECTION_MIN_RECOVERED_EXPERIMENTS:
+            ],
+            "candidate_summaries": top_candidates,
+            "rationale": (
+                "Prefer a reachable bounded objective with greater evidence value "
+                "after accounting for travel cost and remembered familiarity."
+            ),
+        }
+        lab.setdefault("objective_decisions", []).append(objective_decision)
+        lab["objective_decisions"] = lab["objective_decisions"][
+            -OBJECTIVE_SELECTION_MAX_DECISIONS:
+        ]
+        lab["last_objective_selection_cycle"] = cycle
+
+    visit_count, distance, x, y, _, _ = chosen
+    selection_kind = (
+        "self_selected_bounded_objective"
+        if (
+            objective_decision is not None
+            and objective_decision.get("changed_choice") is True
+        )
+        else "least_visited_farthest_reachable"
+    )
     goal = {
         "id": f"PG{len(lab.get('goals', [])) + 1:06d}",
         "assigned_cycle": cycle,
         "target": [x, y],
         "status": "active",
         "selection": {
-            "kind": "least_visited_farthest_reachable",
+            "kind": selection_kind,
             "prior_visits": visit_count,
             "planned_distance": distance,
             "preferred_step_range": [
                 PREFERRED_MIN_PLAN_STEPS,
                 PREFERRED_MAX_PLAN_STEPS,
             ],
+            "objective_decision_id": (
+                objective_decision.get("id")
+                if objective_decision is not None
+                else None
+            ),
+            "counterfactual_target": (
+                list(objective_decision["counterfactual"]["target"])
+                if objective_decision is not None
+                else None
+            ),
         },
     }
     lab.setdefault("goals", []).append(goal)
