@@ -892,6 +892,158 @@ class PlanningLabTests(unittest.TestCase):
                 9,
             )
 
+    def test_phase39_migration_activates_objective_selection_prospectively(self) -> None:
+        state = self._phase32_ready_state()
+        state["schema_version"] = 21
+        state["cycles"] = 50
+        state["generation"] = 50
+        lab = ensure_planning_lab_state(state)
+        lab["objective_selection_started_cycle"] = None
+
+        migrated = migrate_state(state)
+
+        self.assertEqual(migrated["schema_version"], 22)
+        self.assertEqual(
+            migrated["planning_lab"]["objective_selection_started_cycle"],
+            50,
+        )
+        self.assertEqual(migrated["planning_lab"]["objective_decisions"], [])
+        self.assertIsNone(
+            migrated["planning_lab"]["last_objective_selection_cycle"]
+        )
+
+    def test_phase39_selects_bounded_objective_with_explicit_counterfactual(self) -> None:
+        state = self._phase32_ready_state()
+        lab = ensure_planning_lab_state(state)
+        self.assertTrue(planning_lab._bootstrap_from_action_lab(state, lab))
+
+        lab["position"] = [0, 0]
+        lab["visit_counts"] = {"0,0": 1}
+        lab["goals"] = [
+            {
+                "id": "PG_REC_A",
+                "status": "completed",
+                "target": [1, 0],
+            },
+            {
+                "id": "PG_REC_B",
+                "status": "completed",
+                "target": [0, 1],
+            },
+        ]
+        lab["plans"] = []
+        lab["active_goal_id"] = None
+        lab["active_plan_id"] = None
+        lab["self_experiments"] = [
+            {
+                "id": "SE_REC_A",
+                "goal_id": "PG_REC_A",
+                "interpretation": "hypothesis_supported",
+            },
+            {
+                "id": "SE_REC_B",
+                "goal_id": "PG_REC_B",
+                "interpretation": "hypothesis_refuted",
+            },
+        ]
+        lab["objective_selection_started_cycle"] = 8
+        lab["objective_decisions"] = []
+        lab["last_objective_selection_cycle"] = None
+
+        world_version = lab["world_version"]
+        lab["transition_observations"].extend(
+            [
+                {
+                    "source": "test_fixture",
+                    "source_id": "OBJ_N",
+                    "cycle": 8,
+                    "action": "north",
+                    "before": [-2, -2],
+                    "after": [-1, -2],
+                    "delta": [1, 0],
+                    "blocked": False,
+                    "world_version": world_version,
+                },
+                {
+                    "source": "test_fixture",
+                    "source_id": "OBJ_E",
+                    "cycle": 8,
+                    "action": "east",
+                    "before": [-2, -2],
+                    "after": [-2, -2],
+                    "delta": [0, 0],
+                    "blocked": True,
+                    "world_version": world_version,
+                },
+                {
+                    "source": "test_fixture",
+                    "source_id": "OBJ_S",
+                    "cycle": 8,
+                    "action": "south",
+                    "before": [-2, -2],
+                    "after": [-2, -2],
+                    "delta": [0, 0],
+                    "blocked": True,
+                    "world_version": world_version,
+                },
+                {
+                    "source": "test_fixture",
+                    "source_id": "OBJ_W",
+                    "cycle": 8,
+                    "action": "west",
+                    "before": [-2, -2],
+                    "after": [-2, -1],
+                    "delta": [0, 1],
+                    "blocked": False,
+                    "world_version": world_version,
+                },
+            ]
+        )
+
+        goal = planning_lab._choose_goal(lab, 9)
+        decision = lab["objective_decisions"][0]
+
+        self.assertIsNotNone(goal)
+        self.assertEqual(decision["status"], "objective_changed_choice")
+        self.assertTrue(decision["changed_choice"])
+        self.assertEqual(
+            decision["counterfactual"]["target"],
+            [-2, -2],
+        )
+        self.assertNotEqual(
+            decision["selected"]["target"],
+            decision["counterfactual"]["target"],
+        )
+        self.assertGreater(decision["decision_margin"], 0.0)
+        self.assertEqual(
+            decision["phase38_recovery_refs"],
+            ["SE_REC_A", "SE_REC_B"],
+        )
+        self.assertGreaterEqual(decision["candidate_count"], 2)
+        self.assertTrue(decision["candidate_summaries"])
+        self.assertEqual(
+            goal["selection"]["kind"],
+            "self_selected_bounded_objective",
+        )
+        self.assertEqual(
+            goal["selection"]["objective_decision_id"],
+            decision["id"],
+        )
+        self.assertEqual(
+            goal["selection"]["counterfactual_target"],
+            [-2, -2],
+        )
+
+        goal["status"] = "completed"
+        lab["active_goal_id"] = None
+        second_goal = planning_lab._choose_goal(lab, 10)
+
+        self.assertEqual(len(lab["objective_decisions"]), 1)
+        self.assertEqual(
+            second_goal["selection"]["kind"],
+            "least_visited_farthest_reachable",
+        )
+
     def test_completed_route_consolidates_citable_episodic_memory(self) -> None:
         state = self._phase32_ready_state()
         reached = None
