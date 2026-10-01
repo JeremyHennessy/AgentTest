@@ -17,6 +17,7 @@ PLANNING_LAB_VERSION = "persistent-planning-lab-v4"
 CURIOSITY_POLICY_VERSION = "evidence-valued-curiosity-v1"
 EPISODIC_MEMORY_VERSION = "episodic-route-memory-v1"
 EPISODIC_MEMORY_MAX_ENTRIES = 64
+EPISODIC_MEMORY_MAX_DECISIONS = 128
 EPISODIC_MEMORY_MAX_ROUTE_CANDIDATES = 24
 CURIOSITY_TARGET_STATE_SAMPLES = 2
 CURIOSITY_MAX_PROBES_PER_REVISION = 1
@@ -637,6 +638,11 @@ def _consolidate_episodic_route_memories(
         )
         if not executions:
             continue
+        if any(
+            int(item.get("cycle", 0) or 0) < started_cycle
+            for item in executions
+        ):
+            continue
         execution_cycles = {int(item.get("cycle", 0) or 0) for item in executions}
         source_episode_ids: list[str] = []
         for episode in episodes:
@@ -872,6 +878,9 @@ def _select_plan_with_episodic_memory(
         ),
     }
     lab.setdefault("memory_decisions", []).append(decision)
+    lab["memory_decisions"] = lab["memory_decisions"][
+        -EPISODIC_MEMORY_MAX_DECISIONS:
+    ]
     chosen = selected if changed_choice else counterfactual_item
     return list(chosen[2]), chosen[3], decision
 
@@ -987,10 +996,11 @@ def _create_plan(
         "predicted_states": predicted_states,
         "next_step_index": 0,
         "status": "active",
-        "reason": (
+        "reason": reason,
+        "memory_selection_reason": (
             "episodic_memory_tiebreak"
             if memory_influenced
-            else reason
+            else None
         ),
         "world_version": str(
             lab.get("world_version") or STATEFUL_WORLD_VERSION
