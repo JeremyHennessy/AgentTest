@@ -1,107 +1,229 @@
 # Research Roadmap
 
-This roadmap is hypothesis-driven. A phase advances only when its predecessor produces reproducible evidence.
+This roadmap is hypothesis-driven and evidence-gated. It is a custodian planning document, not a runtime instruction surface: Ora does not read this file to choose actions.
 
-## Phases 0–5 — verified foundations
+A phase advances only when its predecessor produces reproducible evidence. Live behavior may change the ordering, scope, or necessity of future phases.
 
-- Phase 0: persistent state, episodic memory, experiments, reflection.
-- Phase 1: auditable repository perception.
-- Phase 2: predictions, endogenous drives, intention selection.
-- Phase 3: grounded optional model cognition with no tools or write authority.
-- Phase 4: semantic memory and temporal provenance-backed world claims.
-- Phase 5: baseline-owned behavioral preservation gate. A deliberate regression was correctly rejected.
+## Phases 0–14 — verified foundations
 
-## Phase 6 — Self-authored change manifests — verified
+- **Phase 0:** persistent growth substrate.
+- **Phase 1:** auditable self-perception.
+- **Phase 2:** predictive drives and endogenous intention.
+- **Phase 3:** grounded generative cognition boundary.
+- **Phase 4:** semantic memory and temporal world model.
+- **Phase 5:** behavioral preservation gate for future self-modification.
+- **Phase 6:** evidence-backed self-authored change proposals.
+- **Phase 7:** evidence relevance review for self-authored proposals.
+- **Phase 8:** verified non-mutating evidence diagnostics.
+- **Phase 9:** intervention-aware prediction scope.
+- **Phase 10:** verified self-model grounding diagnostic.
+- **Phase 11:** verified inquiry-family diagnostic.
+- **Phase 12:** persistent evidence-linked human interaction.
+- **Phase 13:** owner-authorized GitHub interaction channel.
+- **Phase 14:** evidence-debt-aware evolution governor.
 
-AgentTest can propose evidence-backed changes but cannot apply code.
+These phases established the persistent state, evidence hierarchy, governance, interaction membrane, and preservation gates required for later autonomous work.
 
-## Phase 7 — Evidence relevance review — verified
+## Phases 15–31 — experiment and attention governance
 
-Proposals distinguish supported problems from measurement gaps and insufficient evidence.
+- **Phase 15:** evidence-ready experiment lifecycle.
+- **Phase 16:** verified intervention reconciliation.
+- **Phase 17:** readiness-aware learning governance.
+- **Phase 18:** protected experiment-design diagnostic.
+- **Phase 19:** stop duplicate experiment proliferation.
+- **Phase 20:** specification debt as a first-class drive.
+- **Phase 21:** protected system diagnostics as self-change evidence.
+- **Phase 22:** experiment-specification triage.
+- **Phase 23:** protected blocked-attention diagnostic.
+- **Phase 24:** blocked-attention diagnostics as self-change evidence.
+- **Phase 25:** blocked-attention redirection.
+- **Phase 26:** executable prediction experiments.
+- **Phase 27:** opt-in grounded experiment admission.
+- **Phase 28:** park blocked experiment debt.
+- **Phase 29:** keep autonomous attention off parked inquiry.
+- **Phase 30:** let empirical outcomes change future predictions.
+- **Phase 31:** transfer mature empirical evidence into attention and create evidence-linked frontier inquiry.
 
-## Phase 8 — Verified non-mutating diagnostics — verified
+This sequence moved Ora from accumulating experimental debt toward distinguishing evidence-ready work, blocked work, repeated work, and empirically useful attention.
 
-Verified diagnostics can resolve measurement gaps without allowing proposed code to grade itself.
+## Phase 32 — bounded persistent causal action lab — verified
 
-M000001 requested deterministic replay evidence. D000001 found stable replay, so the proposal closed with no patch.
+Ora gained explicit bounded action authority inside the internal micro-world.
 
-## Phase 9 — Intervention-aware prediction — verified
+The action lab:
 
-Predictions are confirmed or violated only inside the baseline in which they were made. A changed non-state repository fingerprint produces invalidated_by_intervention rather than false prediction-error pressure.
+- persists action history;
+- learns transition effects from experience;
+- fails closed on corrupted history;
+- avoids immediate blocked-state retry loops;
+- exposes no hidden transition map to planning code;
+- allows one bounded internal action per authorized heartbeat.
 
-## Phase 10 — Evidence-grounded self-model calibration — verified
+## Phase 33 — persistent goal-directed planning — verified
 
-M000002 exposed a real self-description grounding gap. The first candidate was rejected, which exposed an improvement-hostile preservation check. Governance was repaired, a narrower candidate passed, and a new live diagnostic closed the problem on the repaired baseline.
+Ora can form a multi-step goal, persist its plan across heartbeats, execute one step per cycle, and detect completion.
 
-## Phase 11 — Inquiry-family open-endedness — verified
+## Phase 34 — state-dependent model revision — verified
 
-M000003 showed that exact-string question counting materially inflated open-endedness.
+Ora can detect when a learned general effect fails in a particular state, preserve the surprise as evidence, and replan around the newly learned exception.
 
-The protected inquiry-family diagnostic found:
+## Phase 35 — evidence-valued curiosity — verified
 
-- 13 questions;
-- 6 distinct families;
-- reported open-endedness 0.7647;
-- family-based open-endedness 0.3529;
-- inflation gap 0.4118.
+After a relevant model surprise, Ora may spend a bounded action to gather information when the expected information value exceeds the delay cost to the current goal.
 
-The corrective candidate preserved every raw question, stored deterministic family membership in semantic memory, and changed only the metric. Post-merge diagnostic D000007 reported metric_gap=0 and closed M000003.
+## Phase 36 — episodic memory changes route choice — verified
 
-## Phase 12 — Persistent human interaction membrane — verified
+Completed routes become citable episodic memories. Prior route experience can change a later equal-cost route choice, with the counterfactual route retained for inspection.
 
-Add a direct human interaction surface over the same state and evidence hierarchy.
+## Phase 37 — bounded transfer — verified
 
-A human turn must:
+Ora distinguishes general action effects from world- or state-specific exceptions and can probe whether prior knowledge transfers into a new bounded context.
 
-- become a persistent stimulus episode;
-- link to a persistent interaction record;
-- retrieve semantic memory from before the new turn writes itself;
-- expose current drives, intention, question, and experiment;
-- expose world claims with provenance;
-- expose self-model observed/unverified status;
-- distinguish unavailable/rejected/accepted model cognition;
-- never convert generated response text into evidence.
+## Phase 38 — self-generated falsifiable bounded experiments — verified
 
-The first interface is CLI-based and intentionally structured before any web UI or persona layer.
+Ora can generate a bounded hypothesis, prestate a falsification condition, execute the experiment, and preserve whether the hypothesis was supported or refuted.
 
-## Phase 13 — Owner-authorized GitHub interaction channel — verified
+## Phase 39 — bounded self-selected objectives — verified
 
-Expose the Phase 12 interaction contract through GitHub without requiring a local clone.
+Ora can select among reachable objectives using her own evidence-valued criteria rather than always accepting the default least-visited/farthest target.
 
-The channel:
+A Phase 39 decision must preserve:
 
-- accepts manual workflow-dispatch messages;
-- accepts `/agent <message>` issue/PR comments only from the repository owner;
-- serializes against autonomous growth cycles;
-- runs on the persistent `autonomous/growth` branch;
-- verifies unit and preservation suites before committing interaction state;
-- posts the evidence-linked response back to authorized issue comments;
-- protects the interaction workflow from self-authored change manifests;
-- creates one bootstrap interaction only if no prior human interaction exists.
+- the selected objective;
+- the counterfactual objective;
+- the decision margin;
+- evidence references that made the choice possible;
+- whether the self-selected objective actually changed the choice.
 
-Live owner-authorized interactions H000001–H000003 have now persisted successfully. A transport self-interference defect was found from H000002 and repaired; H000003 subsequently observed a clean worktree.
+## Phase 40 — precommit and realize objective information — live and verified
 
-## Phase 14 — Evidence-debt-aware evolution governor — implementation under verification
+Phase 40 closes the gap between an objective being *predicted to be informative* and the organism actually measuring whether information was obtained.
 
-Live state exposed a mismatch between aggregate metrics and unresolved work:
+For an eligible completed self-selected objective, Ora can:
 
-- learning reported 1.0;
-- ten experiments remained proposed;
-- evidence_hunger remained at 0.8;
-- X000001, created in cycle 1, was still selected in cycle 25 despite later evaluated evidence;
-- correctly aligned open-endedness repeatedly generated new no-problem proposals because its truthful value was below 1.0.
+1. identify one unresolved local action;
+2. persist a hypothesis and falsification criterion **before acting**;
+3. execute the precommitted action on a later heartbeat;
+4. compare prediction with observation;
+5. record local sample count before and after;
+6. record realized information gain;
+7. classify the hypothesis as supported or refuted;
+8. return to normal objective pursuit.
 
-The governor now treats direct stale evidence debt as a higher-priority signal than a saturated aggregate learning metric. It also suppresses open-endedness defect proposals when the runtime family-based measurement and reported metric already agree.
+### First natural live realizations
 
-The resulting learning manifest is reframed around experiment evidence readiness: unresolved history must be preserved, but underspecified work should not masquerade as immediately resolvable evidence debt.
+As of 2026-10-01, the autonomous growth branch has produced two independent complete Phase 40 sequences.
 
-## Next phases — evidence dependent
+**OR000001 → OI000001**
 
-- Add a richer local/web interaction surface using the same interaction contract.
-- Preserve the GitHub interaction transport in future governance checks.
-- Enable live grounded model cognition only when an authorized provider key is configured.
-- Broader external perception/actions with explicit permissions and provenance.
-- Open-ended research frontier selected by information gain and evidence debt.
-- Identity-continuity studies only after substantial history exists.
+- objective: PG000201;
+- state: `[-1, -2]`;
+- precommitted action: east;
+- predicted result: `[-1, -3]`;
+- observed result: blocked, position unchanged;
+- interpretation: hypothesis refuted;
+- local samples: 0 → 1;
+- realized information gain: 1.0.
 
-No phase is permitted to assume consciousness in advance.
+**OR000002 → OI000002**
+
+- objective: PG000204;
+- state: `[2, -1]`;
+- precommitted action: north;
+- predicted result: `[3, -1]`;
+- observed result: blocked, position unchanged;
+- interpretation: hypothesis refuted;
+- local samples: 0 → 1;
+- realized information gain: 1.0.
+
+These are distinct states and actions. After each realization, Ora resumed ordinary goal pursuit rather than looping on the experiment.
+
+### Phase 40 integration sanity gate
+
+A dedicated cross-phase verification gate now checks the class of failure discovered during Phase 40 rollout: if Phase 39 values unresolved boundary information, Phase 40 must be able to form a reachable precommit for that information.
+
+This is a verification-only contract. It does not alter Ora's planning policy or runtime behavior.
+
+## Phase 41 — planned: outcome-aware objective valuation
+
+**Research question:** can the *measured outcome* of previous objectives change which objective Ora selects later?
+
+Phase 41 should allow objective selection to use historical evidence such as:
+
+- realized information gain;
+- whether a hypothesis was supported or refuted;
+- whether a local model was revised;
+- subsequent usefulness of the acquired evidence;
+- action cost required to obtain it.
+
+The phase must not encode hidden environmental truths or hard-code rules such as "boundaries are informative." It should learn only from persisted outcome evidence.
+
+### Promotion gate
+
+Phase 41 is not ready merely because scoring code exists.
+
+Required evidence should include:
+
+- several naturally occurring Phase 40 realizations with meaningful variation;
+- clean return to ordinary goal pursuit after realizations;
+- stable persistence across reloads;
+- at least one later objective choice that differs because of prior objective-outcome evidence;
+- an explicit counterfactual showing what would have been selected without that evidence;
+- preservation and no-regression gates passing;
+- a capability-handoff test proving Phase 40 output is genuinely consumable by Phase 41.
+
+The exact number of Phase 40 events is intentionally not fixed. Diversity and causal evidence matter more than a quota.
+
+## Phase 42 — planned: persistent multi-thread internal agenda
+
+**Research question:** can Ora maintain several worthwhile investigations over time rather than living entirely one objective at a time?
+
+A bounded agenda may contain threads that are:
+
+- active;
+- suspended pending a reachable state or missing evidence;
+- resumed after interruption;
+- deprioritized when expected value falls;
+- abandoned with a recorded reason;
+- promoted when new evidence raises their value.
+
+The agenda must remain bounded, persistent, auditable, and evidence-linked.
+
+### Promotion gate
+
+Phase 42 should follow only after Phase 41 demonstrates that Ora can use outcome history to value future objectives.
+
+Required evidence should include:
+
+- multiple competing investigation threads;
+- at least one genuine suspension and later resumption;
+- at least one priority change caused by new evidence;
+- no starvation loop in which one thread permanently monopolizes attention;
+- preserved counterfactual and evidence references for agenda changes;
+- no weakening of the one-action authority boundary;
+- preservation, no-regression, and cross-capability handoff checks passing.
+
+## Later horizon — endogenous cognitive tempo
+
+Do **not** implement this merely as staggered wall-clock schedules.
+
+The later research direction is to separate logical modes such as:
+
+`observe → deliberate → precommit → act → observe result → revise`
+
+The eventual question is whether Ora can use her agenda, uncertainty, expected value, and evidence state to decide whether the next authorized cycle should primarily deliberate, test, move, investigate, or refrain from acting.
+
+A familiar situation might justify immediate action. A novel or high-uncertainty situation might justify additional deliberation first.
+
+This direction should not be promoted until Phase 41 and Phase 42 provide meaningful evidence on which such mode selection could operate.
+
+## Custodian rules for future phases
+
+- Do not promote a phase because code was written; require live or deterministic evidence that the capability is reachable.
+- Add cross-capability handoff sanity checks when a new phase consumes the output of a previous phase.
+- Prefer minimal, reversible changes.
+- Preserve behavioral and governance boundaries unless the phase explicitly requires changing them.
+- Keep Observer/UI work descriptive; it must not become hidden cognitive input.
+- Record counterfactuals wherever a claim depends on a choice actually changing.
+- Do not infer consciousness, sentience, or subjective experience from behavioral milestones.
+- If live behavior contradicts this roadmap, revise the roadmap before forcing the organism to fit it.
