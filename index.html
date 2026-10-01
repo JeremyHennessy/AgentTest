@@ -300,7 +300,12 @@ function renderNow(o){
  el("nowStatus").textContent=pretty(lab.status||"observing");el("nowStatus").className="pill "+(["executing_plan","goal_reached","plan_active"].includes(lab.status)?"good":["needs_replan","blocked_no_plan"].includes(lab.status)?"warn":"blue");
  el("nowPlan").textContent=nextAction?(nextAction+" → "+vec(nextState)):"No pending move.";
  const latestRealization=(lab.objective_realizations||[]).slice(-1)[0]||{};
- if(latestRealization.id)el("nowLearning").textContent="C"+latestRealization.cycle+": Ora turned a self-selected objective into evidence; "+latestRealization.action+" at "+vec(latestRealization.before)+" produced "+vec(latestRealization.after)+" with realized information gain "+(+latestRealization.realized_information_gain||0).toFixed(2)+".";
+ if(latestRealization.id){
+  const predicted=vec(latestRealization.predicted_after),observed=vec(latestRealization.after),gain=(+latestRealization.realized_information_gain||0).toFixed(2);
+  const verdict=latestRealization.interpretation==="hypothesis_refuted"?"the hypothesis was refuted":latestRealization.interpretation==="hypothesis_supported"?"the hypothesis was supported":pretty(latestRealization.interpretation||"the outcome was recorded");
+  const outcome=latestRealization.blocked?"It was blocked and Ora stayed at "+observed:"It produced "+observed;
+  el("nowLearning").textContent="C"+latestRealization.cycle+": Ora predicted "+latestRealization.action+" at "+vec(latestRealization.before)+" would reach "+predicted+". "+outcome+", so "+verdict+". Realized information gain: "+gain+".";
+ }
  else if(latestTest.id)el("nowLearning").textContent="C"+latestTest.cycle+": Ora tested "+latestTest.action+" from "+vec(latestTest.before)+"; "+pretty(latestTest.interpretation)+".";
  else el("nowLearning").textContent="No self-generated Phase 38 experiment yet.";
  el("nowQuestion").textContent=question.text||"No active question.";
