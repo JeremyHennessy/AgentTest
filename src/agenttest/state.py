@@ -8,7 +8,7 @@ from typing import Any
 from .action_lab import initial_action_lab_state
 from .planning_lab import initial_planning_lab_state
 
-SCHEMA_VERSION = 19
+SCHEMA_VERSION = 20
 
 DIMENSIONS = (
     "continuity",
