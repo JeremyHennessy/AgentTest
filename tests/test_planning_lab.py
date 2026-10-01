@@ -441,6 +441,174 @@ class PlanningLabTests(unittest.TestCase):
             "MR000001",
         )
 
+    def test_transfer_probe_uses_zero_target_evidence_and_preserves_source_plan(self) -> None:
+        state = self._phase32_ready_state()
+        state["cycles"] = 9
+        state["generation"] = 9
+        step_planning_lab(state)
+        lab = ensure_planning_lab_state(state)
+
+        lab["position"] = [0, 0]
+        lab["transition_observations"].extend(
+            [
+                {
+                    "source": "planning_lab",
+                    "source_id": "PX_SOURCE_BLOCK",
+                    "cycle": 9,
+                    "action": "south",
+                    "before": [0, 2],
+                    "after": [0, 2],
+                    "delta": [0, 0],
+                    "blocked": True,
+                    "world_version": lab["world_version"],
+                },
+                {
+                    "source": "curiosity_probe",
+                    "source_id": "CP_SOURCE_CONFIRM",
+                    "cycle": 9,
+                    "action": "south",
+                    "before": [0, 2],
+                    "after": [0, 2],
+                    "delta": [0, 0],
+                    "blocked": True,
+                    "world_version": lab["world_version"],
+                },
+            ]
+        )
+        lab["model_revisions"] = [
+            {
+                "id": "MR000001",
+                "cycle": 9,
+                "trigger_execution_id": "PX_SOURCE_BLOCK",
+                "goal_id": "PG_SOURCE",
+                "plan_id": "PP_SOURCE",
+                "state_action_key": "0,2|south",
+                "before": [0, 2],
+                "action": "south",
+                "predicted_after": [-1, 2],
+                "observed_after": [0, 2],
+                "observed_delta": [0, 0],
+                "observed_blocked": True,
+                "world_version": lab["world_version"],
+                "status": "state_evidence_recorded",
+                "curiosity_status": "probe_confirmed",
+                "curiosity_probe_ids": ["CP_SOURCE_CONFIRM"],
+            }
+        ]
+        lab["goals"] = [
+            {
+                "id": "PG_TRANSFER",
+                "assigned_cycle": 9,
+                "target": [1, 1],
+                "status": "active",
+                "selection": {
+                    "kind": "test_fixture",
+                    "prior_visits": 0,
+                    "planned_distance": 2,
+                    "preferred_step_range": [3, 4],
+                },
+            }
+        ]
+        lab["plans"] = [
+            {
+                "id": "PP_TRANSFER",
+                "goal_id": "PG_TRANSFER",
+                "created_cycle": 9,
+                "start": [0, 0],
+                "goal": [1, 1],
+                "actions": ["north", "west"],
+                "predicted_states": [[1, 0], [1, 1]],
+                "next_step_index": 0,
+                "status": "active",
+                "reason": "test_fixture",
+                "world_version": lab["world_version"],
+                "model_samples": {},
+            }
+        ]
+        lab["active_goal_id"] = "PG_TRANSFER"
+        lab["active_plan_id"] = "PP_TRANSFER"
+        lab["status"] = "executing_plan"
+        source_observation_count = len(lab["transition_observations"])
+
+        state["cycles"] = 10
+        state["generation"] = 10
+        probe = step_planning_lab(state)
+
+        self.assertEqual(probe["execution_kind"], "transfer_probe")
+        self.assertEqual(probe["transfer_decision_id"], "TD000001")
+        self.assertEqual(probe["transfer_probe_id"], "TP000001")
+        self.assertEqual(probe["source_model_revision_id"], "MR000001")
+        self.assertEqual(probe["before"], [0, 2])
+        self.assertEqual(probe["action"], "south")
+        self.assertEqual(probe["target_evidence_samples_before"], 0)
+        self.assertEqual(probe["target_evidence_samples_after"], 1)
+        self.assertEqual(probe["source_specific_prediction"], [0, 2])
+        self.assertEqual(probe["counterfactual_prediction"], [0, 2])
+        self.assertEqual(probe["predicted_after"], [-1, 2])
+        self.assertEqual(probe["after"], [-1, 2])
+        self.assertTrue(probe["matched_prediction"])
+        self.assertEqual(
+            probe["interpretation"],
+            "general_effect_transferred_source_exception_did_not",
+        )
+        self.assertTrue(probe["source_plan_preserved"])
+        self.assertEqual(lab["position"], [0, 0])
+        self.assertEqual(lab["active_plan_id"], "PP_TRANSFER")
+        self.assertEqual(lab["plans"][0]["next_step_index"], 0)
+        self.assertEqual(
+            len(lab["transition_observations"]),
+            source_observation_count,
+        )
+
+        state["cycles"] = 11
+        state["generation"] = 11
+        resumed = step_planning_lab(state)
+
+        self.assertNotEqual(resumed.get("execution_kind"), "transfer_probe")
+        self.assertEqual(resumed["plan_id"], "PP_TRANSFER")
+        self.assertEqual(resumed["step_index"], 0)
+        self.assertEqual(resumed["action"], "north")
+        self.assertEqual(len(lab["transfer_probes"]), 1)
+
+    def test_transfer_evidence_persists_across_reload(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = StateStore(Path(temp) / "organism.json")
+            state = self._phase32_ready_state()
+            lab = ensure_planning_lab_state(state)
+            lab["transfer_decisions"] = [
+                {
+                    "id": "TD_PERSIST",
+                    "source_model_revision_id": "MR_PERSIST",
+                    "target_evidence_samples_before": 0,
+                    "selected_prior": "general_action_effect",
+                }
+            ]
+            lab["transfer_probes"] = [
+                {
+                    "id": "TP_PERSIST",
+                    "decision_id": "TD_PERSIST",
+                    "source_model_revision_id": "MR_PERSIST",
+                    "target_evidence_samples_after": 1,
+                    "source_plan_preserved": True,
+                }
+            ]
+            lab["last_transfer_probe_cycle"] = 42
+            store.save(state)
+            reloaded = store.load()
+
+            self.assertEqual(
+                reloaded["planning_lab"]["transfer_decisions"][0]["id"],
+                "TD_PERSIST",
+            )
+            self.assertEqual(
+                reloaded["planning_lab"]["transfer_probes"][0]["id"],
+                "TP_PERSIST",
+            )
+            self.assertEqual(
+                reloaded["planning_lab"]["last_transfer_probe_cycle"],
+                42,
+            )
+
     def test_completed_route_consolidates_citable_episodic_memory(self) -> None:
         state = self._phase32_ready_state()
         reached = None
@@ -619,6 +787,7 @@ class PlanningLabTests(unittest.TestCase):
         source = inspect.getsource(planning_lab)
         self.assertNotIn("_HIDDEN_ACTION_DELTAS", source)
         self.assertNotIn("_HIDDEN_STATEFUL_BLOCKS", source)
+        self.assertNotIn("_HIDDEN_TRANSFER_BLOCKS", source)
 
     def test_planning_lab_module_has_no_external_effect_imports(self) -> None:
         tree = ast.parse(inspect.getsource(planning_lab))
