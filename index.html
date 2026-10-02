@@ -240,12 +240,16 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="ebox"><div class="n" id="agendaThreadCount">0</div><div class="t">Persisted threads</div></div>
 <div class="ebox"><div class="n" id="agendaSuspendedCount">0</div><div class="t">Suspended threads</div></div>
 <div class="ebox"><div class="n" id="agendaResumptionCount">0</div><div class="t">Genuine resumptions</div></div>
+<div class="ebox"><div class="n" id="agendaOpportunityCount">—</div><div class="t">Resumption opportunities</div></div>
+<div class="ebox"><div class="n" id="agendaLowerPriorityCount">—</div><div class="t">Qualified · lower priority</div></div>
+<div class="ebox"><div class="n" id="agendaMismatchCount">—</div><div class="t">Selection mismatches</div></div>
 </div>
 <div class="rows" style="margin-top:10px">
 <div class="row"><span class="label">Foreground inquiry</span><span class="value" id="agendaForeground">—</span></div>
 <div class="row"><span class="label">Core choice without agenda</span><span class="value" id="agendaCounterfactual">—</span></div>
 <div class="row"><span class="label">Latest priority margin</span><span class="value" id="agendaMargin">—</span></div>
 <div class="row"><span class="label">Evidence behind foreground</span><span class="value" id="agendaEvidence">—</span></div>
+<div class="row"><span class="label">Resumption diagnostic</span><span class="value" id="agendaOpportunityStatus">Waiting for first diagnostic heartbeat.</span></div>
 </div>
 <div class="preds" id="agendaThreads"></div>
 </article>
@@ -592,6 +596,15 @@ function renderOutcomeValuation(o){
  el("outcomeValuationMargin").textContent=d.id?Number(d.outcome_decision_margin||0).toFixed(3):"—";
  el("outcomeValuationHistory").innerHTML=tail(decisions,4).map(x=>'<span class="pred '+(x.outcome_changed_choice?'confirmed':'pending')+'">'+esc(x.id)+" · "+esc(x.outcome_changed_choice?"outcomes changed objective":"Phase 39 choice retained")+" · "+esc(vec(x.selected?.target))+"</span>").join("");
 }
+function renderAgendaOpportunityDiagnostic(d){
+ const ready=d&&d.diagnostic_version==="phase42-resumption-opportunities-v1";
+ el("agendaOpportunityCount").textContent=ready?Number(d.opportunity_count||0):"—";
+ el("agendaLowerPriorityCount").textContent=ready?Number(d.lower_priority_opportunity_count||0):"—";
+ el("agendaMismatchCount").textContent=ready?Number(d.handoff_or_selection_mismatch_count||0):"—";
+ if(!ready){el("agendaOpportunityStatus").textContent="Waiting for first diagnostic heartbeat.";return}
+ const opportunities=Number(d.opportunity_count||0),resumed=Number(d.resumed_opportunity_count||0),lower=Number(d.lower_priority_opportunity_count||0),mismatch=Number(d.handoff_or_selection_mismatch_count||0);
+ el("agendaOpportunityStatus").textContent=mismatch?mismatch+" opportunity"+(mismatch===1?"":"ies")+" need handoff/selection review.":opportunities===0?"No qualifying resumption opportunity exists in the retained decision window.":resumed?resumed+" qualifying opportunity"+(resumed===1?" resumed successfully.":"ies resumed successfully."):(lower===opportunities?opportunities+" qualifying opportunity"+(opportunities===1?" was":"ies were")+" recognized but remained lower priority.":opportunities+" qualifying opportunities observed; no selection mismatch detected.");
+}
 function renderAgenda(o){
  const agenda=o.agenda||{},threads=agenda.threads||[],decisions=agenda.decisions||[];
  const d=decisions[decisions.length-1]||{},foreground=threads.find(x=>x.id===agenda.foreground_thread_id)||{},suspended=threads.filter(x=>x.status==="suspended"),resumptionCount=agendaGenuineResumptionCount(agenda);
@@ -630,7 +643,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderObjectiveSelection(o);renderObjectiveRealization(o);renderOutcomeValuation(o);renderAgenda(o);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i,phase42Diagnostic){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderObjectiveSelection(o);renderObjectiveRealization(o);renderOutcomeValuation(o);renderAgenda(o);renderAgendaOpportunityDiagnostic(phase42Diagnostic);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function resolveGrowthSha(){
  const now=Date.now();
  if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
@@ -648,12 +661,13 @@ async function load(){
   const base=RAW_BASE+"/"+sha+"/state";
   const r=await Promise.all([
    fetch(base+"/organism.json",{cache:"no-store"}),
-   fetch(base+"/last_interaction.json",{cache:"no-store"})
+   fetch(base+"/last_interaction.json",{cache:"no-store"}),
+   fetch(base+"/phase42_resumption_opportunities.json",{cache:"no-store"})
   ]);
   if(!r[0].ok||!r[1].ok)throw new Error("immutable state fetch failed");
-  const d=await Promise.all([r[0].json(),r[1].json()]);
+  const d=await Promise.all([r[0].json(),r[1].json(),r[2].ok?r[2].json():Promise.resolve(null)]);
   lastLoadedSha=sha;
-  render(d[0],d[1])
+  render(d[0],d[1],d[2])
  }catch(e){
   el("liveStatus").innerHTML='<span class="error">Live state unavailable</span>';
   el("refreshFoot").textContent=e.message
