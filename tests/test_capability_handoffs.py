@@ -200,6 +200,7 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
 
         observations: list[dict] = []
         source_index = 0
+        comparison_targets = {(-2, -1), (-2, 2)}
         positions = [
             [x, y]
             for x in range(-BOUNDS, BOUNDS + 1)
@@ -210,7 +211,8 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             sources = [
                 before
                 for before in positions
-                if _in_bounds(
+                if tuple(before) not in comparison_targets
+                and _in_bounds(
                     [before[0] + delta[0], before[1] + delta[1]]
                 )
             ][:2]
