@@ -962,6 +962,21 @@ class AgentCore:
                 intention.get("evidence_refs", [])
             )
 
+        # Build the next repository prediction path after the cycle's drive and
+        # intention are already chosen, but before agenda scoring. This preserves
+        # the current-cycle drive decision while ensuring Phase 42 does not score
+        # a stale gap between resolving the prior prediction experiment and
+        # creating its evidence-ready successor.
+        prediction = None
+        if observation is not None:
+            prediction = self._make_prediction(state, observation, now)
+            state["predictions"].append(prediction)
+            prediction_experiment = self._create_prediction_experiment(
+                state,
+                prediction,
+                now,
+            )
+
         agenda_decision = update_agenda(
             state,
             legacy_question=legacy_question,
@@ -996,16 +1011,6 @@ class AgentCore:
                 strict_experiment_admission and observation is not None
             ),
         )
-
-        prediction = None
-        if observation is not None:
-            prediction = self._make_prediction(state, observation, now)
-            state["predictions"].append(prediction)
-            prediction_experiment = self._create_prediction_experiment(
-                state,
-                prediction,
-                now,
-            )
 
         self_model_calibration = _calibrate_self_model(state)
         state["self_model"]["last_updated_cycle"] = cycle

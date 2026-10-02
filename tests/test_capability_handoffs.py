@@ -662,12 +662,43 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             if item["id"] == prediction["id"]
         )
         self.assertEqual(resolved_prediction["status"], "confirmed")
+        replication_candidate = next(
+            item
+            for item in event["agenda_decision"]["candidate_summaries"]
+            if item["question_id"] == replication["id"]
+        )
+        self.assertTrue(replication_candidate["active_experiment_path"])
+        self.assertEqual(replication_candidate["actionability_value"], 0.35)
+        self.assertIn(
+            replication["id"],
+            [
+                item["id"]
+                for item in event["strict_actionable_questions"]
+            ],
+        )
         self.assertEqual(event["drives"]["evidence_hunger"], 0.0)
         self.assertFalse(event["agenda_decision"]["foreground_changed"])
         self.assertIsNone(event["agenda_decision"]["resumed_thread_id"])
         self.assertEqual(
             event["agenda_decision"]["selected_thread_id"],
             frontier_thread_id,
+        )
+        replication_summary = next(
+            item
+            for item in event["agenda_decision"]["candidate_summaries"]
+            if item["question_id"] == replication["id"]
+        )
+        self.assertTrue(
+            replication_summary["active_experiment_path"],
+            "Agenda must score the replacement evidence-ready prediction path "
+            "that exists by the end of the same observed cycle.",
+        )
+        self.assertIn(
+            replication["id"],
+            [
+                item["id"]
+                for item in event["strict_actionable_questions"]
+            ],
         )
         self.assertEqual(after["agenda"]["genuine_resumption_count"], 0)
 

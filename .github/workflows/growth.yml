@@ -65,6 +65,9 @@ jobs:
               --state state/organism.json \
               --output state/blocked_attention_diagnostic.json
 
+      - name: Verify Phase 42 live-state integrity
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/phase42_integrity_eval.py --state state/organism.json
+
       - name: Verify invariants
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 

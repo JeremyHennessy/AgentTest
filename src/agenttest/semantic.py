@@ -178,10 +178,35 @@ def question_has_active_experiment_path(
         if str(experiment.get("question_id") or "") == question_id
     ]
     if linked:
-        return any(
+        if any(
             experiment.get("status") == "proposed"
             for experiment in linked
-        )
+        ):
+            return True
+
+        # Prediction-backed repository-stability work has a deliberate same-cycle
+        # handoff: the prior contract is resolved near the start of cycle(), while
+        # its replacement experiment is created after agenda selection. Preserve
+        # actionability only across that proven internal handoff so the agenda does
+        # not observe a transient false inactive state.
+        current_cycle = int(state.get("cycles", 0) or 0)
+        for experiment in reversed(linked):
+            if experiment.get("status") != "completed":
+                continue
+            history = experiment.get("status_history")
+            if not isinstance(history, list) or not history:
+                continue
+            transition = history[-1]
+            if not isinstance(transition, dict):
+                continue
+            if int(transition.get("cycle", -1) or -1) != current_cycle:
+                continue
+            if transition.get("reason") in {
+                "prediction_status_contract_resolved",
+                "prediction_invalidated_by_intervention",
+            }:
+                return True
+        return False
 
     target_experiment_id = question_target_experiment_id(question)
     if target_experiment_id:
