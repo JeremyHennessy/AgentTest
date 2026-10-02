@@ -492,6 +492,84 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertEqual(selected["new_evidence_refs"], [])
         self.assertEqual(selected["evidence_change_value"], 0.0)
 
+    def test_v1_thread_progress_is_baselined_during_policy_migration(self) -> None:
+        state = self._state()
+        frontier = {
+            "id": "Q000001",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 5,
+            "last_selected_cycle": 9,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": ["P_SOURCE_1", "R_SOURCE_1"],
+        }
+        replication = {
+            "id": "Q000002",
+            "text": "Will measured repository fields remain stable on the next observation?",
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 20,
+            "last_selected_cycle": 8,
+            "source": "repository_stability_prediction",
+        }
+        state["questions"] = [frontier, replication]
+        state["experiments"] = [
+            {
+                "id": "X_OLD_PROGRESS",
+                "question_id": frontier["id"],
+                "status": "completed",
+                "outcome": "supported",
+                "evidence_refs": ["E_OLD_PROGRESS", "R_OLD_PROGRESS"],
+            }
+        ]
+        state["agenda"]["version"] = "persistent-multithread-agenda-v1"
+        state["agenda"]["foreground_thread_id"] = "AT000001"
+        state["agenda"]["threads"] = [
+            {
+                "id": "AT000001",
+                "question_id": frontier["id"],
+                "created_cycle": 9,
+                "status": "foreground",
+                "priority_score": 0.8,
+                "evidence_refs": ["P_SOURCE_1", "R_SOURCE_1"],
+                "last_foreground_cycle": 9,
+                "last_updated_cycle": 9,
+                "history": [],
+            },
+            {
+                "id": "AT000002",
+                "question_id": replication["id"],
+                "created_cycle": 9,
+                "status": "suspended",
+                "priority_score": 0.0,
+                "evidence_refs": [],
+                "last_foreground_cycle": None,
+                "last_updated_cycle": 9,
+                "history": [],
+            },
+        ]
+
+        decision = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=10,
+        )
+
+        self.assertIsNotNone(decision)
+        self.assertEqual(decision["selected"]["new_evidence_refs"], [])
+        self.assertEqual(decision["selected"]["evidence_change_value"], 0.0)
+        frontier_thread = next(
+            thread
+            for thread in state["agenda"]["threads"]
+            if thread["question_id"] == frontier["id"]
+        )
+        self.assertIn(
+            "X_OLD_PROGRESS",
+            frontier_thread["thread_progress_evidence_refs"],
+        )
+
     def test_agenda_is_bounded(self) -> None:
         state = self._state()
         questions = []
