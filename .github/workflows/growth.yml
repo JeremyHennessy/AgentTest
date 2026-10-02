@@ -37,12 +37,9 @@ jobs:
           fi
 
       - name: Observe and run one autonomous cycle
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          AGENTTEST_MODEL: gpt-6-luna
         shell: bash
         run: |
-          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest cycle --self-observe --cognition --grounded-experiments-only --planning-lab --stimulus "autonomous heartbeat"
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest cycle --self-observe --grounded-experiments-only --planning-lab --stimulus "autonomous heartbeat"
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose-change
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
