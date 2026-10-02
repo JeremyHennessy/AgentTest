@@ -314,6 +314,10 @@ function agendaGenuineResumptionCount(agenda){
  const retained=(agenda?.decisions||[]).filter(genuineAgendaResumption).length,durable=Number(agenda?.genuine_resumption_count);
  return Number.isFinite(durable)?Math.max(0,durable,retained):retained
 }
+function agendaLifetimeDecisionCount(agenda){
+ const retained=(agenda?.decisions||[]).length,next=Number(agenda?.next_decision_index);
+ return Number.isFinite(next)&&next>0?Math.max(retained,next-1):retained
+}
 function phase38RecoveryCount(lab){
  return (lab.self_experiments||[]).filter(x=>{
   const goal=(lab.goals||[]).find(g=>g.id===x.goal_id);
@@ -407,9 +411,9 @@ function renderNow(o){
   el("milestoneTitle").textContent=phaseLabel(currentPhase);
   el("milestoneCopy").textContent="Ora is accumulating natural evidence for its newest capability.";
  }
- el("milestoneTests").textContent=String(currentPhase>=42?agendaDecisions.length:currentPhase>=41?p41changed.length:currentPhase>=40?p40.length:currentPhase>=39?p39changed.length:selfTests.length);
+ el("milestoneTests").textContent=String(currentPhase>=42?agendaLifetimeDecisionCount(agenda):currentPhase>=41?p41changed.length:currentPhase>=40?p40.length:currentPhase>=39?p39changed.length:selfTests.length);
  el("milestoneRecoveries").textContent=String(currentPhase>=42?p42ResumptionCount:currentPhase>=41?p41completed.length:currentPhase>=40?p40.filter(x=>(+x.realized_information_gain||0)>0).length:currentPhase>=39?p39completed.length:recoveries);
- el("milestoneTestsLabel").textContent=currentPhase>=42?"agenda decisions":"self-tests";
+ el("milestoneTestsLabel").textContent=currentPhase>=42?"total agenda decisions":"self-tests";
  el("milestoneRecoveriesLabel").textContent=currentPhase>=42?"genuine resumptions":"goals recovered";
 }
 function renderActionLab(o){
