@@ -65,6 +65,15 @@ jobs:
               --state state/organism.json \
               --output state/blocked_attention_diagnostic.json
 
+      - name: Enforce Phase 42 live-state contract
+        shell: bash
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+            python scripts/phase42_state_eval.py \
+              --state state/organism.json \
+              --require-repository-prediction-path \
+              --output /tmp/phase42-state-contract.json
+
       - name: Verify invariants
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 
