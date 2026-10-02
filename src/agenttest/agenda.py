@@ -15,6 +15,7 @@ AGENDA_MAX_ARCHIVED_THREADS = 16
 AGENDA_MAX_DECISIONS = 128
 AGENDA_MAX_THREAD_HISTORY = 32
 AGENDA_EVIDENCE_REF_LIMIT = 16
+AGENDA_CURRENT_EVIDENCE_FOCUS_VALUE = 1.0
 
 
 def initial_agenda_state() -> dict[str, Any]:
@@ -127,7 +128,7 @@ def _candidate_metrics(
     )
     new_refs = [ref for ref in refs if ref not in prior_refs]
 
-    legacy_focus_value = 0.2 if question_id == legacy_question_id else 0.0
+    legacy_focus_value = AGENDA_CURRENT_EVIDENCE_FOCUS_VALUE if question_id == legacy_question_id else 0.0
     actionability_value = 0.35 if active_path else 0.0
     frontier_value = (
         round(0.8 * saturation, 6)

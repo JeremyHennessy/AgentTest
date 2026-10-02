@@ -69,7 +69,14 @@ class PersistentAgendaTests(unittest.TestCase):
             "last_selected_cycle": 8,
             "source": "empirical_frontier_transfer",
             "source_learning_family": REPOSITORY_STABILITY_FAMILY,
-            "source_evidence_refs": ["P000001", "R000001"],
+            "source_evidence_refs": [
+                "P000001",
+                "R000001",
+                "P000002",
+                "R000002",
+                "P000003",
+                "R000003",
+            ],
         }
         state["questions"] = [replication, frontier]
         state["experiments"] = [
@@ -195,6 +202,81 @@ class PersistentAgendaTests(unittest.TestCase):
             ),
             second["suspended_thread_ids"],
         )
+
+    def test_new_evidence_backed_core_question_can_interrupt_and_frontier_can_resume(self) -> None:
+        state = self._state()
+        frontier = {
+            "id": "Q000001",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 8,
+            "last_selected_cycle": 9,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": [
+                "P000001",
+                "R000001",
+                "P000002",
+                "R000002",
+                "P000003",
+                "R000003",
+            ],
+        }
+        interrupt = {
+            "id": "Q000002",
+            "text": "What caused the newly observed prediction error?",
+            "status": "open",
+            "created_cycle": 10,
+            "times_selected": 0,
+            "last_selected_cycle": None,
+            "source_evidence_refs": ["S_INTERRUPT", "R_INTERRUPT"],
+        }
+        state["questions"] = [frontier, interrupt]
+        state["experiments"] = [
+            {
+                "id": "X_INTERRUPT",
+                "question_id": interrupt["id"],
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            }
+        ]
+
+        first = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=10,
+        )
+        self.assertEqual(first["selected"]["question_id"], frontier["id"])
+        frontier_thread_id = first["selected_thread_id"]
+
+        state["cycles"] = 11
+        second = update_agenda(
+            state,
+            legacy_question=interrupt,
+            cycle=11,
+        )
+        self.assertEqual(second["selected"]["question_id"], interrupt["id"])
+        self.assertTrue(second["foreground_changed"])
+        self.assertIn(frontier_thread_id, second["suspended_thread_ids"])
+
+        frontier["source_evidence_refs"] = [
+            "P000002",
+            "R000002",
+            "P000003",
+            "R000003",
+            "P000004",
+            "R000004",
+        ]
+        state["cycles"] = 12
+        third = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=12,
+        )
+        self.assertEqual(third["selected"]["question_id"], frontier["id"])
+        self.assertEqual(third["resumed_thread_id"], frontier_thread_id)
+        self.assertTrue(third["priority_change_supported_by_new_evidence"])
 
     def test_agenda_is_bounded(self) -> None:
         state = self._state()
