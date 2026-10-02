@@ -99,6 +99,8 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertEqual(decision["selected"]["question_id"], frontier["id"])
         self.assertTrue(decision["changed_choice"])
         self.assertGreater(decision["decision_margin"], 0.0)
+        self.assertIsNone(decision["resumed_thread_id"])
+        self.assertFalse(decision["priority_change_supported_by_new_evidence"])
         self.assertEqual(len(state["agenda"]["threads"]), 2)
         self.assertEqual(len(state["questions"]), before_questions)
         self.assertEqual(len(state["experiments"]), before_experiments)
