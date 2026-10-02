@@ -179,14 +179,18 @@ class PersistentAgendaTests(unittest.TestCase):
         state["empirical_learning"]["families"][
             REPOSITORY_STABILITY_FAMILY
         ] = saturated_family()
-        frontier["source_evidence_refs"] = [
-            "P000001",
-            "R000001",
-            "P000002",
-            "R000002",
-            "P000003",
-            "R000003",
-        ]
+        frontier["source_evidence_refs"] = list(
+            saturated_family()["evidence_refs"]
+        )
+        state["experiments"].append(
+            {
+                "id": "X_FRONTIER_RESULT",
+                "question_id": frontier["id"],
+                "status": "completed",
+                "evidence_refs": ["E_FRONTIER_RESULT", "R_FRONTIER_RESULT"],
+                "outcome": "supported",
+            }
+        )
         state["cycles"] = 11
         second = update_agenda(
             state,
@@ -198,6 +202,10 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertEqual(second["resumed_thread_id"], frontier_thread_id)
         self.assertTrue(second["foreground_changed"])
         self.assertTrue(second["priority_change_supported_by_new_evidence"])
+        self.assertEqual(
+            second["selected"]["new_evidence_refs"],
+            ["X_FRONTIER_RESULT", "E_FRONTIER_RESULT", "R_FRONTIER_RESULT"],
+        )
         self.assertEqual(state["agenda"]["genuine_resumption_count"], 1)
         self.assertEqual(
             state["agenda"]["last_genuine_resumption"]["decision_id"],
@@ -258,14 +266,18 @@ class PersistentAgendaTests(unittest.TestCase):
         state["empirical_learning"]["families"][
             REPOSITORY_STABILITY_FAMILY
         ] = saturated_family()
-        frontier["source_evidence_refs"] = [
-            "P000001",
-            "R000001",
-            "P000002",
-            "R000002",
-            "P000003",
-            "R000003",
-        ]
+        frontier["source_evidence_refs"] = list(
+            saturated_family()["evidence_refs"]
+        )
+        state["experiments"].append(
+            {
+                "id": "X_FRONTIER_RESULT",
+                "question_id": frontier["id"],
+                "status": "completed",
+                "evidence_refs": ["E_FRONTIER_RESULT", "R_FRONTIER_RESULT"],
+                "outcome": "supported",
+            }
+        )
         second = update_agenda(
             state,
             legacy_question=replication,
@@ -410,14 +422,16 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertTrue(second["foreground_changed"])
         self.assertIn(frontier_thread_id, second["suspended_thread_ids"])
 
-        frontier["source_evidence_refs"] = [
-            "P000002",
-            "R000002",
-            "P000003",
-            "R000003",
-            "P000004",
-            "R000004",
-        ]
+        frontier["source_evidence_refs"].extend(["P000004", "R000004"])
+        state["experiments"].append(
+            {
+                "id": "X_FRONTIER_PROGRESS",
+                "question_id": frontier["id"],
+                "status": "completed",
+                "evidence_refs": ["E_FRONTIER_PROGRESS", "R_FRONTIER_PROGRESS"],
+                "outcome": "supported",
+            }
+        )
         state["cycles"] = 12
         third = update_agenda(
             state,
@@ -427,6 +441,134 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertEqual(third["selected"]["question_id"], frontier["id"])
         self.assertEqual(third["resumed_thread_id"], frontier_thread_id)
         self.assertTrue(third["priority_change_supported_by_new_evidence"])
+        self.assertNotIn("P000004", third["selected"]["new_evidence_refs"])
+        self.assertIn("X_FRONTIER_PROGRESS", third["selected"]["new_evidence_refs"])
+
+    def test_source_family_provenance_is_not_fresh_thread_progress(self) -> None:
+        state = self._state()
+        frontier = {
+            "id": "Q000001",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 5,
+            "last_selected_cycle": 9,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": ["P_SOURCE_1", "R_SOURCE_1"],
+        }
+        replication = {
+            "id": "Q000002",
+            "text": "Will measured repository fields remain stable on the next observation?",
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 20,
+            "last_selected_cycle": 8,
+            "source": "repository_stability_prediction",
+        }
+        state["questions"] = [frontier, replication]
+
+        first = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=10,
+        )
+        self.assertIsNotNone(first)
+        self.assertEqual(first["selected"]["question_id"], frontier["id"])
+
+        frontier["source_evidence_refs"].extend(["P_SOURCE_2", "R_SOURCE_2"])
+        state["cycles"] = 11
+        second = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=11,
+        )
+
+        self.assertIsNotNone(second)
+        selected = second["selected"]
+        self.assertEqual(selected["question_id"], frontier["id"])
+        self.assertIn("P_SOURCE_2", selected["evidence_refs"])
+        self.assertIn("R_SOURCE_2", selected["evidence_refs"])
+        self.assertEqual(selected["new_evidence_refs"], [])
+        self.assertEqual(selected["evidence_change_value"], 0.0)
+
+    def test_v1_thread_progress_is_baselined_during_policy_migration(self) -> None:
+        state = self._state()
+        frontier = {
+            "id": "Q000001",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 5,
+            "last_selected_cycle": 9,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": ["P_SOURCE_1", "R_SOURCE_1"],
+        }
+        replication = {
+            "id": "Q000002",
+            "text": "Will measured repository fields remain stable on the next observation?",
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 20,
+            "last_selected_cycle": 8,
+            "source": "repository_stability_prediction",
+        }
+        state["questions"] = [frontier, replication]
+        state["experiments"] = [
+            {
+                "id": "X_OLD_PROGRESS",
+                "question_id": frontier["id"],
+                "status": "completed",
+                "outcome": "supported",
+                "evidence_refs": ["E_OLD_PROGRESS", "R_OLD_PROGRESS"],
+            }
+        ]
+        state["agenda"]["version"] = "persistent-multithread-agenda-v1"
+        state["agenda"]["foreground_thread_id"] = "AT000001"
+        state["agenda"]["threads"] = [
+            {
+                "id": "AT000001",
+                "question_id": frontier["id"],
+                "created_cycle": 9,
+                "status": "foreground",
+                "priority_score": 0.8,
+                "evidence_refs": ["P_SOURCE_1", "R_SOURCE_1"],
+                "last_foreground_cycle": 9,
+                "last_updated_cycle": 9,
+                "history": [],
+            },
+            {
+                "id": "AT000002",
+                "question_id": replication["id"],
+                "created_cycle": 9,
+                "status": "suspended",
+                "priority_score": 0.0,
+                "evidence_refs": [],
+                "last_foreground_cycle": None,
+                "last_updated_cycle": 9,
+                "history": [],
+            },
+        ]
+
+        decision = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=10,
+        )
+
+        self.assertIsNotNone(decision)
+        self.assertEqual(decision["selected"]["new_evidence_refs"], [])
+        self.assertEqual(decision["selected"]["evidence_change_value"], 0.0)
+        frontier_thread = next(
+            thread
+            for thread in state["agenda"]["threads"]
+            if thread["question_id"] == frontier["id"]
+        )
+        self.assertIn(
+            "X_OLD_PROGRESS",
+            frontier_thread["thread_progress_evidence_refs"],
+        )
 
     def test_agenda_is_bounded(self) -> None:
         state = self._state()

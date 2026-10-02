@@ -482,6 +482,18 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             family["evidence_refs"].extend(
                 ["P_HANDOFF_NEW", "R_HANDOFF_NEW"]
             )
+            state["experiments"].append(
+                {
+                    "id": "X_HANDOFF_FRONTIER_PROGRESS",
+                    "question_id": frontier["id"],
+                    "status": "completed",
+                    "outcome": "supported",
+                    "evidence_refs": [
+                        "E_HANDOFF_FRONTIER_PROGRESS",
+                        "R_HANDOFF_FRONTIER_PROGRESS",
+                    ],
+                }
+            )
             state["cycles"] = 22
 
             next_drives = compute_drives(
@@ -659,7 +671,7 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
         )
         self.assertEqual(after["agenda"]["genuine_resumption_count"], 0)
 
-    def test_phase42_real_cycle_prediction_error_interrupts_and_frontier_resumes(self) -> None:
+    def test_phase42_real_cycle_prediction_error_returns_frontier_without_false_genuine_resumption(self) -> None:
         state = initial_state()
         state["cycles"] = 20
         state["generation"] = 20
@@ -784,11 +796,11 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
                 strict_experiment_admission=True,
             )
             after_interrupt = store.load()
-            resumed = core.cycle(
+            returned = core.cycle(
                 observation=changed_observation,
                 strict_experiment_admission=True,
             )
-            after_resume = store.load()
+            after_return = store.load()
 
         self.assertEqual(interrupted["drives"]["prediction_error"], 1.0)
         self.assertTrue(interrupted["agenda_decision"]["foreground_changed"])
@@ -806,18 +818,22 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            resumed["agenda_decision"]["resumed_thread_id"],
+            returned["agenda_decision"]["resumed_thread_id"],
             frontier_thread_id,
         )
-        self.assertTrue(resumed["agenda_decision"]["foreground_changed"])
-        self.assertTrue(
-            resumed["agenda_decision"][
+        self.assertTrue(returned["agenda_decision"]["foreground_changed"])
+        self.assertFalse(
+            returned["agenda_decision"][
                 "priority_change_supported_by_new_evidence"
             ]
         )
         self.assertEqual(
-            after_resume["agenda"]["genuine_resumption_count"],
-            1,
+            returned["agenda_decision"]["selected"]["new_evidence_refs"],
+            [],
+        )
+        self.assertEqual(
+            after_return["agenda"]["genuine_resumption_count"],
+            0,
         )
 
     def test_mature_empirical_frontier_feeds_phase42_persistent_agenda(self) -> None:
