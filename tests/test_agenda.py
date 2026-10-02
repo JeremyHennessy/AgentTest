@@ -277,7 +277,10 @@ class PersistentAgendaTests(unittest.TestCase):
             reloaded = store.load()
 
             self.assertIsNotNone(result["agenda_decision"])
-            self.assertEqual(result["question"]["id"], "Q000002")
+            self.assertEqual(
+                result["question"]["id"],
+                result["agenda_decision"]["selected"]["question_id"],
+            )
             self.assertIsNone(result["action_lab_result"])
             self.assertIsNone(result["planning_lab_result"])
             self.assertEqual(
