@@ -226,6 +226,14 @@ class PersistentAgendaTests(unittest.TestCase):
             "source_evidence_refs": ["S_INTERRUPT", "R_INTERRUPT"],
         }
         state["questions"] = [frontier, interrupt]
+        state["experiments"] = [
+            {
+                "id": "X_INTERRUPT",
+                "question_id": interrupt["id"],
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            }
+        ]
 
         first = update_agenda(
             state,
