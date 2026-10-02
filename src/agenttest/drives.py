@@ -5,6 +5,9 @@ from typing import Any
 from .learning import empirical_frontier_signal
 from .semantic import actionable_open_questions
 
+EVIDENCE_READY_WORK_PRESSURE = 0.75
+
+
 DRIVE_ORDER = (
     "prediction_error",
     "specification_pressure",
@@ -29,6 +32,10 @@ def compute_drives(
         item for item in state.get("experiments", [])
         if item.get("status") == "proposed"
         and item.get("readiness") != "needs_specification"
+    ]
+    evidence_ready_pending = [
+        item for item in pending
+        if item.get("readiness") == "evidence_ready"
     ]
     specification_backlog = [
         item for item in state.get("experiments", [])
@@ -63,7 +70,10 @@ def compute_drives(
             else (0.0 if intervention else (0.6 if surprise else 0.0))
         ),
         "specification_pressure": min(0.9, len(specification_backlog) / 4.0),
-        "evidence_hunger": min(0.8, len(pending) / 4.0),
+        "evidence_hunger": max(
+            min(0.8, len(pending) / 4.0),
+            EVIDENCE_READY_WORK_PRESSURE if evidence_ready_pending else 0.0,
+        ),
         "uncertainty": min(0.8, len(open_questions) / 6.0),
         "continuity_repair": max(0.0, 1.0 - metrics.get("continuity", 0.0)),
         "calibration_gap": max(0.0, 1.0 - metrics.get("self_model", 0.0)),
