@@ -86,7 +86,7 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <summary><span><span class="drawer-title">Evidence & history</span><span class="drawer-copy">Open the scientific trail for planning, surprise, curiosity, memory, transfer, attention and empirical learning.</span></span></summary>
 <div class="detail-grid">
 <article class="card s4"><div class="head"><div><h2>Learned causal model</h2><div class="sub">Technical action effects learned from outcomes, not action names.</div></div></div><div class="models" id="causalModel"></div></article>
-<article class="card s8"><div class="head"><div><h2>Phase progression</h2><div class="sub">The same capabilities shown above, with scientific framing.</div></div></div><div class="micro">Phase 32 actions → 33 planning → 34 revision → 35 curiosity → 36 episodic memory → 37 transfer → 38 self-generated falsifiable experiments.</div></article>
+<article class="card s8"><div class="head"><div><h2>Phase progression</h2><div class="sub">The same capabilities shown above, with scientific framing.</div></div></div><div class="micro">Phase 32 actions → 33 planning → 34 revision → 35 curiosity → 36 episodic memory → 37 transfer → 38 self-generated falsifiable experiments → 39 self-selected objectives → 40 realized information → 41 outcome-aware objectives.</div></article>
 <article class="card s12">
 <div class="head"><div><h2>Phase 33 · persistent planning</h2><div class="sub">Goal, persisted multi-step plan, predicted intermediate states, and execution evidence across heartbeats.</div></div><span class="pill blue" id="planningStatus">not started</span></div>
 <div class="evidence">
@@ -216,6 +216,22 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="row"><span class="label">Observed result</span><span class="value" id="realizationOutcome">—</span></div>
 </div>
 <div class="preds" id="realizationHistory"></div>
+</article>
+
+<article class="card s12">
+<div class="head"><div><h2>Phase 41 · outcome-aware objective valuation</h2><div class="sub">Ora can compare the Phase 39 objective it would have chosen with a later valuation adjusted by measured Phase 40 outcomes. Phase 41 passes only when that evidence naturally changes the goal and the changed goal completes.</div></div><span class="pill blue" id="outcomeValuationStatus">active · waiting for natural evidence</span></div>
+<div class="evidence">
+<div class="ebox"><div class="n" id="outcomeValuationDecisionCount">0</div><div class="t">Outcome-aware decisions</div></div>
+<div class="ebox"><div class="n" id="outcomeValuationChangedCount">0</div><div class="t">Choices changed by outcomes</div></div>
+<div class="ebox"><div class="n" id="outcomeValuationCompletedCount">0</div><div class="t">Changed goals completed</div></div>
+</div>
+<div class="rows" style="margin-top:10px">
+<div class="row"><span class="label">Phase 39 would choose</span><span class="value" id="outcomeValuationCounterfactual">—</span></div>
+<div class="row"><span class="label">Outcome-aware choice</span><span class="value" id="outcomeValuationSelected">—</span></div>
+<div class="row"><span class="label">Phase 40 evidence used</span><span class="value" id="outcomeValuationEvidence">Waiting for a natural changed choice.</span></div>
+<div class="row"><span class="label">Outcome decision margin</span><span class="value" id="outcomeValuationMargin">—</span></div>
+</div>
+<div class="preds" id="outcomeValuationHistory"></div>
 </article>
 
 <article class="card s5">
@@ -518,6 +534,26 @@ function renderObjectiveRealization(o){
  el("realizationOutcome").textContent=r.id?vec(r.predicted_after)+" predicted → "+vec(r.after)+" observed · "+pretty(r.interpretation||"observed")+" · samples "+(+r.state_samples_before||0)+"→"+(+r.state_samples_after||0):"No Phase 40 action observed yet.";
  el("realizationHistory").innerHTML=tail(runs,4).map(x=>'<span class="pred '+(x.matched_prediction?'confirmed':'violated')+'">'+esc(x.id)+" · C"+esc(x.cycle)+" · gain "+esc(Number(x.realized_information_gain||0).toFixed(2))+"</span>").join("");
 }
+
+function renderOutcomeValuation(o){
+ const lab=o.planning_lab||{},all=lab.objective_decisions||[],goals=lab.goals||[];
+ const decisions=all.filter(x=>x.policy_version==="outcome-aware-objective-valuation-v1"||x.outcome_changed_choice!=null);
+ const changed=decisions.filter(x=>x.outcome_changed_choice===true);
+ const completed=changed.filter(x=>goals.some(g=>g.selection?.objective_decision_id===x.id&&g.status==="completed"));
+ const d=decisions[decisions.length-1]||{},passed=completed.length>0,active=lab.outcome_valuation_started_cycle!=null;
+ el("outcomeValuationStatus").textContent=passed?"natural gate passed":changed.length?"changed choice observed":active?"active · waiting for natural changed choice":"not active";
+ el("outcomeValuationStatus").className="pill "+(passed?"good":changed.length?"warn":"blue");
+ el("outcomeValuationDecisionCount").textContent=decisions.length;
+ el("outcomeValuationChangedCount").textContent=changed.length;
+ el("outcomeValuationCompletedCount").textContent=completed.length;
+ el("outcomeValuationCounterfactual").textContent=d.id?vec(d.phase39_counterfactual?.target)+" · score "+Number(d.phase39_counterfactual?.objective_score||0).toFixed(3):active?"Active since C"+lab.outcome_valuation_started_cycle+" · no outcome-aware choice recorded yet.":"—";
+ el("outcomeValuationSelected").textContent=d.id?vec(d.selected?.target)+" · adjusted score "+Number(d.selected?.outcome_adjusted_score??d.selected?.objective_score??0).toFixed(3):"—";
+ const refs=d.selected?.phase40_outcome_refs||d.outcome_evidence_refs||[];
+ const gain=d.selected?.mean_realized_information_gain;
+ el("outcomeValuationEvidence").textContent=d.id?(refs.length?refs.join(", ")+(gain==null?"":" · mean realized gain "+Number(gain).toFixed(2)):"No Phase 40 evidence changed this choice."):"Waiting for a natural changed choice.";
+ el("outcomeValuationMargin").textContent=d.id?Number(d.outcome_decision_margin||0).toFixed(3):"—";
+ el("outcomeValuationHistory").innerHTML=tail(decisions,4).map(x=>'<span class="pred '+(x.outcome_changed_choice?'confirmed':'pending')+'">'+esc(x.id)+" · "+esc(x.outcome_changed_choice?"outcomes changed objective":"Phase 39 choice retained")+" · "+esc(vec(x.selected?.target))+"</span>").join("");
+}
 function renderAttention(o){const i=tail(o.intentions,1)[0]||{},d=i.dominant_drive||"—",pressure=Number((o.drives||{})[d]);el("dominantDrive").textContent=pretty(d);el("intentionKind").textContent=pretty(i.kind);el("intentionTarget").textContent=i.target||"—";el("intentionRationale").textContent=i.rationale||"—";el("drivePressure").textContent=Number.isFinite(pressure)?pressure.toFixed(2)+" pressure":"—";
  const q=(o.questions||[]).slice().sort((a,b)=>(b.last_selected_cycle||b.created_cycle||0)-(a.last_selected_cycle||a.created_cycle||0))[0];el("currentQuestion").textContent=q?.text||"—";
  const active=(o.experiments||[]).filter(x=>!["completed","closed","rejected"].includes(x.status)).slice(-1)[0];el("activeExperiment").textContent=active?active.id+" · "+pretty(active.readiness||active.status):"—";
@@ -540,7 +576,7 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderObjectiveSelection(o);renderObjectiveRealization(o);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function render(o,i){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderObjectiveSelection(o);renderObjectiveRealization(o);renderOutcomeValuation(o);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
 async function resolveGrowthSha(){
  const now=Date.now();
  if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
