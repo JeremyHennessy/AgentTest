@@ -59,9 +59,9 @@ def evaluate(state: dict) -> dict:
 
     selected = latest.get("selected")
     if isinstance(selected, dict):
-        source_refs = {
+        progress_refs = {
             str(ref)
-            for ref in selected.get("source_provenance_refs", [])
+            for ref in selected.get("thread_progress_evidence_refs", [])
             if isinstance(ref, str)
         }
         new_refs = {
@@ -69,13 +69,13 @@ def evaluate(state: dict) -> dict:
             for ref in selected.get("new_evidence_refs", [])
             if isinstance(ref, str)
         }
-        provenance_only = source_refs & new_refs
-        if provenance_only:
+        ungrounded_new_refs = new_refs - progress_refs
+        if ungrounded_new_refs:
             failures.append(
                 {
-                    "kind": "source_provenance_scored_as_new_progress",
+                    "kind": "new_evidence_not_grounded_in_thread_progress",
                     "question_id": selected.get("question_id"),
-                    "overlap": sorted(provenance_only),
+                    "refs": sorted(ungrounded_new_refs),
                 }
             )
 
