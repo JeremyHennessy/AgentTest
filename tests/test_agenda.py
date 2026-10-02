@@ -7,6 +7,7 @@ from pathlib import Path
 from agenttest.agenda import (
     AGENDA_MAX_DECISIONS,
     AGENDA_MAX_THREADS,
+    agenda_contract_errors,
     update_agenda,
 )
 from agenttest.core import AgentCore
@@ -619,6 +620,136 @@ class PersistentAgendaTests(unittest.TestCase):
 
         self.assertEqual(migrated["schema_version"], 25)
         self.assertEqual(migrated["agenda"]["started_cycle"], 50)
+
+    def test_phase42_contract_rejects_source_provenance_as_new_progress(self) -> None:
+        state = self._state()
+        frontier = {
+            "id": "Q000001",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 5,
+            "last_selected_cycle": 9,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": ["P_SOURCE_ONLY"],
+        }
+        replication = {
+            "id": "Q000002",
+            "text": "Will measured repository fields remain stable on the next observation?",
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 20,
+            "last_selected_cycle": 8,
+            "source": "repository_stability_prediction",
+        }
+        state["questions"] = [frontier, replication]
+        decision = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=10,
+        )
+        self.assertIsNotNone(decision)
+
+        selected_summary = next(
+            summary
+            for summary in decision["candidate_summaries"]
+            if summary["question_id"] == frontier["id"]
+        )
+        selected_summary["new_evidence_refs"] = ["P_SOURCE_ONLY"]
+        selected_summary["thread_progress_evidence_refs"] = []
+        selected_summary["evidence_change_value"] = 0.05
+
+        errors = agenda_contract_errors(state)
+
+        self.assertIn(
+            "new_evidence_not_direct_thread_progress:Q000001",
+            errors,
+        )
+
+    def test_phase42_contract_requires_repository_prediction_path_when_requested(self) -> None:
+        state = self._state()
+        replication = {
+            "id": "Q000001",
+            "text": "Will measured repository fields remain stable on the next observation?",
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 20,
+            "last_selected_cycle": 9,
+            "source": "repository_stability_prediction",
+        }
+        frontier = {
+            "id": "Q000002",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 5,
+            "last_selected_cycle": 8,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": ["P000001", "R000001"],
+        }
+        state["questions"] = [replication, frontier]
+        update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=10,
+        )
+
+        errors = agenda_contract_errors(
+            state,
+            require_repository_prediction_path=True,
+        )
+
+        self.assertIn("repository_prediction_path_missing", errors)
+        self.assertIn(
+            "repository_prediction_path_not_visible_to_agenda:Q000001",
+            errors,
+        )
+
+    def test_phase42_contract_accepts_visible_repository_prediction_path(self) -> None:
+        state = self._state()
+        replication = {
+            "id": "Q000001",
+            "text": "Will measured repository fields remain stable on the next observation?",
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 20,
+            "last_selected_cycle": 9,
+            "source": "repository_stability_prediction",
+        }
+        frontier = {
+            "id": "Q000002",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 5,
+            "last_selected_cycle": 8,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": ["P000001", "R000001"],
+        }
+        state["questions"] = [replication, frontier]
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "question_id": replication["id"],
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            }
+        ]
+        update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=10,
+        )
+
+        errors = agenda_contract_errors(
+            state,
+            require_repository_prediction_path=True,
+        )
+
+        self.assertEqual(errors, [])
 
     def test_core_emits_agenda_decision_without_new_action_authority(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
