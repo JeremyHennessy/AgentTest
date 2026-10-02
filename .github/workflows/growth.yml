@@ -65,6 +65,14 @@ jobs:
       - name: Verify Phase 42 live-state integrity
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/phase42_integrity_eval.py --state state/organism.json
 
+      - name: Measure Phase 42 resumption opportunities
+        shell: bash
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+            python scripts/phase42_resumption_opportunity_eval.py \
+              --state state/organism.json \
+              --output state/phase42_resumption_opportunities.json
+
       - name: Verify invariants
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 
