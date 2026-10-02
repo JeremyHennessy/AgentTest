@@ -29,11 +29,9 @@ Accepted candidates remain status=proposed. Later observations or explicit exper
 
 If no provider is configured, cognition is recorded as unavailable and the deterministic loop continues. Provider/network errors are recorded and likewise cannot halt the heartbeat.
 
-## OpenAI provider
+## Runtime boundary
 
-The optional built-in provider calls the Responses API with Structured Outputs and no tools. It reads OPENAI_API_KEY and optionally AGENTTEST_MODEL from the environment. The default model is gpt-6-luna.
-
-The response ID, model, usage metadata, prompt version, and a hash of the exact supplied cognition context are preserved with each cognition event for provenance.
+The autonomous growth and GitHub interaction workflows do not invoke an external model and do not require an API key. The provider abstraction remains available for isolated tests and explicit experiments, but it is not part of Ora's live autonomous runtime.
 
 ## Evaluation question
 
