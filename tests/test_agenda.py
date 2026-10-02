@@ -4,7 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agenttest.agenda import AGENDA_MAX_THREADS, update_agenda
+from agenttest.agenda import (
+    AGENDA_MAX_DECISIONS,
+    AGENDA_MAX_THREADS,
+    ensure_agenda_state,
+    update_agenda,
+)
 from agenttest.core import AgentCore
 from agenttest.learning import REPOSITORY_STABILITY_FAMILY
 from agenttest.state import StateStore, initial_state, migrate_state
@@ -194,6 +199,11 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertEqual(second["resumed_thread_id"], frontier_thread_id)
         self.assertTrue(second["foreground_changed"])
         self.assertTrue(second["priority_change_supported_by_new_evidence"])
+        self.assertEqual(state["agenda"]["genuine_resumption_count"], 1)
+        self.assertEqual(
+            state["agenda"]["last_genuine_resumption"]["decision_id"],
+            second["id"],
+        )
         self.assertIn(
             next(
                 thread["id"]
@@ -202,6 +212,115 @@ class PersistentAgendaTests(unittest.TestCase):
             ),
             second["suspended_thread_ids"],
         )
+
+    def test_genuine_resumption_survives_decision_history_rollover(self) -> None:
+        state = initial_state()
+        state["cycles"] = 10
+        state["generation"] = 10
+        state["agenda"]["started_cycle"] = 1
+        frontier = {
+            "id": "Q000001",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 0,
+            "last_selected_cycle": None,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": [],
+        }
+        replication = {
+            "id": "Q000002",
+            "text": "Will the current measured repository fields remain unchanged?",
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 1,
+            "last_selected_cycle": 9,
+            "source": "repository_stability_prediction",
+        }
+        state["questions"] = [frontier, replication]
+        state["experiments"] = [
+            {
+                "id": "X000001",
+                "question_id": replication["id"],
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            }
+        ]
+
+        update_agenda(state, legacy_question=replication, cycle=10)
+        frontier_thread = next(
+            thread
+            for thread in state["agenda"]["threads"]
+            if thread["question_id"] == frontier["id"]
+        )
+        frontier_thread_id = frontier_thread["id"]
+
+        state["empirical_learning"]["families"][
+            REPOSITORY_STABILITY_FAMILY
+        ] = saturated_family()
+        frontier["source_evidence_refs"] = [
+            "P000001",
+            "R000001",
+            "P000002",
+            "R000002",
+            "P000003",
+            "R000003",
+        ]
+        second = update_agenda(
+            state,
+            legacy_question=replication,
+            cycle=11,
+        )
+        self.assertEqual(second["resumed_thread_id"], frontier_thread_id)
+        self.assertEqual(state["agenda"]["genuine_resumption_count"], 1)
+
+        for cycle in range(12, 12 + AGENDA_MAX_DECISIONS + 2):
+            state["cycles"] = cycle
+            update_agenda(
+                state,
+                legacy_question=frontier,
+                cycle=cycle,
+            )
+
+        self.assertEqual(
+            len(state["agenda"]["decisions"]),
+            AGENDA_MAX_DECISIONS,
+        )
+        self.assertNotIn(
+            second["id"],
+            [decision["id"] for decision in state["agenda"]["decisions"]],
+        )
+        self.assertEqual(state["agenda"]["genuine_resumption_count"], 1)
+        self.assertEqual(
+            state["agenda"]["last_genuine_resumption"]["decision_id"],
+            second["id"],
+        )
+
+    def test_initial_thread_artifact_is_not_backfilled_as_genuine_resumption(self) -> None:
+        state = self._state()
+        state["agenda"].pop("genuine_resumption_count", None)
+        state["agenda"].pop("last_genuine_resumption", None)
+        state["agenda"]["decisions"] = [
+            {
+                "id": "AD000001",
+                "cycle": 10,
+                "foreground_changed": False,
+                "previous_foreground_thread_id": None,
+                "selected_thread_id": "AT000001",
+                "resumed_thread_id": "AT000001",
+                "priority_change_supported_by_new_evidence": True,
+                "selected": {
+                    "question_id": "Q000001",
+                    "new_evidence_refs": ["P000001", "R000001"],
+                },
+            }
+        ]
+
+        agenda = ensure_agenda_state(state)
+
+        self.assertEqual(agenda["genuine_resumption_count"], 0)
+        self.assertIsNone(agenda["last_genuine_resumption"])
 
     def test_new_evidence_backed_core_question_can_interrupt_and_frontier_can_resume(self) -> None:
         state = self._state()

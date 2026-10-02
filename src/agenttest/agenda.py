@@ -29,13 +29,72 @@ def initial_agenda_state() -> dict[str, Any]:
         "last_decision_cycle": None,
         "next_thread_index": 1,
         "next_decision_index": 1,
+        "genuine_resumption_count": 0,
+        "last_genuine_resumption": None,
+    }
+
+
+def _is_genuine_resumption(decision: dict[str, Any]) -> bool:
+    resumed_thread_id = decision.get("resumed_thread_id")
+    previous_foreground_thread_id = decision.get("previous_foreground_thread_id")
+    return bool(
+        resumed_thread_id
+        and previous_foreground_thread_id
+        and decision.get("foreground_changed") is True
+        and decision.get("priority_change_supported_by_new_evidence") is True
+        and decision.get("selected_thread_id") == resumed_thread_id
+        and previous_foreground_thread_id != resumed_thread_id
+    )
+
+
+def _genuine_resumption_record(decision: dict[str, Any]) -> dict[str, Any]:
+    selected = decision.get("selected")
+    new_evidence_refs = (
+        list(selected.get("new_evidence_refs", []))
+        if isinstance(selected, dict)
+        else []
+    )
+    return {
+        "decision_id": decision.get("id"),
+        "cycle": decision.get("cycle"),
+        "thread_id": decision.get("resumed_thread_id"),
+        "previous_foreground_thread_id": decision.get(
+            "previous_foreground_thread_id"
+        ),
+        "question_id": (
+            selected.get("question_id")
+            if isinstance(selected, dict)
+            else None
+        ),
+        "new_evidence_refs": new_evidence_refs,
     }
 
 
 def ensure_agenda_state(state: dict[str, Any]) -> dict[str, Any]:
     agenda = state.setdefault("agenda", initial_agenda_state())
+    had_resumption_count = "genuine_resumption_count" in agenda
+    had_last_resumption = "last_genuine_resumption" in agenda
     for key, value in initial_agenda_state().items():
         agenda.setdefault(key, value)
+
+    retained_genuine_resumptions = [
+        decision
+        for decision in agenda.get("decisions", [])
+        if isinstance(decision, dict) and _is_genuine_resumption(decision)
+    ]
+    if not had_resumption_count:
+        agenda["genuine_resumption_count"] = len(
+            retained_genuine_resumptions
+        )
+    if (
+        not had_last_resumption
+        and retained_genuine_resumptions
+        and int(agenda.get("genuine_resumption_count", 0) or 0) > 0
+    ):
+        agenda["last_genuine_resumption"] = _genuine_resumption_record(
+            retained_genuine_resumptions[-1]
+        )
+
     agenda["version"] = AGENDA_VERSION
     return agenda
 
@@ -458,6 +517,14 @@ def update_agenda(
             "thread with the strongest current evidence-linked priority."
         ),
     }
+    if _is_genuine_resumption(decision):
+        agenda["genuine_resumption_count"] = (
+            int(agenda.get("genuine_resumption_count", 0) or 0) + 1
+        )
+        agenda["last_genuine_resumption"] = _genuine_resumption_record(
+            decision
+        )
+
     agenda.setdefault("decisions", []).append(decision)
     if len(agenda["decisions"]) > AGENDA_MAX_DECISIONS:
         del agenda["decisions"][:-AGENDA_MAX_DECISIONS]
