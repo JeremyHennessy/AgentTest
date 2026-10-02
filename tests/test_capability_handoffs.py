@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 import agenttest.planning_lab as planning_lab
 from agenttest.action_lab import ACTION_ORDER, BOUNDS, STATEFUL_WORLD_VERSION
 from agenttest.agenda import update_agenda
+from agenttest.core import AgentCore
+from agenttest.drives import choose_intention, compute_drives
 from agenttest.learning import REPOSITORY_STABILITY_FAMILY
 from agenttest.planning_lab import initial_planning_lab_state
-from agenttest.state import initial_state
+from agenttest.state import StateStore, initial_state
 
 
 # Cross-phase sanity checks belong here. A new capability that consumes the
@@ -351,6 +355,174 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             goal["selection"]["kind"],
             "outcome_aware_bounded_objective",
         )
+
+    def test_phase42_evidence_ready_interrupt_reaches_agenda_and_frontier_can_resume(self) -> None:
+        state = initial_state()
+        state["cycles"] = 20
+        state["generation"] = 20
+        state["agenda"]["started_cycle"] = 19
+        state["metrics"].update(
+            {
+                "continuity": 1.0,
+                "self_model": 1.0,
+                "open_endedness": 0.1,
+            }
+        )
+        family = {
+            "family": REPOSITORY_STABILITY_FAMILY,
+            "completed_trials": 6,
+            "evaluable_trials": 6,
+            "stable_observations": 6,
+            "change_observations": 0,
+            "inconclusive_trials": 0,
+            "stability_rate": 1.0,
+            "next_expected_status": "confirmed",
+            "experiment_refs": [],
+            "evidence_refs": [
+                "P_HANDOFF_1",
+                "R_HANDOFF_1",
+                "P_HANDOFF_2",
+                "R_HANDOFF_2",
+                "P_HANDOFF_3",
+                "R_HANDOFF_3",
+            ],
+        }
+        state["empirical_learning"]["families"][
+            REPOSITORY_STABILITY_FAMILY
+        ] = family
+        replication = {
+            "id": "Q_HANDOFF_REPLICATION",
+            "text": "Will another comparable observation preserve the stable pattern?",
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 20,
+            "last_selected_cycle": 19,
+            "source": "repository_stability_prediction",
+        }
+        frontier = {
+            "id": "Q_HANDOFF_FRONTIER",
+            "text": (
+                "Which distinct measurable relationship should be tested next to "
+                "challenge or extend the learned "
+                "repository_stability_without_intervention pattern?"
+            ),
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 5,
+            "last_selected_cycle": 18,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": list(family["evidence_refs"]),
+        }
+        state["questions"] = [replication, frontier]
+
+        first = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=20,
+        )
+        self.assertIsNotNone(first)
+        self.assertEqual(first["selected"]["question_id"], frontier["id"])
+        frontier_thread_id = first["selected_thread_id"]
+
+        interrupt = {
+            "id": "Q_HANDOFF_INTERRUPT",
+            "text": "What evidence-ready work should be resolved next?",
+            "status": "open",
+            "created_cycle": 21,
+            "times_selected": 0,
+            "last_selected_cycle": None,
+        }
+        state["questions"].append(interrupt)
+        state["experiments"] = [
+            {
+                "id": "X_HANDOFF_INTERRUPT",
+                "question_id": interrupt["id"],
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            }
+        ]
+        state["cycles"] = 21
+
+        drives = compute_drives(
+            state,
+            strict_question_attention=True,
+        )
+        self.assertGreater(
+            drives["evidence_hunger"],
+            drives["empirical_frontier"],
+            "Evidence-ready work must be able to interrupt mature frontier exploration.",
+        )
+        intention = choose_intention(state, drives)
+        self.assertEqual(intention["kind"], "resolve_pending_evidence")
+        self.assertEqual(intention["target"], "X_HANDOFF_INTERRUPT")
+
+        with tempfile.TemporaryDirectory() as temp:
+            core = AgentCore(StateStore(Path(temp) / "organism.json"))
+            interrupt_text = core._generate_question(
+                state,
+                surprise=None,
+                intention=intention,
+                thought=None,
+                strict_question_attention=True,
+            )
+            interrupt_followup = core._upsert_question(state, interrupt_text)
+
+            second = update_agenda(
+                state,
+                legacy_question=interrupt_followup,
+                cycle=21,
+            )
+            self.assertIsNotNone(second)
+            self.assertTrue(second["foreground_changed"])
+            self.assertIn(frontier_thread_id, second["suspended_thread_ids"])
+
+            state["experiments"][0]["status"] = "completed"
+            state["experiments"][0]["readiness"] = "resolved"
+            family["evidence_refs"].extend(
+                ["P_HANDOFF_NEW", "R_HANDOFF_NEW"]
+            )
+            state["cycles"] = 22
+
+            next_drives = compute_drives(
+                state,
+                strict_question_attention=True,
+            )
+            next_intention = choose_intention(state, next_drives)
+            self.assertEqual(
+                next_intention["kind"],
+                "explore_empirical_frontier",
+            )
+            frontier_text = core._generate_question(
+                state,
+                surprise=None,
+                intention=next_intention,
+                thought=None,
+                strict_question_attention=True,
+            )
+            resumed_frontier = core._upsert_question(state, frontier_text)
+            resumed_frontier.setdefault(
+                "source",
+                "empirical_frontier_transfer",
+            )
+            resumed_frontier["source_learning_family"] = (
+                next_intention["target"]
+            )
+            resumed_frontier["source_evidence_refs"] = list(
+                next_intention["evidence_refs"]
+            )
+
+            third = update_agenda(
+                state,
+                legacy_question=resumed_frontier,
+                cycle=22,
+            )
+
+        self.assertIsNotNone(third)
+        self.assertEqual(third["resumed_thread_id"], frontier_thread_id)
+        self.assertTrue(third["foreground_changed"])
+        self.assertTrue(third["priority_change_supported_by_new_evidence"])
+        self.assertEqual(state["agenda"]["genuine_resumption_count"], 1)
 
     def test_mature_empirical_frontier_feeds_phase42_persistent_agenda(self) -> None:
         state = initial_state()
