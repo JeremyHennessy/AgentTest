@@ -236,7 +236,7 @@ def _new_thread(
         "id": f"AT{index:06d}",
         "question_id": question_id,
         "created_cycle": cycle,
-        "status": "suspended",
+        "status": None,
         "priority_score": 0.0,
         "evidence_refs": [],
         "last_foreground_cycle": None,
