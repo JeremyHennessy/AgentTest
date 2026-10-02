@@ -278,6 +278,66 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertEqual(third["resumed_thread_id"], frontier_thread_id)
         self.assertTrue(third["priority_change_supported_by_new_evidence"])
 
+    def test_frontier_source_provenance_does_not_count_as_new_thread_progress(self) -> None:
+        state = self._state()
+        frontier = {
+            "id": "Q000001",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 8,
+            "last_selected_cycle": 9,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": [
+                "P000001",
+                "R000001",
+                "P000002",
+                "R000002",
+            ],
+        }
+        alternative = {
+            "id": "Q000002",
+            "text": "Which existing assumption should be challenged next?",
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 1,
+            "last_selected_cycle": 8,
+        }
+        state["questions"] = [frontier, alternative]
+
+        first = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=10,
+        )
+        self.assertEqual(first["selected"]["question_id"], frontier["id"])
+
+        frontier["source_evidence_refs"] = [
+            "P000001",
+            "R000001",
+            "P000002",
+            "R000002",
+            "P000003",
+            "R000003",
+        ]
+        state["cycles"] = 11
+        second = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=11,
+        )
+
+        frontier_summary = next(
+            item
+            for item in second["candidate_summaries"]
+            if item["question_id"] == frontier["id"]
+        )
+        self.assertIn("P000003", frontier_summary["evidence_refs"])
+        self.assertIn("R000003", frontier_summary["evidence_refs"])
+        self.assertEqual(frontier_summary["new_evidence_refs"], [])
+        self.assertEqual(frontier_summary["evidence_change_value"], 0.0)
+
     def test_agenda_is_bounded(self) -> None:
         state = self._state()
         questions = []
