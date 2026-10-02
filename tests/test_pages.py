@@ -73,6 +73,19 @@ class PagesInteractionTests(unittest.TestCase):
         self.assertNotIn("Authorization: Bearer", page)
         self.assertNotIn("OPENAI_API_KEY", page)
 
+    def test_live_workflows_do_not_depend_on_external_model_api(self) -> None:
+        growth = (ROOT / ".github/workflows/growth.yml").read_text(encoding="utf-8")
+        interaction = (ROOT / ".github/workflows/interact.yml").read_text(encoding="utf-8")
+
+        for workflow in (growth, interaction):
+            self.assertNotIn("OPENAI_API_KEY", workflow)
+            self.assertNotIn("AGENTTEST_MODEL", workflow)
+
+        self.assertNotIn("--cognition", growth)
+        self.assertNotIn("--cognition", interaction)
+        self.assertNotIn("inputs.cognition", interaction)
+        self.assertNotIn("INTERACTION_COGNITION", interaction)
+
     def test_owner_created_issue_is_a_supported_interaction_transport(self) -> None:
         workflow = (ROOT / ".github/workflows/interact.yml").read_text(encoding="utf-8")
 
