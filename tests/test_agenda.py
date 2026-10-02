@@ -69,7 +69,14 @@ class PersistentAgendaTests(unittest.TestCase):
             "last_selected_cycle": 8,
             "source": "empirical_frontier_transfer",
             "source_learning_family": REPOSITORY_STABILITY_FAMILY,
-            "source_evidence_refs": ["P000001", "R000001"],
+            "source_evidence_refs": [
+                "P000001",
+                "R000001",
+                "P000002",
+                "R000002",
+                "P000003",
+                "R000003",
+            ],
         }
         state["questions"] = [replication, frontier]
         state["experiments"] = [
