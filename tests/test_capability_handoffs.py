@@ -644,7 +644,12 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             )
             after = store.load()
 
-        self.assertEqual(event["prediction_result_id"], prediction["id"])
+        resolved_prediction = next(
+            item
+            for item in after["predictions"]
+            if item["id"] == prediction["id"]
+        )
+        self.assertEqual(resolved_prediction["status"], "confirmed")
         self.assertEqual(event["drives"]["evidence_hunger"], 0.0)
         self.assertFalse(event["agenda_decision"]["foreground_changed"])
         self.assertIsNone(event["agenda_decision"]["resumed_thread_id"])
