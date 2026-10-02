@@ -6,6 +6,7 @@ from collections import Counter
 from typing import Any
 
 from .action_lab import step_action_lab
+from .agenda import update_agenda
 from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
 from .evidence import known_evidence_ids
@@ -946,22 +947,44 @@ class AgentCore:
                 cognition_provider,
             )
 
-        question_text = self._generate_question(
+        legacy_question_text = self._generate_question(
             state,
             surprise,
             intention,
             thought,
             strict_question_attention=strict_question_attention,
         )
-        question = self._upsert_question(state, question_text)
-        question["times_selected"] += 1
-        question["last_selected_cycle"] = cycle
+        legacy_question = self._upsert_question(state, legacy_question_text)
         if intention.get("kind") == "explore_empirical_frontier":
-            question.setdefault("source", "empirical_frontier_transfer")
-            question["source_learning_family"] = intention.get("target")
-            question["source_evidence_refs"] = list(
+            legacy_question.setdefault("source", "empirical_frontier_transfer")
+            legacy_question["source_learning_family"] = intention.get("target")
+            legacy_question["source_evidence_refs"] = list(
                 intention.get("evidence_refs", [])
             )
+
+        agenda_decision = update_agenda(
+            state,
+            legacy_question=legacy_question,
+            cycle=cycle,
+        )
+        question = legacy_question
+        if agenda_decision is not None:
+            selected_question_id = str(
+                agenda_decision.get("selected", {}).get("question_id") or ""
+            )
+            agenda_question = next(
+                (
+                    item
+                    for item in state.get("questions", [])
+                    if str(item.get("id") or "") == selected_question_id
+                ),
+                None,
+            )
+            if agenda_question is not None:
+                question = agenda_question
+
+        question["times_selected"] += 1
+        question["last_selected_cycle"] = cycle
         inquiry_update = consolidate_inquiry_families(state)
 
         experiment = self._select_or_propose_experiment(
@@ -1007,6 +1030,7 @@ class AgentCore:
             "planning_lab_result": planning_lab_result,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
+            "agenda_decision": agenda_decision,
             "world_update": world_update,
             "empirical_learning_update": empirical_learning_update,
             "self_model_calibration": self_model_calibration,
@@ -1043,6 +1067,7 @@ class AgentCore:
             "planning_lab_result": planning_lab_result,
             "semantic_update": semantic_update,
             "inquiry_update": inquiry_update,
+            "agenda_decision": agenda_decision,
             "world_update": world_update,
             "empirical_learning_update": empirical_learning_update,
             "self_model_calibration": self_model_calibration,

@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from .action_lab import initial_action_lab_state
+from .agenda import initial_agenda_state
 from .planning_lab import initial_planning_lab_state
 
-SCHEMA_VERSION = 24
+SCHEMA_VERSION = 25
 
 DIMENSIONS = (
     "continuity",
@@ -123,6 +124,7 @@ def initial_state() -> dict[str, Any]:
         "empirical_learning": _empty_empirical_learning(),
         "action_lab": initial_action_lab_state(),
         "planning_lab": initial_planning_lab_state(),
+        "agenda": initial_agenda_state(),
         "cognition_events": [],
         "cognition_candidates": [],
         "questions": [],
@@ -157,6 +159,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         ("empirical_learning", _empty_empirical_learning()),
         ("action_lab", initial_action_lab_state()),
         ("planning_lab", initial_planning_lab_state()),
+        ("agenda", initial_agenda_state()),
         ("cognition_events", []),
         ("cognition_candidates", []),
         ("episodes", []),
@@ -233,6 +236,16 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         planning_lab["outcome_valuation_started_cycle"] = int(
             state.get("cycles", 0) or 0
         )
+
+    agenda = state["agenda"]
+    for key, value in initial_agenda_state().items():
+        agenda.setdefault(key, value)
+    if (
+        prior_schema_version < 25
+        and agenda.get("started_cycle") is None
+        and int(state.get("cycles", 0) or 0) > 0
+    ):
+        agenda["started_cycle"] = int(state.get("cycles", 0) or 0)
 
     metrics = state.setdefault("metrics", {})
     for dimension in DIMENSIONS:
