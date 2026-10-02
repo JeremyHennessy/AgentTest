@@ -524,6 +524,302 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
         self.assertTrue(third["priority_change_supported_by_new_evidence"])
         self.assertEqual(state["agenda"]["genuine_resumption_count"], 1)
 
+    def test_phase42_real_cycle_confirmation_does_not_fake_an_interrupt(self) -> None:
+        state = initial_state()
+        state["cycles"] = 20
+        state["generation"] = 20
+        state["agenda"]["started_cycle"] = 19
+        state["metrics"].update(
+            {
+                "continuity": 1.0,
+                "self_model": 1.0,
+                "open_endedness": 0.1,
+            }
+        )
+        replication = {
+            "id": "Q_CYCLE_REPLICATION",
+            "text": (
+                "Will measured repository fields remain unchanged until the next "
+                "self-observation unless an intervening code change alters the baseline?"
+            ),
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 20,
+            "last_selected_cycle": 19,
+            "source": "repository_stability_prediction",
+        }
+        frontier = {
+            "id": "Q_CYCLE_FRONTIER",
+            "text": (
+                "Which distinct measurable relationship should be tested next to "
+                "challenge or extend the learned "
+                "repository_stability_without_intervention pattern?"
+            ),
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 5,
+            "last_selected_cycle": 18,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": [
+                "P_HIST_1",
+                "R_HIST_1",
+                "P_HIST_2",
+                "R_HIST_2",
+                "P_HIST_3",
+                "R_HIST_3",
+                "P_HIST_4",
+                "R_HIST_4",
+                "P_HIST_5",
+                "R_HIST_5",
+                "P_HIST_6",
+                "R_HIST_6",
+            ],
+        }
+        state["questions"] = [replication, frontier]
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "question_id": replication["id"],
+                "status": "completed",
+                "learning_family": REPOSITORY_STABILITY_FAMILY,
+                "observed_prediction_status": "confirmed",
+                "evidence_refs": [f"P_HIST_{index}", f"R_HIST_{index}"],
+            }
+            for index in range(1, 7)
+        ]
+        state["empirical_learning"]["families"][
+            REPOSITORY_STABILITY_FAMILY
+        ] = {
+            "family": REPOSITORY_STABILITY_FAMILY,
+            "completed_trials": 6,
+            "evaluable_trials": 6,
+            "stable_observations": 6,
+            "change_observations": 0,
+            "inconclusive_trials": 0,
+            "stability_rate": 1.0,
+            "next_expected_status": "confirmed",
+            "experiment_refs": [f"X{index:06d}" for index in range(1, 7)],
+            "evidence_refs": list(frontier["source_evidence_refs"]),
+        }
+        first = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=20,
+        )
+        self.assertIsNotNone(first)
+        frontier_thread_id = first["selected_thread_id"]
+
+        observation = {
+            "branch": "autonomous/growth",
+            "baseline_fingerprint": "same-baseline",
+            "tracked_files": 100,
+            "python_files": 20,
+            "python_source_lines": 5000,
+            "test_files": 12,
+            "working_tree_clean": True,
+        }
+        state["environment_snapshots"] = [dict(observation, cycle=20)]
+
+        with tempfile.TemporaryDirectory() as temp:
+            store = StateStore(Path(temp) / "organism.json")
+            core = AgentCore(store)
+            prediction = core._make_prediction(
+                state,
+                observation,
+                "2026-10-02T00:00:00+00:00",
+            )
+            state["predictions"].append(prediction)
+            core._create_prediction_experiment(
+                state,
+                prediction,
+                "2026-10-02T00:00:00+00:00",
+            )
+            store.save(state)
+
+            event = core.cycle(
+                observation=observation,
+                strict_experiment_admission=True,
+            )
+            after = store.load()
+
+        resolved_prediction = next(
+            item
+            for item in after["predictions"]
+            if item["id"] == prediction["id"]
+        )
+        self.assertEqual(resolved_prediction["status"], "confirmed")
+        self.assertEqual(event["drives"]["evidence_hunger"], 0.0)
+        self.assertFalse(event["agenda_decision"]["foreground_changed"])
+        self.assertIsNone(event["agenda_decision"]["resumed_thread_id"])
+        self.assertEqual(
+            event["agenda_decision"]["selected_thread_id"],
+            frontier_thread_id,
+        )
+        self.assertEqual(after["agenda"]["genuine_resumption_count"], 0)
+
+    def test_phase42_real_cycle_prediction_error_interrupts_and_frontier_resumes(self) -> None:
+        state = initial_state()
+        state["cycles"] = 20
+        state["generation"] = 20
+        state["agenda"]["started_cycle"] = 19
+        state["metrics"].update(
+            {
+                "continuity": 1.0,
+                "self_model": 1.0,
+                "open_endedness": 0.1,
+            }
+        )
+        replication = {
+            "id": "Q_CYCLE_REPLICATION",
+            "text": (
+                "Will measured repository fields remain unchanged until the next "
+                "self-observation unless an intervening code change alters the baseline?"
+            ),
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 20,
+            "last_selected_cycle": 19,
+            "source": "repository_stability_prediction",
+        }
+        frontier = {
+            "id": "Q_CYCLE_FRONTIER",
+            "text": (
+                "Which distinct measurable relationship should be tested next to "
+                "challenge or extend the learned "
+                "repository_stability_without_intervention pattern?"
+            ),
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 5,
+            "last_selected_cycle": 18,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": [
+                "P_HIST_1",
+                "R_HIST_1",
+                "P_HIST_2",
+                "R_HIST_2",
+                "P_HIST_3",
+                "R_HIST_3",
+                "P_HIST_4",
+                "R_HIST_4",
+                "P_HIST_5",
+                "R_HIST_5",
+                "P_HIST_6",
+                "R_HIST_6",
+            ],
+        }
+        state["questions"] = [replication, frontier]
+        state["experiments"] = [
+            {
+                "id": f"X{index:06d}",
+                "cycle": index,
+                "question_id": replication["id"],
+                "status": "completed",
+                "learning_family": REPOSITORY_STABILITY_FAMILY,
+                "observed_prediction_status": "confirmed",
+                "evidence_refs": [f"P_HIST_{index}", f"R_HIST_{index}"],
+            }
+            for index in range(1, 7)
+        ]
+        state["empirical_learning"]["families"][
+            REPOSITORY_STABILITY_FAMILY
+        ] = {
+            "family": REPOSITORY_STABILITY_FAMILY,
+            "completed_trials": 6,
+            "evaluable_trials": 6,
+            "stable_observations": 6,
+            "change_observations": 0,
+            "inconclusive_trials": 0,
+            "stability_rate": 1.0,
+            "next_expected_status": "confirmed",
+            "experiment_refs": [f"X{index:06d}" for index in range(1, 7)],
+            "evidence_refs": list(frontier["source_evidence_refs"]),
+        }
+        first = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=20,
+        )
+        self.assertIsNotNone(first)
+        frontier_thread_id = first["selected_thread_id"]
+
+        baseline_observation = {
+            "branch": "autonomous/growth",
+            "baseline_fingerprint": "same-baseline",
+            "tracked_files": 100,
+            "python_files": 20,
+            "python_source_lines": 5000,
+            "test_files": 12,
+            "working_tree_clean": True,
+        }
+        changed_observation = dict(
+            baseline_observation,
+            branch="diagnostic/alternate-context",
+        )
+        state["environment_snapshots"] = [
+            dict(baseline_observation, cycle=20)
+        ]
+
+        with tempfile.TemporaryDirectory() as temp:
+            store = StateStore(Path(temp) / "organism.json")
+            core = AgentCore(store)
+            prediction = core._make_prediction(
+                state,
+                baseline_observation,
+                "2026-10-02T00:00:00+00:00",
+            )
+            state["predictions"].append(prediction)
+            core._create_prediction_experiment(
+                state,
+                prediction,
+                "2026-10-02T00:00:00+00:00",
+            )
+            store.save(state)
+
+            interrupted = core.cycle(
+                observation=changed_observation,
+                strict_experiment_admission=True,
+            )
+            after_interrupt = store.load()
+            resumed = core.cycle(
+                observation=changed_observation,
+                strict_experiment_admission=True,
+            )
+            after_resume = store.load()
+
+        self.assertEqual(interrupted["drives"]["prediction_error"], 1.0)
+        self.assertTrue(interrupted["agenda_decision"]["foreground_changed"])
+        self.assertIn(
+            frontier_thread_id,
+            interrupted["agenda_decision"]["suspended_thread_ids"],
+        )
+        self.assertNotEqual(
+            interrupted["agenda_decision"]["selected_thread_id"],
+            frontier_thread_id,
+        )
+        self.assertEqual(
+            after_interrupt["agenda"]["genuine_resumption_count"],
+            0,
+        )
+
+        self.assertEqual(
+            resumed["agenda_decision"]["resumed_thread_id"],
+            frontier_thread_id,
+        )
+        self.assertTrue(resumed["agenda_decision"]["foreground_changed"])
+        self.assertTrue(
+            resumed["agenda_decision"][
+                "priority_change_supported_by_new_evidence"
+            ]
+        )
+        self.assertEqual(
+            after_resume["agenda"]["genuine_resumption_count"],
+            1,
+        )
+
     def test_mature_empirical_frontier_feeds_phase42_persistent_agenda(self) -> None:
         state = initial_state()
         state["cycles"] = 20
