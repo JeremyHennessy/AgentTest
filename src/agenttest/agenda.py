@@ -234,12 +234,23 @@ def _candidate_metrics(
     source_provenance_refs = _source_provenance_refs(question)
     progress_refs = _thread_progress_evidence_refs(state, question)
     refs = _evidence_refs(state, question)
-    prior_refs = set(
-        str(ref)
-        for ref in (prior_thread or {}).get("evidence_refs", [])
-        if isinstance(ref, str)
-    )
-    new_refs = [ref for ref in progress_refs if ref not in prior_refs]
+    if prior_thread is None:
+        prior_progress_refs: set[str] = set()
+    elif "thread_progress_evidence_refs" in prior_thread:
+        prior_progress_refs = {
+            str(ref)
+            for ref in prior_thread.get("thread_progress_evidence_refs", [])
+            if isinstance(ref, str)
+        }
+    else:
+        # A v1 thread has no separate progress ledger. Baseline all currently
+        # visible direct progress at migration so the policy upgrade itself
+        # cannot replay historical evidence as newly observed progress.
+        prior_progress_refs = set(progress_refs)
+    new_refs = [
+        ref for ref in progress_refs
+        if ref not in prior_progress_refs
+    ]
 
     legacy_focus_value = AGENDA_CURRENT_EVIDENCE_FOCUS_VALUE if question_id == legacy_question_id else 0.0
     actionability_value = 0.35 if active_path else 0.0
