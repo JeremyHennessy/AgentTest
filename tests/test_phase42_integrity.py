@@ -23,7 +23,7 @@ class Phase42IntegrityTests(unittest.TestCase):
             "source": "repository_stability_prediction",
         }
 
-    def test_prediction_contract_completion_stays_active_during_same_cycle_handoff(self) -> None:
+    def test_only_proposed_linked_work_is_an_active_experiment_path(self) -> None:
         state = initial_state()
         state["cycles"] = 10
         question = self._replication_question()
@@ -33,66 +33,29 @@ class Phase42IntegrityTests(unittest.TestCase):
                 "id": "X000001",
                 "question_id": question["id"],
                 "status": "completed",
-                "completion_source": "prediction_status_contract",
                 "status_history": [
                     {
                         "cycle": 10,
                         "from": "proposed",
                         "to": "completed",
                         "reason": "prediction_status_contract_resolved",
-                        "evidence_refs": ["P000001", "R000001"],
                     }
                 ],
             }
         ]
+
+        self.assertFalse(question_has_active_experiment_path(state, question))
+
+        state["experiments"].append(
+            {
+                "id": "X000002",
+                "question_id": question["id"],
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            }
+        )
 
         self.assertTrue(question_has_active_experiment_path(state, question))
-
-    def test_same_cycle_manual_completion_is_not_treated_as_active_handoff(self) -> None:
-        state = initial_state()
-        state["cycles"] = 10
-        question = self._replication_question()
-        state["questions"] = [question]
-        state["experiments"] = [
-            {
-                "id": "X000001",
-                "question_id": question["id"],
-                "status": "completed",
-                "status_history": [
-                    {
-                        "cycle": 10,
-                        "from": "proposed",
-                        "to": "completed",
-                        "reason": "manual_outcome_recorded",
-                    }
-                ],
-            }
-        ]
-
-        self.assertFalse(question_has_active_experiment_path(state, question))
-
-    def test_previous_cycle_prediction_completion_is_not_kept_active(self) -> None:
-        state = initial_state()
-        state["cycles"] = 11
-        question = self._replication_question()
-        state["questions"] = [question]
-        state["experiments"] = [
-            {
-                "id": "X000001",
-                "question_id": question["id"],
-                "status": "completed",
-                "status_history": [
-                    {
-                        "cycle": 10,
-                        "from": "proposed",
-                        "to": "completed",
-                        "reason": "prediction_status_contract_resolved",
-                    }
-                ],
-            }
-        ]
-
-        self.assertFalse(question_has_active_experiment_path(state, question))
 
     def test_source_provenance_cannot_create_progress_bonus(self) -> None:
         state = initial_state()
