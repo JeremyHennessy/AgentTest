@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .action_lab import initial_action_lab_state
-from .agenda import initial_agenda_state
+from .agenda import ensure_agenda_state, initial_agenda_state
 from .planning_lab import initial_planning_lab_state
 
 SCHEMA_VERSION = 25
@@ -237,9 +237,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
             state.get("cycles", 0) or 0
         )
 
-    agenda = state["agenda"]
-    for key, value in initial_agenda_state().items():
-        agenda.setdefault(key, value)
+    agenda = ensure_agenda_state(state)
     if (
         prior_schema_version < 25
         and agenda.get("started_cycle") is None

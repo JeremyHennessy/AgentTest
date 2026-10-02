@@ -7,7 +7,6 @@ from pathlib import Path
 from agenttest.agenda import (
     AGENDA_MAX_DECISIONS,
     AGENDA_MAX_THREADS,
-    ensure_agenda_state,
     update_agenda,
 )
 from agenttest.core import AgentCore
@@ -317,10 +316,42 @@ class PersistentAgendaTests(unittest.TestCase):
             }
         ]
 
-        agenda = ensure_agenda_state(state)
+        agenda = migrate_state(state)["agenda"]
 
         self.assertEqual(agenda["genuine_resumption_count"], 0)
         self.assertIsNone(agenda["last_genuine_resumption"])
+
+    def test_migration_backfills_retained_genuine_resumption(self) -> None:
+        state = self._state()
+        state["agenda"].pop("genuine_resumption_count", None)
+        state["agenda"].pop("last_genuine_resumption", None)
+        state["agenda"]["decisions"] = [
+            {
+                "id": "AD000007",
+                "cycle": 16,
+                "foreground_changed": True,
+                "previous_foreground_thread_id": "AT000002",
+                "selected_thread_id": "AT000001",
+                "resumed_thread_id": "AT000001",
+                "priority_change_supported_by_new_evidence": True,
+                "selected": {
+                    "question_id": "Q000001",
+                    "new_evidence_refs": ["P000007", "R000007"],
+                },
+            }
+        ]
+
+        agenda = migrate_state(state)["agenda"]
+
+        self.assertEqual(agenda["genuine_resumption_count"], 1)
+        self.assertEqual(
+            agenda["last_genuine_resumption"]["decision_id"],
+            "AD000007",
+        )
+        self.assertEqual(
+            agenda["last_genuine_resumption"]["new_evidence_refs"],
+            ["P000007", "R000007"],
+        )
 
     def test_new_evidence_backed_core_question_can_interrupt_and_frontier_can_resume(self) -> None:
         state = self._state()
