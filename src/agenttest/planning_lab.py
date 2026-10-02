@@ -14,13 +14,14 @@ from .action_lab import (
     validate_action_lab_history,
 )
 
-PLANNING_LAB_VERSION = "persistent-planning-lab-v8"
+PLANNING_LAB_VERSION = "persistent-planning-lab-v9"
 CURIOSITY_POLICY_VERSION = "evidence-valued-curiosity-v1"
 EPISODIC_MEMORY_VERSION = "episodic-route-memory-v1"
 TRANSFER_POLICY_VERSION = "bounded-transfer-v1"
 SELF_EXPERIMENT_POLICY_VERSION = "self-generated-falsifiable-experiment-v1"
 OBJECTIVE_SELECTION_POLICY_VERSION = "bounded-objective-selection-v1"
 OBJECTIVE_REALIZATION_POLICY_VERSION = "objective-information-realization-v1"
+OUTCOME_AWARE_OBJECTIVE_POLICY_VERSION = "outcome-aware-objective-valuation-v1"
 EPISODIC_MEMORY_MAX_ENTRIES = 64
 EPISODIC_MEMORY_MAX_DECISIONS = 128
 EPISODIC_MEMORY_MAX_ROUTE_CANDIDATES = 24
@@ -36,6 +37,8 @@ OBJECTIVE_SELECTION_MIN_RECOVERED_EXPERIMENTS = 2
 OBJECTIVE_SELECTION_COOLDOWN_CYCLES = 12
 OBJECTIVE_SELECTION_MAX_DECISIONS = 128
 OBJECTIVE_REALIZATION_MAX_RECORDS = 128
+OUTCOME_VALUATION_MIN_REALIZATIONS = 3
+OUTCOME_VALUATION_MIN_ACTIONS = 2
 MIN_MODEL_SAMPLES = 2
 PREFERRED_MIN_PLAN_STEPS = 3
 PREFERRED_MAX_PLAN_STEPS = 4
@@ -71,6 +74,7 @@ def initial_planning_lab_state() -> dict[str, Any]:
         "objective_realization_decisions": [],
         "objective_realizations": [],
         "active_objective_realization_id": None,
+        "outcome_valuation_started_cycle": None,
         "world_version": STATEFUL_WORLD_VERSION,
         "goals": [],
         "plans": [],
@@ -1633,6 +1637,121 @@ def _objective_candidate_metrics(
     }
 
 
+def _objective_outcome_metrics(
+    lab: dict[str, Any],
+    *,
+    target: tuple[int, int],
+    base_metrics: dict[str, Any],
+) -> dict[str, Any]:
+    """Estimate future objective value from persisted Phase 40 outcomes only."""
+
+    target_list = [int(target[0]), int(target[1])]
+    learned = lab.get("learned_effects", {})
+    state_effects = lab.get("state_effects", {})
+    observations = lab.get("transition_observations", [])
+
+    realization_action = None
+    for action in ACTION_ORDER:
+        key = _state_action_key(target, action)
+        if int(state_effects.get(key, {}).get("samples", 0) or 0) != 0:
+            continue
+        general = learned.get(action, {})
+        delta = general.get("modal_delta")
+        if (
+            int(general.get("unblocked_samples", 0) or 0) < MIN_MODEL_SAMPLES
+            or float(general.get("confidence", 0.0) or 0.0) <= 0.0
+            or not isinstance(delta, list)
+            or len(delta) != 2
+        ):
+            continue
+        source_refs = [
+            str(item.get("source_id") or "")
+            for item in observations
+            if (
+                item.get("action") == action
+                and item.get("blocked") is False
+                and item.get("delta") == delta
+                and item.get("source_id")
+            )
+        ]
+        if source_refs:
+            realization_action = action
+            break
+
+    outcome_records = [
+        item
+        for item in lab.get("objective_realizations", [])
+        if (
+            realization_action is not None
+            and item.get("action") == realization_action
+            and item.get("id")
+            and isinstance(item.get("realized_information_gain"), (int, float))
+        )
+    ]
+    outcome_refs = [
+        str(item.get("id") or "")
+        for item in outcome_records
+        if item.get("id")
+    ][-16:]
+    evidence_count = len(outcome_records)
+    mean_realized_gain = round(
+        (
+            sum(float(item.get("realized_information_gain", 0.0) or 0.0) for item in outcome_records)
+            / evidence_count
+        )
+        if evidence_count
+        else 0.0,
+        6,
+    )
+    evidence_weight = round(
+        evidence_count / (evidence_count + 1),
+        6,
+    ) if evidence_count else 0.0
+    outcome_value = round(mean_realized_gain * evidence_weight, 6)
+    refutation_count = sum(
+        1
+        for item in outcome_records
+        if item.get("interpretation") == "hypothesis_refuted"
+    )
+    refutation_rate = round(
+        refutation_count / evidence_count,
+        6,
+    ) if evidence_count else 0.0
+    base_score = float(base_metrics.get("objective_score", 0.0) or 0.0)
+    return {
+        **base_metrics,
+        "phase40_realization_action": realization_action,
+        "phase40_outcome_evidence_count": evidence_count,
+        "phase40_outcome_refs": outcome_refs,
+        "mean_realized_information_gain": mean_realized_gain,
+        "outcome_evidence_weight": evidence_weight,
+        "outcome_value": outcome_value,
+        "outcome_refutation_rate": refutation_rate,
+        "outcome_adjusted_score": round(base_score + outcome_value, 6),
+        "outcome_target": target_list,
+    }
+
+
+def _outcome_valuation_ready(lab: dict[str, Any], cycle: int) -> bool:
+    started = lab.get("outcome_valuation_started_cycle")
+    if started is None or cycle <= int(started or 0):
+        return False
+    outcomes = [
+        item
+        for item in lab.get("objective_realizations", [])
+        if (
+            item.get("id")
+            and isinstance(item.get("realized_information_gain"), (int, float))
+            and item.get("action") in ACTION_ORDER
+        )
+    ]
+    actions = {str(item.get("action")) for item in outcomes}
+    return (
+        len(outcomes) >= OUTCOME_VALUATION_MIN_REALIZATIONS
+        and len(actions) >= OUTCOME_VALUATION_MIN_ACTIONS
+    )
+
+
 def _latest_pending_objective_realization(lab: dict[str, Any]) -> dict[str, Any] | None:
     active_id = lab.get("active_objective_realization_id")
     if not active_id:
@@ -1678,7 +1797,7 @@ def _select_objective_realization(
             goal.get("status") == "completed"
             and int(goal.get("assigned_cycle", 0) or 0) > int(started or 0)
             and goal.get("selection", {}).get("kind")
-            == "self_selected_bounded_objective"
+            in {"self_selected_bounded_objective", "outcome_aware_bounded_objective"}
             and str(goal.get("id") or "") not in realized_goal_ids
         )
     ]
@@ -1690,7 +1809,10 @@ def _select_objective_realization(
     objective_decision = decisions_by_id.get(
         str(selection.get("objective_decision_id") or "")
     )
-    if not objective_decision or objective_decision.get("changed_choice") is not True:
+    if not objective_decision or not (
+        objective_decision.get("changed_choice") is True
+        or objective_decision.get("outcome_changed_choice") is True
+    ):
         return None
 
     _rebuild_model(lab)
@@ -1996,58 +2118,162 @@ def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
                 )
             )
         scored.sort(key=lambda item: item[:5])
-        selected_item = scored[0][5]
-        selected_metrics = scored[0][6]
+        phase39_item = scored[0][5]
+        phase39_metrics = scored[0][6]
+        selected_item = phase39_item
+        selected_metrics = phase39_metrics
+        outcome_changed_choice = False
+        outcome_decision_margin = 0.0
+        outcome_policy_ready = _outcome_valuation_ready(lab, cycle)
+
+        outcome_scored: list[
+            tuple[
+                float,
+                int,
+                int,
+                int,
+                int,
+                tuple[int, int, int, int, list[str], list[list[int]]],
+                dict[str, Any],
+            ]
+        ] = []
+        if outcome_policy_ready:
+            for item in pool:
+                visit_count, distance, x, y, _, _ = item
+                base_metrics = _objective_candidate_metrics(
+                    lab,
+                    target=(x, y),
+                    visit_count=visit_count,
+                    distance=distance,
+                )
+                metrics = _objective_outcome_metrics(
+                    lab,
+                    target=(x, y),
+                    base_metrics=base_metrics,
+                )
+                outcome_scored.append(
+                    (
+                        -float(metrics["outcome_adjusted_score"]),
+                        visit_count,
+                        -distance,
+                        x,
+                        y,
+                        item,
+                        metrics,
+                    )
+                )
+            outcome_scored.sort(key=lambda item: item[:5])
+            outcome_item = outcome_scored[0][5]
+            outcome_metrics = outcome_scored[0][6]
+            phase39_outcome_metrics = _objective_outcome_metrics(
+                lab,
+                target=(phase39_item[2], phase39_item[3]),
+                base_metrics=phase39_metrics,
+            )
+            outcome_decision_margin = round(
+                float(outcome_metrics["outcome_adjusted_score"])
+                - float(phase39_outcome_metrics["outcome_adjusted_score"]),
+                6,
+            )
+            outcome_changed_choice = (
+                [outcome_item[2], outcome_item[3]]
+                != [phase39_item[2], phase39_item[3]]
+                and outcome_decision_margin > 0.0
+            )
+            if outcome_changed_choice:
+                selected_item = outcome_item
+                selected_metrics = outcome_metrics
+            else:
+                selected_metrics = phase39_outcome_metrics
+
         counterfactual_metrics = _objective_candidate_metrics(
             lab,
             target=(counterfactual[2], counterfactual[3]),
             visit_count=counterfactual[0],
             distance=counterfactual[1],
         )
-        decision_margin = round(
-            float(selected_metrics["objective_score"])
-            - float(counterfactual_metrics["objective_score"]),
-            6,
-        )
+        if outcome_policy_ready:
+            counterfactual_for_margin = _objective_outcome_metrics(
+                lab,
+                target=(counterfactual[2], counterfactual[3]),
+                base_metrics=counterfactual_metrics,
+            )
+            selected_score = float(selected_metrics["outcome_adjusted_score"])
+            counterfactual_score = float(
+                counterfactual_for_margin["outcome_adjusted_score"]
+            )
+        else:
+            selected_score = float(selected_metrics["objective_score"])
+            counterfactual_score = float(counterfactual_metrics["objective_score"])
+        decision_margin = round(selected_score - counterfactual_score, 6)
         changed_choice = (
             [selected_item[2], selected_item[3]]
             != [counterfactual[2], counterfactual[3]]
             and decision_margin > 0.0
         )
-        if changed_choice:
+        if changed_choice or outcome_changed_choice:
             chosen = selected_item
 
         top_candidates = [
             entry[6]
-            for entry in scored[: min(5, len(scored))]
+            for entry in (
+                outcome_scored
+                if outcome_policy_ready
+                else scored
+            )[: min(5, len(scored))]
         ]
+        outcome_refs = sorted(
+            {
+                ref
+                for metrics in top_candidates
+                for ref in metrics.get("phase40_outcome_refs", [])
+            }
+        )
         objective_decision = {
             "id": f"OD{len(lab.get('objective_decisions', [])) + 1:06d}",
             "cycle": cycle,
-            "policy_version": OBJECTIVE_SELECTION_POLICY_VERSION,
+            "policy_version": (
+                OUTCOME_AWARE_OBJECTIVE_POLICY_VERSION
+                if outcome_policy_ready
+                else OBJECTIVE_SELECTION_POLICY_VERSION
+            ),
             "status": (
-                "objective_changed_choice"
-                if changed_choice
-                else "counterfactual_retained"
+                "outcome_evidence_changed_choice"
+                if outcome_changed_choice
+                else (
+                    "objective_changed_choice"
+                    if changed_choice
+                    else "counterfactual_retained"
+                )
             ),
             "changed_choice": changed_choice,
+            "outcome_changed_choice": outcome_changed_choice,
             "candidate_count": len(pool),
             "counterfactual_policy": "least_visited_farthest_reachable",
             "counterfactual": counterfactual_metrics,
+            "phase39_counterfactual": phase39_metrics,
             "selected": (
                 selected_metrics
-                if changed_choice
+                if (changed_choice or outcome_changed_choice)
                 else counterfactual_metrics
             ),
             "best_scored_candidate": selected_metrics,
             "decision_margin": decision_margin,
+            "outcome_decision_margin": outcome_decision_margin,
+            "outcome_evidence_refs": outcome_refs,
             "phase38_recovery_refs": recovered_experiment_refs[
                 -OBJECTIVE_SELECTION_MIN_RECOVERED_EXPERIMENTS:
             ],
             "candidate_summaries": top_candidates,
             "rationale": (
-                "Prefer a reachable bounded objective with greater evidence value "
-                "after accounting for travel cost and remembered familiarity."
+                "Use measured Phase 40 information outcomes to adjust the "
+                "existing bounded objective valuation while preserving the "
+                "Phase 39 choice as an explicit counterfactual."
+                if outcome_policy_ready
+                else (
+                    "Prefer a reachable bounded objective with greater evidence value "
+                    "after accounting for travel cost and remembered familiarity."
+                )
             ),
         }
         lab.setdefault("objective_decisions", []).append(objective_decision)
@@ -2058,12 +2284,19 @@ def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
 
     visit_count, distance, x, y, _, _ = chosen
     selection_kind = (
-        "self_selected_bounded_objective"
+        "outcome_aware_bounded_objective"
         if (
             objective_decision is not None
-            and objective_decision.get("changed_choice") is True
+            and objective_decision.get("outcome_changed_choice") is True
         )
-        else "least_visited_farthest_reachable"
+        else (
+            "self_selected_bounded_objective"
+            if (
+                objective_decision is not None
+                and objective_decision.get("changed_choice") is True
+            )
+            else "least_visited_farthest_reachable"
+        )
     )
     goal = {
         "id": f"PG{len(lab.get('goals', [])) + 1:06d}",
