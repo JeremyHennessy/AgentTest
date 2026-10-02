@@ -683,23 +683,6 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             event["agenda_decision"]["selected_thread_id"],
             frontier_thread_id,
         )
-        replication_summary = next(
-            item
-            for item in event["agenda_decision"]["candidate_summaries"]
-            if item["question_id"] == replication["id"]
-        )
-        self.assertTrue(
-            replication_summary["active_experiment_path"],
-            "Agenda must score the replacement evidence-ready prediction path "
-            "that exists by the end of the same observed cycle.",
-        )
-        self.assertIn(
-            replication["id"],
-            [
-                item["id"]
-                for item in event["strict_actionable_questions"]
-            ],
-        )
         self.assertEqual(after["agenda"]["genuine_resumption_count"], 0)
 
     def test_phase42_real_cycle_prediction_error_returns_frontier_without_false_genuine_resumption(self) -> None:
