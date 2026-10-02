@@ -17,7 +17,7 @@ PYTHONPATH=src python -m agenttest interact \
   "What changed since the last cycle?"
 ```
 
-`--cognition` only uses a configured provider. If no provider is available, the interaction remains fully functional through the deterministic evidence loop.
+Live GitHub interaction uses the deterministic evidence loop only; it does not call an external model or require an API key.
 
 ## GitHub-native channel
 
