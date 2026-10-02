@@ -270,7 +270,7 @@ function planningPhaseNumber(lab){
  return match?32+Number(match[1]):((lab?.executions||[]).length?33:32)
 }
 function phaseLabel(n){
- const labels={32:"learned actions",33:"persistent planning",34:"learned from surprise",35:"tested uncertainty",36:"episodic memory",37:"knowledge transfer",38:"self-generated experiments",39:"self-selected objectives",40:"realized information"};
+ const labels={32:"learned actions",33:"persistent planning",34:"learned from surprise",35:"tested uncertainty",36:"episodic memory",37:"knowledge transfer",38:"self-generated experiments",39:"self-selected objectives",40:"realized information",41:"outcome-aware objectives"};
  return labels[n]||"active capability"
 }
 function phase38RecoveryCount(lab){
@@ -287,7 +287,9 @@ function renderNow(o){
  const nextAction=step<actions.length?actions[step]:null,nextState=step<states.length?states[step]:null;
  const selfTests=lab.self_experiments||[],latestTest=selfTests[selfTests.length-1]||{},recoveries=phase38RecoveryCount(lab),currentPhase=planningPhaseNumber(lab);
  const question=(o.questions||[]).slice().sort((x,y)=>(y.last_selected_cycle||y.created_cycle||0)-(x.last_selected_cycle||x.created_cycle||0))[0]||{};
- const reason=plan.memory_influenced?"Past route memory helped choose this route.":plan.reason==="replan_after_invalidation"?"Ora rebuilt this route after an experiment changed its position.":"This route follows Ora’s learned model.";
+ const objectiveDecision=(lab.objective_decisions||[]).find(d=>d.id===goal.selection?.objective_decision_id)||{};
+ const routeReason=plan.memory_influenced?"Past route memory helped choose this route.":plan.reason==="replan_after_invalidation"?"Ora rebuilt this route after an experiment changed its position.":"This route follows Ora’s learned model.";
+ const reason=objectiveDecision.outcome_changed_choice===true?"Prior measured outcomes changed this goal from "+vec(objectiveDecision.phase39_counterfactual?.target)+" to "+vec(objectiveDecision.selected?.target)+". "+routeReason:routeReason;
  let story;
  if(goal.id&&plan.id){
   story="Ora is at "+vec(lab.position)+" and moving toward "+vec(goal.target)+". "+(remaining?remaining+" planned step"+(remaining===1?"":"s")+" remain"+(remaining===1?"s":"")+", with "+nextAction+" next. ":"")+" "+reason;
@@ -327,17 +329,24 @@ function renderNow(o){
  const phase32=(o.action_lab?.history||[]).some(x=>x.decision?.kind==="use_learned_transition");
  const p39changed=(lab.objective_decisions||[]).filter(x=>x.changed_choice),p39completed=p39changed.filter(x=>(lab.goals||[]).some(g=>g.selection?.objective_decision_id===x.id&&g.status==="completed"));
  const p40=lab.objective_realizations||[];
- const evidence={32:phase32,33:(lab.plans||[]).some(x=>x.status==="completed"),34:(lab.model_revisions||[]).length>0,35:(lab.curiosity_probes||[]).length>0,36:changed,37:(lab.transfer_probes||[]).length>0,38:selfTests.length>0&&recoveries>0,39:p39completed.length>0,40:p40.length>0};
+ const p41changed=(lab.objective_decisions||[]).filter(x=>x.outcome_changed_choice===true),p41completed=p41changed.filter(x=>(lab.goals||[]).some(g=>g.selection?.objective_decision_id===x.id&&g.status==="completed"));
+ const evidence={32:phase32,33:(lab.plans||[]).some(x=>x.status==="completed"),34:(lab.model_revisions||[]).length>0,35:(lab.curiosity_probes||[]).length>0,36:changed,37:(lab.transfer_probes||[]).length>0,38:selfTests.length>0&&recoveries>0,39:p39completed.length>0,40:p40.length>0,41:p41completed.length>0};
  const maxPhase=Math.max(40,currentPhase);
  const chips=[];
  for(let n=32;n<=maxPhase;n++)chips.push([n,phaseLabel(n),Boolean(evidence[n]),n===currentPhase]);
  el("capabilityLadder").innerHTML=chips.map(([n,label,done,latest])=>'<span class="phase-chip '+(done?'done ':'')+(latest?'latest':'')+'"><span class="p-dot"></span>Phase '+n+' · '+esc(label)+'</span>').join("");
 
- const p38passed=selfTests.length>0&&recoveries>0,p40passed=p40.length>0,p39passed=p39completed.length>0;
- const milestonePassed=currentPhase>=40?p40passed:currentPhase>=39?p39passed:p38passed;
+ const p38passed=selfTests.length>0&&recoveries>0,p40passed=p40.length>0,p39passed=p39completed.length>0,p41passed=p41completed.length>0;
+ const milestonePassed=currentPhase>=41?p41passed:currentPhase>=40?p40passed:currentPhase>=39?p39passed:p38passed;
  el("milestoneStatus").textContent=milestonePassed?"passed":"gathering evidence";el("milestoneStatus").className="pill "+(milestonePassed?"good":"blue");
  el("milestonePhase").textContent="Phase "+currentPhase;
- if(currentPhase>=40&&p40passed){
+ if(currentPhase>=41&&p41passed){
+  el("milestoneTitle").textContent="Past measured outcomes changed what Ora chose to pursue.";
+  el("milestoneCopy").textContent="Ora preserved its Phase 39 objective as a counterfactual, used persisted Phase 40 realization evidence to select a different bounded goal, and then completed that outcome-driven objective.";
+ }else if(currentPhase>=41){
+  el("milestoneTitle").textContent="Outcome-aware objective valuation is active.";
+  el("milestoneCopy").textContent="Ora can now compare its Phase 39 choice with a valuation adjusted by persisted Phase 40 outcomes. Phase 41 remains unpassed until that evidence naturally changes a goal and the goal completes.";
+ }else if(currentPhase>=40&&p40passed){
   el("milestoneTitle").textContent="Ora turned a chosen objective into measured information.";
   el("milestoneCopy").textContent="It precommitted a prediction and falsifier after reaching a self-selected goal, performed one bounded evidence-gathering action, and measured expected versus realized information gain.";
  }else if(currentPhase>=39&&p39passed){
@@ -350,8 +359,8 @@ function renderNow(o){
   el("milestoneTitle").textContent=phaseLabel(currentPhase);
   el("milestoneCopy").textContent="Ora is accumulating natural evidence for its newest capability.";
  }
- el("milestoneTests").textContent=String(currentPhase>=40?p40.length:currentPhase>=39?p39changed.length:selfTests.length);
- el("milestoneRecoveries").textContent=String(currentPhase>=40?p40.filter(x=>(+x.realized_information_gain||0)>0).length:currentPhase>=39?p39completed.length:recoveries);
+ el("milestoneTests").textContent=String(currentPhase>=41?p41changed.length:currentPhase>=40?p40.length:currentPhase>=39?p39changed.length:selfTests.length);
+ el("milestoneRecoveries").textContent=String(currentPhase>=41?p41completed.length:currentPhase>=40?p40.filter(x=>(+x.realized_information_gain||0)>0).length:currentPhase>=39?p39completed.length:recoveries);
 }
 function renderActionLab(o){
  const lab=o.action_lab||{},pl=o.planning_lab||{},planningActive=pl.bootstrapped_cycle!=null||(pl.executions||[]).length>0;
@@ -485,15 +494,19 @@ function renderSelfExperiment(o){
  el("selfExperimentHistory").innerHTML=tail(tests,4).map(t=>'<span class="pred '+(t.matched_prediction?'confirmed':'violated')+'">'+esc(t.id)+" · C"+esc(t.cycle)+" · "+esc(pretty(t.interpretation||"observed"))+"</span>").join("");
 }
 function renderObjectiveSelection(o){
- const lab=o.planning_lab||{},decisions=lab.objective_decisions||[],goals=lab.goals||[];
- const d=decisions[decisions.length-1]||{},changed=decisions.filter(x=>x.changed_choice),completed=changed.filter(x=>goals.some(g=>g.selection?.objective_decision_id===x.id&&g.status==="completed"));
- el("objectiveStatus").textContent=completed.length?"natural gate passed":changed.length?"choice changed":"waiting for natural evidence";el("objectiveStatus").className="pill "+(completed.length?"good":changed.length?"warn":"blue");
+ const lab=o.planning_lab||{},decisions=lab.objective_decisions||[],goals=lab.goals||[],currentPhase=planningPhaseNumber(lab);
+ const d=decisions[decisions.length-1]||{},changed=decisions.filter(x=>x.changed_choice||x.outcome_changed_choice),completed=changed.filter(x=>goals.some(g=>g.selection?.objective_decision_id===x.id&&g.status==="completed"));
+ const phase41Changed=decisions.filter(x=>x.outcome_changed_choice===true),phase41Completed=phase41Changed.filter(x=>goals.some(g=>g.selection?.objective_decision_id===x.id&&g.status==="completed"));
+ const gateChanged=currentPhase>=41?phase41Changed:changed,gateCompleted=currentPhase>=41?phase41Completed:completed;
+ el("objectiveStatus").textContent=gateCompleted.length?"natural gate passed":gateChanged.length?"outcome evidence changed choice":currentPhase>=41?"waiting for Phase 41 natural choice":"waiting for natural evidence";el("objectiveStatus").className="pill "+(gateCompleted.length?"good":gateChanged.length?"warn":"blue");
  el("objectiveDecisionCount").textContent=decisions.length;el("objectiveChangedCount").textContent=changed.length;el("objectiveCompletedCount").textContent=completed.length;
- el("objectiveSelected").textContent=d.id?vec(d.selected?.target)+" · score "+Number(d.selected?.objective_score||0).toFixed(3):"—";
- el("objectiveCounterfactual").textContent=d.id?vec(d.counterfactual?.target)+" · score "+Number(d.counterfactual?.objective_score||0).toFixed(3):"—";
- el("objectiveMargin").textContent=d.id?Number(d.decision_margin||0).toFixed(3):"—";
- el("objectiveEvidenceValue").textContent=d.id?"information "+Number(d.selected?.information_value||0).toFixed(3)+" · unseen actions "+Number(d.selected?.unseen_target_actions||0):"—";
- el("objectiveHistory").innerHTML=tail(decisions,4).map(x=>'<span class="pred '+(x.changed_choice?'confirmed':'pending')+'">'+esc(x.id)+" · "+esc(x.changed_choice?"changed objective":"control retained")+" · "+esc(vec(x.selected?.target))+"</span>").join("");
+ const selectedScore=d.outcome_changed_choice?d.selected?.outcome_adjusted_score:d.selected?.objective_score;
+ el("objectiveSelected").textContent=d.id?vec(d.selected?.target)+" · "+(d.outcome_changed_choice?"outcome-adjusted ":"")+"score "+Number(selectedScore||0).toFixed(3):"—";
+ const control=d.outcome_changed_choice?d.phase39_counterfactual:d.counterfactual;
+ el("objectiveCounterfactual").textContent=d.id?(d.outcome_changed_choice?"Phase 39 ":"")+vec(control?.target)+" · score "+Number(control?.objective_score||0).toFixed(3):"—";
+ el("objectiveMargin").textContent=d.id?Number(d.outcome_changed_choice?d.outcome_decision_margin:d.decision_margin||0).toFixed(3):"—";
+ el("objectiveEvidenceValue").textContent=d.id&&d.outcome_changed_choice?"Phase 40 outcomes "+Number(d.selected?.phase40_outcome_evidence_count||0)+" · mean gain "+Number(d.selected?.mean_realized_information_gain||0).toFixed(2)+" · refs "+(d.selected?.phase40_outcome_refs||[]).join(", "):d.id?"information "+Number(d.selected?.information_value||0).toFixed(3)+" · unseen actions "+Number(d.selected?.unseen_target_actions||0):"—";
+ el("objectiveHistory").innerHTML=tail(decisions,4).map(x=>{const changed=x.changed_choice||x.outcome_changed_choice,label=x.outcome_changed_choice?"outcomes changed objective":x.changed_choice?"changed objective":"control retained";return '<span class="pred '+(changed?'confirmed':'pending')+'">'+esc(x.id)+" · "+esc(label)+" · "+esc(vec(x.selected?.target))+"</span>"}).join("");
 }
 function renderObjectiveRealization(o){
  const lab=o.planning_lab||{},decisions=lab.objective_realization_decisions||[],runs=lab.objective_realizations||[];
