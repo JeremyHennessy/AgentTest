@@ -4,7 +4,10 @@ import unittest
 
 import agenttest.planning_lab as planning_lab
 from agenttest.action_lab import ACTION_ORDER, BOUNDS, STATEFUL_WORLD_VERSION
+from agenttest.agenda import update_agenda
+from agenttest.learning import REPOSITORY_STABILITY_FAMILY
 from agenttest.planning_lab import initial_planning_lab_state
+from agenttest.state import initial_state
 
 
 # Cross-phase sanity checks belong here. A new capability that consumes the
@@ -348,6 +351,94 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             goal["selection"]["kind"],
             "outcome_aware_bounded_objective",
         )
+
+    def test_mature_empirical_frontier_feeds_phase42_persistent_agenda(self) -> None:
+        state = initial_state()
+        state["cycles"] = 20
+        state["generation"] = 20
+        state["agenda"]["started_cycle"] = 19
+        state["empirical_learning"]["families"][
+            REPOSITORY_STABILITY_FAMILY
+        ] = {
+            "family": REPOSITORY_STABILITY_FAMILY,
+            "completed_trials": 6,
+            "evaluable_trials": 6,
+            "stable_observations": 6,
+            "change_observations": 0,
+            "inconclusive_trials": 0,
+            "stability_rate": 1.0,
+            "next_expected_status": "confirmed",
+            "experiment_refs": [],
+            "evidence_refs": [
+                "P_HANDOFF_1",
+                "R_HANDOFF_1",
+                "P_HANDOFF_2",
+                "R_HANDOFF_2",
+                "P_HANDOFF_3",
+                "R_HANDOFF_3",
+            ],
+        }
+        replication = {
+            "id": "Q_HANDOFF_REPLICATION",
+            "text": "Will another comparable observation preserve the stable pattern?",
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 20,
+            "last_selected_cycle": 19,
+            "source": "repository_stability_prediction",
+        }
+        frontier = {
+            "id": "Q_HANDOFF_FRONTIER",
+            "text": (
+                "Which distinct measurable relationship should be tested next "
+                "to challenge or extend the mature empirical pattern?"
+            ),
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 5,
+            "last_selected_cycle": 18,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": [
+                "P_HANDOFF_1",
+                "R_HANDOFF_1",
+                "P_HANDOFF_2",
+                "R_HANDOFF_2",
+            ],
+        }
+        state["questions"] = [replication, frontier]
+        state["experiments"] = [
+            {
+                "id": "X_HANDOFF",
+                "question_id": replication["id"],
+                "status": "proposed",
+                "readiness": "evidence_ready",
+                "learning_family": REPOSITORY_STABILITY_FAMILY,
+                "empirical_basis": state["empirical_learning"]["families"][
+                    REPOSITORY_STABILITY_FAMILY
+                ],
+            }
+        ]
+
+        decision = update_agenda(
+            state,
+            legacy_question=replication,
+            cycle=20,
+        )
+
+        self.assertIsNotNone(decision)
+        self.assertEqual(
+            decision["legacy_counterfactual"]["question_id"],
+            replication["id"],
+        )
+        self.assertEqual(
+            decision["selected"]["question_id"],
+            frontier["id"],
+        )
+        self.assertTrue(decision["changed_choice"])
+        self.assertTrue(decision["evidence_refs"])
+        self.assertGreater(decision["decision_margin"], 0.0)
+        self.assertEqual(len(state["agenda"]["threads"]), 2)
 
 
 if __name__ == "__main__":
