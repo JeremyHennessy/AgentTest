@@ -60,6 +60,8 @@ class PagesInteractionTests(unittest.TestCase):
         self.assertIn("genuine resumptions", page)
         self.assertIn("genuineAgendaResumption", page)
         self.assertIn("agendaGenuineResumptionCount", page)
+        self.assertIn("agendaLifetimeDecisionCount", page)
+        self.assertIn("total agenda decisions", page)
         self.assertIn("genuine_resumption_count", page)
         self.assertIn("o?.agenda?.started_cycle", page)
         self.assertIn('id="selfExperimentMarks"', page)
