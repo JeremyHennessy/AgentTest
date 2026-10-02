@@ -192,5 +192,161 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
                 self.assertTrue(precommit["source_observation_refs"])
 
 
+    def test_phase40_realizations_feed_phase41_objective_valuation(self) -> None:
+        lab = initial_planning_lab_state()
+        lab["status"] = "ready"
+        lab["bounds"] = BOUNDS
+        lab["world_version"] = STATEFUL_WORLD_VERSION
+
+        observations: list[dict] = []
+        source_index = 0
+        positions = [
+            [x, y]
+            for x in range(-BOUNDS, BOUNDS + 1)
+            for y in range(-BOUNDS, BOUNDS + 1)
+        ]
+        for action in ACTION_ORDER:
+            delta = _CANONICAL_EFFECTS[action]
+            sources = [
+                before
+                for before in positions
+                if _in_bounds(
+                    [before[0] + delta[0], before[1] + delta[1]]
+                )
+            ][:2]
+            self.assertEqual(len(sources), 2)
+            for before in sources:
+                source_index += 1
+                observations.append(
+                    {
+                        "source": "handoff_sanity",
+                        "source_id": f"P41_GENERAL_{source_index}",
+                        "cycle": 1,
+                        "action": action,
+                        "before": list(before),
+                        "after": [
+                            before[0] + delta[0],
+                            before[1] + delta[1],
+                        ],
+                        "delta": list(delta),
+                        "blocked": False,
+                        "world_version": STATEFUL_WORLD_VERSION,
+                    }
+                )
+
+        observations.extend(
+            [
+                {
+                    "source": "handoff_sanity",
+                    "source_id": "P41_A_NORTH",
+                    "cycle": 1,
+                    "action": "north",
+                    "before": [-2, -1],
+                    "after": [-1, -1],
+                    "delta": [1, 0],
+                    "blocked": False,
+                    "world_version": STATEFUL_WORLD_VERSION,
+                },
+                {
+                    "source": "handoff_sanity",
+                    "source_id": "P41_B_EAST",
+                    "cycle": 1,
+                    "action": "east",
+                    "before": [-2, 2],
+                    "after": [-2, 1],
+                    "delta": [0, -1],
+                    "blocked": False,
+                    "world_version": STATEFUL_WORLD_VERSION,
+                },
+            ]
+        )
+        lab["transition_observations"] = observations
+        planning_lab._rebuild_model(lab)
+
+        phase40_cases = [
+            ("OR_H1", [0, 0], "north", [1, 0]),
+            ("OR_H2", [1, 0], "north", [2, 0]),
+            ("OR_H3", [0, 0], "east", [0, -1]),
+        ]
+        for cycle, (decision_id, state, action, predicted_after) in enumerate(
+            phase40_cases,
+            start=2,
+        ):
+            lab["position"] = list(state)
+            realized = planning_lab._execute_objective_realization(
+                lab,
+                {
+                    "id": decision_id,
+                    "state": list(state),
+                    "action": action,
+                    "predicted_after": list(predicted_after),
+                    "goal_id": f"PG_{decision_id}",
+                    "objective_decision_id": f"OD_{decision_id}",
+                },
+                cycle,
+            )
+            self.assertEqual(realized["realized_information_gain"], 1.0)
+
+        self.assertEqual(
+            [item["action"] for item in lab["objective_realizations"]],
+            ["north", "north", "east"],
+        )
+
+        lab["position"] = [0, 0]
+        lab["visit_counts"] = {
+            f"{x},{y}": 100
+            for x in range(-BOUNDS, BOUNDS + 1)
+            for y in range(-BOUNDS, BOUNDS + 1)
+        }
+        lab["visit_counts"]["0,0"] = 1
+        lab["visit_counts"]["-2,-1"] = 0
+        lab["visit_counts"]["-2,2"] = 0
+        lab["goals"] = [
+            {"id": "PG_REC_A", "status": "completed", "target": [1, 0]},
+            {"id": "PG_REC_B", "status": "completed", "target": [0, 1]},
+        ]
+        lab["self_experiments"] = [
+            {
+                "id": "SE_REC_A",
+                "goal_id": "PG_REC_A",
+                "interpretation": "hypothesis_supported",
+            },
+            {
+                "id": "SE_REC_B",
+                "goal_id": "PG_REC_B",
+                "interpretation": "hypothesis_refuted",
+            },
+        ]
+        lab["plans"] = []
+        lab["active_goal_id"] = None
+        lab["active_plan_id"] = None
+        lab["objective_selection_started_cycle"] = 4
+        lab["outcome_valuation_started_cycle"] = 4
+        lab["last_objective_selection_cycle"] = None
+        lab["objective_decisions"] = []
+
+        goal = planning_lab._choose_goal(lab, 5)
+        decision = lab["objective_decisions"][0]
+
+        self.assertIsNotNone(goal)
+        self.assertEqual(
+            decision["phase39_counterfactual"]["target"],
+            [-2, -1],
+        )
+        self.assertEqual(decision["selected"]["target"], [-2, 2])
+        self.assertTrue(decision["outcome_changed_choice"])
+        self.assertEqual(
+            decision["selected"]["phase40_outcome_refs"],
+            [
+                lab["objective_realizations"][0]["id"],
+                lab["objective_realizations"][1]["id"],
+            ],
+        )
+        self.assertEqual(
+            goal["selection"]["kind"],
+            "outcome_aware_bounded_objective",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

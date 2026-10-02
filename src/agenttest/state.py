@@ -8,7 +8,7 @@ from typing import Any
 from .action_lab import initial_action_lab_state
 from .planning_lab import initial_planning_lab_state
 
-SCHEMA_VERSION = 23
+SCHEMA_VERSION = 24
 
 DIMENSIONS = (
     "continuity",
@@ -223,6 +223,14 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         and int(state.get("cycles", 0) or 0) > 0
     ):
         planning_lab["objective_realization_started_cycle"] = int(
+            state.get("cycles", 0) or 0
+        )
+    if (
+        prior_schema_version < 24
+        and planning_lab.get("outcome_valuation_started_cycle") is None
+        and int(state.get("cycles", 0) or 0) > 0
+    ):
+        planning_lab["outcome_valuation_started_cycle"] = int(
             state.get("cycles", 0) or 0
         )
 
