@@ -622,7 +622,7 @@ class PlanningLabTests(unittest.TestCase):
         old["planning_lab"]["self_experiment_started_cycle"] = None
         migrated = migrate_state(old)
 
-        self.assertEqual(migrated["schema_version"], 23)
+        self.assertEqual(migrated["schema_version"], 24)
         self.assertEqual(
             migrated["planning_lab"]["self_experiment_started_cycle"],
             50,
@@ -902,7 +902,7 @@ class PlanningLabTests(unittest.TestCase):
 
         migrated = migrate_state(state)
 
-        self.assertEqual(migrated["schema_version"], 23)
+        self.assertEqual(migrated["schema_version"], 24)
         self.assertEqual(
             migrated["planning_lab"]["objective_selection_started_cycle"],
             50,
@@ -1316,6 +1316,149 @@ class PlanningLabTests(unittest.TestCase):
         self.assertEqual(
             second_goal["selection"]["kind"],
             "least_visited_farthest_reachable",
+        )
+
+    def test_phase41_activation_is_prospective_on_schema24_migration(self) -> None:
+        state = self._phase32_ready_state()
+        lab = ensure_planning_lab_state(state)
+        state["schema_version"] = 23
+        state["cycles"] = 50
+        state["generation"] = 50
+        lab["outcome_valuation_started_cycle"] = None
+
+        migrated = migrate_state(state)
+
+        self.assertEqual(migrated["schema_version"], 24)
+        self.assertEqual(
+            migrated["planning_lab"]["outcome_valuation_started_cycle"],
+            50,
+        )
+
+        migrated["cycles"] = 51
+        migrated["generation"] = 51
+        migrate_state(migrated)
+        self.assertEqual(
+            migrated["planning_lab"]["outcome_valuation_started_cycle"],
+            50,
+        )
+
+    def test_phase41_outcomes_change_objective_choice_with_phase39_counterfactual(self) -> None:
+        state = self._phase32_ready_state()
+        lab = ensure_planning_lab_state(state)
+        self.assertTrue(planning_lab._bootstrap_from_action_lab(state, lab))
+
+        lab["position"] = [0, 0]
+        lab["visit_counts"] = {
+            f"{x},{y}": 100
+            for x in range(-2, 3)
+            for y in range(-2, 3)
+        }
+        lab["visit_counts"]["0,0"] = 1
+        lab["visit_counts"]["-2,-1"] = 0
+        lab["visit_counts"]["-2,2"] = 0
+
+        lab["goals"] = [
+            {"id": "PG_REC_A", "status": "completed", "target": [1, 0]},
+            {"id": "PG_REC_B", "status": "completed", "target": [0, 1]},
+        ]
+        lab["self_experiments"] = [
+            {
+                "id": "SE_REC_A",
+                "goal_id": "PG_REC_A",
+                "interpretation": "hypothesis_supported",
+            },
+            {
+                "id": "SE_REC_B",
+                "goal_id": "PG_REC_B",
+                "interpretation": "hypothesis_refuted",
+            },
+        ]
+        lab["plans"] = []
+        lab["active_goal_id"] = None
+        lab["active_plan_id"] = None
+        lab["objective_selection_started_cycle"] = 8
+        lab["last_objective_selection_cycle"] = None
+        lab["objective_decisions"] = []
+        lab["outcome_valuation_started_cycle"] = 8
+
+        world_version = lab["world_version"]
+        lab["transition_observations"].extend(
+            [
+                {
+                    "source": "phase41_fixture",
+                    "source_id": "P41_A_NORTH",
+                    "cycle": 8,
+                    "action": "north",
+                    "before": [-2, -1],
+                    "after": [-1, -1],
+                    "delta": [1, 0],
+                    "blocked": False,
+                    "world_version": world_version,
+                },
+                {
+                    "source": "phase41_fixture",
+                    "source_id": "P41_B_EAST",
+                    "cycle": 8,
+                    "action": "east",
+                    "before": [-2, 2],
+                    "after": [-2, 1],
+                    "delta": [0, -1],
+                    "blocked": False,
+                    "world_version": world_version,
+                },
+            ]
+        )
+        lab["objective_realizations"] = [
+            {
+                "id": "OI_N1",
+                "action": "north",
+                "realized_information_gain": 1.0,
+                "interpretation": "hypothesis_refuted",
+            },
+            {
+                "id": "OI_N2",
+                "action": "north",
+                "realized_information_gain": 1.0,
+                "interpretation": "hypothesis_supported",
+            },
+            {
+                "id": "OI_E1",
+                "action": "east",
+                "realized_information_gain": 1.0,
+                "interpretation": "hypothesis_refuted",
+            },
+        ]
+
+        goal = planning_lab._choose_goal(lab, 9)
+        decision = lab["objective_decisions"][0]
+
+        self.assertIsNotNone(goal)
+        self.assertEqual(
+            decision["policy_version"],
+            "outcome-aware-objective-valuation-v1",
+        )
+        self.assertTrue(decision["outcome_changed_choice"])
+        self.assertEqual(
+            decision["phase39_counterfactual"]["target"],
+            [-2, -1],
+        )
+        self.assertEqual(decision["selected"]["target"], [-2, 2])
+        self.assertEqual(
+            decision["selected"]["phase40_realization_action"],
+            "north",
+        )
+        self.assertEqual(
+            decision["selected"]["phase40_outcome_refs"],
+            ["OI_N1", "OI_N2"],
+        )
+        self.assertGreater(decision["outcome_decision_margin"], 0.0)
+        self.assertEqual(
+            goal["selection"]["kind"],
+            "outcome_aware_bounded_objective",
+        )
+        self.assertEqual(
+            goal["selection"]["objective_decision_id"],
+            decision["id"],
         )
 
     def test_completed_route_consolidates_citable_episodic_memory(self) -> None:
