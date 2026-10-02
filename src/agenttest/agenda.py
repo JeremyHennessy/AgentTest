@@ -70,6 +70,165 @@ def _genuine_resumption_record(decision: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def agenda_contract_errors(
+    state: dict[str, Any],
+    *,
+    require_repository_prediction_path: bool = False,
+) -> list[str]:
+    """Return Phase 42 state-contract violations without mutating state."""
+
+    agenda = state.get("agenda")
+    if not isinstance(agenda, dict):
+        return ["agenda_missing"]
+    if agenda.get("started_cycle") is None:
+        return []
+
+    errors: list[str] = []
+    if agenda.get("version") != AGENDA_VERSION:
+        errors.append("agenda_version_mismatch")
+
+    threads = [
+        thread
+        for thread in agenda.get("threads", [])
+        if isinstance(thread, dict)
+    ]
+    thread_ids = [str(thread.get("id") or "") for thread in threads]
+    question_ids = [str(thread.get("question_id") or "") for thread in threads]
+    if len(thread_ids) != len(set(thread_ids)):
+        errors.append("duplicate_thread_id")
+    if len(question_ids) != len(set(question_ids)):
+        errors.append("duplicate_thread_question")
+
+    foreground = [
+        thread
+        for thread in threads
+        if thread.get("status") == "foreground"
+    ]
+    foreground_thread_id = str(agenda.get("foreground_thread_id") or "")
+    if threads and len(foreground) != 1:
+        errors.append("foreground_thread_count")
+    elif foreground and str(foreground[0].get("id") or "") != foreground_thread_id:
+        errors.append("foreground_thread_pointer_mismatch")
+
+    decisions = [
+        decision
+        for decision in agenda.get("decisions", [])
+        if isinstance(decision, dict)
+    ]
+    if decisions:
+        decision = decisions[-1]
+        if str(decision.get("selected_thread_id") or "") != foreground_thread_id:
+            errors.append("decision_foreground_pointer_mismatch")
+
+        foreground_question_id = (
+            str(foreground[0].get("question_id") or "")
+            if foreground
+            else ""
+        )
+        selected = (
+            decision.get("selected")
+            if isinstance(decision.get("selected"), dict)
+            else {}
+        )
+        if (
+            foreground_question_id
+            and str(selected.get("question_id") or "") != foreground_question_id
+        ):
+            errors.append("decision_foreground_question_mismatch")
+
+        summaries = [
+            summary
+            for summary in decision.get("candidate_summaries", [])
+            if isinstance(summary, dict)
+        ]
+        for summary in summaries:
+            new_refs = {
+                str(ref)
+                for ref in summary.get("new_evidence_refs", [])
+                if isinstance(ref, str) and ref
+            }
+            progress_refs = {
+                str(ref)
+                for ref in summary.get("thread_progress_evidence_refs", [])
+                if isinstance(ref, str) and ref
+            }
+            if not new_refs.issubset(progress_refs):
+                errors.append(
+                    "new_evidence_not_direct_thread_progress:"
+                    f"{summary.get('question_id')}"
+                )
+            expected_evidence_value = round(
+                min(0.3, 0.05 * len(new_refs)),
+                6,
+            )
+            observed_evidence_value = round(
+                float(summary.get("evidence_change_value", 0.0) or 0.0),
+                6,
+            )
+            if observed_evidence_value != expected_evidence_value:
+                errors.append(
+                    "evidence_change_value_mismatch:"
+                    f"{summary.get('question_id')}"
+                )
+
+        if decision.get("priority_change_supported_by_new_evidence") is True:
+            selected_new_refs = [
+                ref
+                for ref in selected.get("new_evidence_refs", [])
+                if isinstance(ref, str) and ref
+            ]
+            if not decision.get("resumed_thread_id"):
+                errors.append("evidence_backed_priority_change_without_resumption")
+            if not selected_new_refs:
+                errors.append("evidence_backed_priority_change_without_direct_evidence")
+
+        if _is_genuine_resumption(decision):
+            if int(agenda.get("genuine_resumption_count", 0) or 0) <= 0:
+                errors.append("genuine_resumption_count_missing")
+            last = agenda.get("last_genuine_resumption")
+            if (
+                not isinstance(last, dict)
+                or last.get("decision_id") != decision.get("id")
+            ):
+                errors.append("last_genuine_resumption_mismatch")
+
+    genuine_count = int(agenda.get("genuine_resumption_count", 0) or 0)
+    last_genuine = agenda.get("last_genuine_resumption")
+    if genuine_count == 0 and last_genuine is not None:
+        errors.append("zero_genuine_count_with_last_record")
+    if genuine_count > 0 and not isinstance(last_genuine, dict):
+        errors.append("positive_genuine_count_without_last_record")
+
+    if require_repository_prediction_path:
+        replication_questions = [
+            question
+            for question in state.get("questions", [])
+            if isinstance(question, dict)
+            and question.get("status") == "open"
+            and question.get("source") == "repository_stability_prediction"
+        ]
+        if replication_questions and not any(
+            question_has_active_experiment_path(state, question)
+            for question in replication_questions
+        ):
+            errors.append("repository_prediction_path_missing")
+
+        if decisions:
+            for summary in decisions[-1].get("candidate_summaries", []):
+                if (
+                    isinstance(summary, dict)
+                    and summary.get("source")
+                    == "repository_stability_prediction"
+                    and summary.get("active_experiment_path") is not True
+                ):
+                    errors.append(
+                        "repository_prediction_path_not_visible_to_agenda:"
+                        f"{summary.get('question_id')}"
+                    )
+
+    return errors
+
+
 def ensure_agenda_state(state: dict[str, Any]) -> dict[str, Any]:
     agenda = state.setdefault("agenda", initial_agenda_state())
     had_resumption_count = "genuine_resumption_count" in agenda
