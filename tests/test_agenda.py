@@ -428,6 +428,54 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertEqual(third["resumed_thread_id"], frontier_thread_id)
         self.assertTrue(third["priority_change_supported_by_new_evidence"])
 
+    def test_source_family_provenance_is_not_fresh_thread_progress(self) -> None:
+        state = self._state()
+        frontier = {
+            "id": "Q000001",
+            "text": FRONTIER_QUESTION,
+            "status": "open",
+            "created_cycle": 1,
+            "times_selected": 5,
+            "last_selected_cycle": 9,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": ["P_SOURCE_1", "R_SOURCE_1"],
+        }
+        replication = {
+            "id": "Q000002",
+            "text": "Will measured repository fields remain stable on the next observation?",
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 20,
+            "last_selected_cycle": 8,
+            "source": "repository_stability_prediction",
+        }
+        state["questions"] = [frontier, replication]
+
+        first = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=10,
+        )
+        self.assertIsNotNone(first)
+        self.assertEqual(first["selected"]["question_id"], frontier["id"])
+
+        frontier["source_evidence_refs"].extend(["P_SOURCE_2", "R_SOURCE_2"])
+        state["cycles"] = 11
+        second = update_agenda(
+            state,
+            legacy_question=frontier,
+            cycle=11,
+        )
+
+        self.assertIsNotNone(second)
+        selected = second["selected"]
+        self.assertEqual(selected["question_id"], frontier["id"])
+        self.assertIn("P_SOURCE_2", selected["evidence_refs"])
+        self.assertIn("R_SOURCE_2", selected["evidence_refs"])
+        self.assertEqual(selected["new_evidence_refs"], [])
+        self.assertEqual(selected["evidence_change_value"], 0.0)
+
     def test_agenda_is_bounded(self) -> None:
         state = self._state()
         questions = []
