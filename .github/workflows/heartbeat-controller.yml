@@ -124,4 +124,27 @@ jobs:
             sleep 60
           fi
 
-          gh workflow run heartbeat-controller.yml             --repo "$GITHUB_REPOSITORY"             --ref main             -f controller_token=controller-v3             -f delay_seconds=0
+          queued=0
+          for attempt in $(seq 1 5); do
+            if gh workflow run heartbeat-controller.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              --ref main \
+              -f controller_token=controller-v3 \
+              -f delay_seconds=0
+            then
+              echo "Successor controller queued on attempt $attempt."
+              queued=1
+              break
+            fi
+
+            if [ "$attempt" -lt 5 ]; then
+              backoff=$((attempt * 3))
+              echo "Successor dispatch attempt $attempt failed; retrying in ${backoff}s."
+              sleep "$backoff"
+            fi
+          done
+
+          if [ "$queued" != "1" ]; then
+            echo "Failed to queue successor controller after 5 attempts."
+            exit 1
+          fi
