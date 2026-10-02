@@ -130,7 +130,7 @@ Lower-authority layers may guide attention but cannot rewrite higher-authority e
 
 ## Still missing
 
-- live successful model cognition, because no provider key is configured;
+- live autonomous execution intentionally uses no external model/API cognition provider;
 - graphical/web interaction surface;
 - broader external perception/actions;
 - causal models beyond current temporal/evidence structures;
