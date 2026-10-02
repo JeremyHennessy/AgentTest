@@ -179,14 +179,18 @@ class PersistentAgendaTests(unittest.TestCase):
         state["empirical_learning"]["families"][
             REPOSITORY_STABILITY_FAMILY
         ] = saturated_family()
-        frontier["source_evidence_refs"] = [
-            "P000001",
-            "R000001",
-            "P000002",
-            "R000002",
-            "P000003",
-            "R000003",
-        ]
+        frontier["source_evidence_refs"] = list(
+            saturated_family()["evidence_refs"]
+        )
+        state["experiments"].append(
+            {
+                "id": "X_FRONTIER_RESULT",
+                "question_id": frontier["id"],
+                "status": "completed",
+                "evidence_refs": ["E_FRONTIER_RESULT", "R_FRONTIER_RESULT"],
+                "outcome": "supported",
+            }
+        )
         state["cycles"] = 11
         second = update_agenda(
             state,
@@ -198,6 +202,10 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertEqual(second["resumed_thread_id"], frontier_thread_id)
         self.assertTrue(second["foreground_changed"])
         self.assertTrue(second["priority_change_supported_by_new_evidence"])
+        self.assertEqual(
+            second["selected"]["new_evidence_refs"],
+            ["X_FRONTIER_RESULT", "E_FRONTIER_RESULT", "R_FRONTIER_RESULT"],
+        )
         self.assertEqual(state["agenda"]["genuine_resumption_count"], 1)
         self.assertEqual(
             state["agenda"]["last_genuine_resumption"]["decision_id"],
@@ -258,14 +266,18 @@ class PersistentAgendaTests(unittest.TestCase):
         state["empirical_learning"]["families"][
             REPOSITORY_STABILITY_FAMILY
         ] = saturated_family()
-        frontier["source_evidence_refs"] = [
-            "P000001",
-            "R000001",
-            "P000002",
-            "R000002",
-            "P000003",
-            "R000003",
-        ]
+        frontier["source_evidence_refs"] = list(
+            saturated_family()["evidence_refs"]
+        )
+        state["experiments"].append(
+            {
+                "id": "X_FRONTIER_RESULT",
+                "question_id": frontier["id"],
+                "status": "completed",
+                "evidence_refs": ["E_FRONTIER_RESULT", "R_FRONTIER_RESULT"],
+                "outcome": "supported",
+            }
+        )
         second = update_agenda(
             state,
             legacy_question=replication,
@@ -410,14 +422,16 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertTrue(second["foreground_changed"])
         self.assertIn(frontier_thread_id, second["suspended_thread_ids"])
 
-        frontier["source_evidence_refs"] = [
-            "P000002",
-            "R000002",
-            "P000003",
-            "R000003",
-            "P000004",
-            "R000004",
-        ]
+        frontier["source_evidence_refs"].extend(["P000004", "R000004"])
+        state["experiments"].append(
+            {
+                "id": "X_FRONTIER_PROGRESS",
+                "question_id": frontier["id"],
+                "status": "completed",
+                "evidence_refs": ["E_FRONTIER_PROGRESS", "R_FRONTIER_PROGRESS"],
+                "outcome": "supported",
+            }
+        )
         state["cycles"] = 12
         third = update_agenda(
             state,
@@ -427,6 +441,8 @@ class PersistentAgendaTests(unittest.TestCase):
         self.assertEqual(third["selected"]["question_id"], frontier["id"])
         self.assertEqual(third["resumed_thread_id"], frontier_thread_id)
         self.assertTrue(third["priority_change_supported_by_new_evidence"])
+        self.assertNotIn("P000004", third["selected"]["new_evidence_refs"])
+        self.assertIn("X_FRONTIER_PROGRESS", third["selected"]["new_evidence_refs"])
 
     def test_source_family_provenance_is_not_fresh_thread_progress(self) -> None:
         state = self._state()
