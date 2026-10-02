@@ -9,7 +9,7 @@ from .learning import (
 )
 from .semantic import question_has_active_experiment_path
 
-AGENDA_VERSION = "persistent-multithread-agenda-v1"
+AGENDA_VERSION = "persistent-multithread-agenda-v2"
 AGENDA_MAX_THREADS = 4
 AGENDA_MAX_ARCHIVED_THREADS = 16
 AGENDA_MAX_DECISIONS = 128
@@ -129,6 +129,57 @@ def _question_family(
     return None
 
 
+def _source_provenance_refs(question: dict[str, Any]) -> list[str]:
+    refs = question.get("source_evidence_refs")
+    if not isinstance(refs, list):
+        return []
+    return [
+        str(ref)
+        for ref in refs
+        if isinstance(ref, str) and ref
+    ][-AGENDA_EVIDENCE_REF_LIMIT:]
+
+
+def _thread_progress_evidence_refs(
+    state: dict[str, Any],
+    question: dict[str, Any],
+) -> list[str]:
+    """Return evidence that directly advances this question, not source provenance."""
+
+    refs: list[str] = []
+
+    def add(values: Any) -> None:
+        if not isinstance(values, list):
+            return
+        for value in values:
+            if isinstance(value, str) and value and value not in refs:
+                refs.append(value)
+
+    add(question.get("thread_evidence_refs"))
+    question_id = str(question.get("id") or "")
+    completed_experiment_ids: set[str] = set()
+    for experiment in _linked_experiments(state, question_id):
+        if experiment.get("status") != "completed":
+            continue
+        experiment_id = str(experiment.get("id") or "")
+        if experiment_id and experiment_id not in refs:
+            refs.append(experiment_id)
+            completed_experiment_ids.add(experiment_id)
+        add(experiment.get("evidence_refs"))
+
+    for reflection in state.get("reflections", []):
+        experiment_id = str(reflection.get("experiment_id") or "")
+        reflection_id = str(reflection.get("id") or "")
+        if (
+            experiment_id in completed_experiment_ids
+            and reflection_id
+            and reflection_id not in refs
+        ):
+            refs.append(reflection_id)
+
+    return refs[-AGENDA_EVIDENCE_REF_LIMIT:]
+
+
 def _evidence_refs(
     state: dict[str, Any],
     question: dict[str, Any],
@@ -142,10 +193,11 @@ def _evidence_refs(
             if isinstance(value, str) and value and value not in refs:
                 refs.append(value)
 
-    add(question.get("source_evidence_refs"))
+    add(_source_provenance_refs(question))
+    add(_thread_progress_evidence_refs(state, question))
+
     question_id = str(question.get("id") or "")
     for experiment in _linked_experiments(state, question_id):
-        add(experiment.get("evidence_refs"))
         empirical_basis = experiment.get("empirical_basis")
         if isinstance(empirical_basis, dict):
             add(empirical_basis.get("evidence_refs"))
@@ -179,13 +231,15 @@ def _candidate_metrics(
         else 0.0
     )
     active_path = question_has_active_experiment_path(state, question)
+    source_provenance_refs = _source_provenance_refs(question)
+    progress_refs = _thread_progress_evidence_refs(state, question)
     refs = _evidence_refs(state, question)
     prior_refs = set(
         str(ref)
         for ref in (prior_thread or {}).get("evidence_refs", [])
         if isinstance(ref, str)
     )
-    new_refs = [ref for ref in refs if ref not in prior_refs]
+    new_refs = [ref for ref in progress_refs if ref not in prior_refs]
 
     legacy_focus_value = AGENDA_CURRENT_EVIDENCE_FOCUS_VALUE if question_id == legacy_question_id else 0.0
     actionability_value = 0.35 if active_path else 0.0
@@ -223,6 +277,8 @@ def _candidate_metrics(
         "replication_saturation_cost": replication_saturation_cost,
         "priority_score": priority_score,
         "evidence_refs": refs,
+        "source_provenance_refs": source_provenance_refs,
+        "thread_progress_evidence_refs": progress_refs,
         "new_evidence_refs": new_refs,
         "times_selected": int(question.get("times_selected", 0) or 0),
         "last_selected_cycle": question.get("last_selected_cycle"),
@@ -430,6 +486,12 @@ def update_agenda(
                 "active_experiment_path": candidate["active_experiment_path"],
                 "family_saturation": candidate["family_saturation"],
                 "evidence_refs": list(candidate.get("evidence_refs", [])),
+                "source_provenance_refs": list(
+                    candidate.get("source_provenance_refs", [])
+                ),
+                "thread_progress_evidence_refs": list(
+                    candidate.get("thread_progress_evidence_refs", [])
+                ),
                 "new_evidence_refs": list(
                     candidate.get("new_evidence_refs", [])
                 ),
