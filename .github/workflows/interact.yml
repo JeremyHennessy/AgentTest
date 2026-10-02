@@ -7,11 +7,6 @@ on:
         description: "Message to AgentTest"
         required: true
         type: string
-      cognition:
-        description: "Allow configured model cognition"
-        required: false
-        default: false
-        type: boolean
   issue_comment:
     types: [created]
   issues:
@@ -67,7 +62,6 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_MESSAGE: ${{ inputs.message }}
-          DISPATCH_COGNITION: ${{ inputs.cognition }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         shell: bash
@@ -78,12 +72,10 @@ jobs:
           from pathlib import Path
 
           event = os.environ.get("EVENT_NAME", "")
-          cognition = "false"
           skip = False
 
           if event == "workflow_dispatch":
               message = os.environ.get("DISPATCH_MESSAGE", "").strip()
-              cognition = os.environ.get("DISPATCH_COGNITION", "false").lower()
           elif event == "issue_comment":
               body = os.environ.get("COMMENT_BODY", "")
               message = body[len("/agent "):].strip() if body.startswith("/agent ") else ""
@@ -114,28 +106,18 @@ jobs:
           Path("/tmp/agenttest-message.txt").write_text(message, encoding="utf-8")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
               handle.write(f"SKIP_INTERACTION={'true' if skip else 'false'}\n")
-              handle.write(f"INTERACTION_COGNITION={cognition}\n")
           PY
 
       - name: Run evidence-linked interaction
         if: env.SKIP_INTERACTION != 'true'
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          AGENTTEST_MODEL: gpt-6-luna
         shell: bash
         run: |
           mkdir -p state
           MESSAGE="$(cat /tmp/agenttest-message.txt)"
           OUTPUT=/tmp/agenttest-last-interaction.json
-          if [ "$INTERACTION_COGNITION" = "true" ]; then
-            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
-              python -m agenttest interact --self-observe --cognition "$MESSAGE" \
-              > "$OUTPUT"
-          else
-            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
-              python -m agenttest interact --self-observe "$MESSAGE" \
-              > "$OUTPUT"
-          fi
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+            python -m agenttest interact --self-observe "$MESSAGE" \
+            > "$OUTPUT"
           cat "$OUTPUT"
           cp "$OUTPUT" state/last_interaction.json
 
