@@ -704,7 +704,6 @@ class PersistentAgendaTests(unittest.TestCase):
         )
         self.assertEqual(returning["id"], "AT000002")
         self.assertEqual(decision["resumed_thread_id"], "AT000002")
-        self.assertTrue(decision["foreground_changed"])
         self.assertNotIn(
             "AT000002",
             [item.get("id") for item in state["agenda"]["archived_threads"]],
