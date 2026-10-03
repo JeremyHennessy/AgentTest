@@ -650,8 +650,23 @@ class PersistentAgendaTests(unittest.TestCase):
                 "created_cycle": 2,
                 "times_selected": 2,
                 "last_selected_cycle": 8,
+                "source": "empirical_frontier_transfer",
+                "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+                "source_evidence_refs": ["P_RETURN", "R_RETURN"],
             },
         ]
+        state["empirical_learning"]["families"][REPOSITORY_STABILITY_FAMILY] = {
+            "family": REPOSITORY_STABILITY_FAMILY,
+            "completed_trials": 6,
+            "evaluable_trials": 6,
+            "stable_observations": 6,
+            "change_observations": 0,
+            "inconclusive_trials": 0,
+            "stability_rate": 1.0,
+            "next_expected_status": "confirmed",
+            "experiment_refs": [],
+            "evidence_refs": ["P_RETURN", "R_RETURN"],
+        }
         state["questions"] = questions
         state["experiments"] = [
             {
