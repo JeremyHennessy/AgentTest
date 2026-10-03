@@ -497,6 +497,7 @@ def update_agenda(
                 )
 
         previous_status = str(thread.get("status") or "") or None
+        previous_active_experiment_path = bool(thread.get("active_experiment_path"))
         lifecycle_source = (
             "active"
             if question_id in existing_by_question
@@ -577,6 +578,10 @@ def update_agenda(
                 "previous_status": previous_status,
                 "status": status,
                 "active_experiment_path": bool(candidate.get("active_experiment_path")),
+                "newly_executable": bool(
+                    candidate.get("active_experiment_path")
+                    and not previous_active_experiment_path
+                ),
                 "new_evidence_refs": list(candidate.get("new_evidence_refs", [])),
                 "priority_score": float(candidate.get("priority_score", 0.0) or 0.0),
                 "selected": selected,
@@ -584,7 +589,10 @@ def update_agenda(
                     previous_status == "suspended"
                     and (
                         candidate.get("new_evidence_refs")
-                        or candidate.get("active_experiment_path")
+                        or (
+                            candidate.get("active_experiment_path")
+                            and not previous_active_experiment_path
+                        )
                     )
                 ),
             }
