@@ -709,6 +709,56 @@ class PersistentAgendaTests(unittest.TestCase):
             [item.get("id") for item in state["agenda"]["archived_threads"]],
         )
 
+    def test_decision_telemetry_records_suspended_new_evidence_opportunity(self) -> None:
+        state = self._state()
+        questions = [
+            {"id": "Q000001", "text": "Foreground", "status": "open", "created_cycle": 1, "times_selected": 1, "last_selected_cycle": 9},
+            {"id": "Q000002", "text": "Suspended", "status": "open", "created_cycle": 2, "times_selected": 1, "last_selected_cycle": 8},
+        ]
+        state["questions"] = questions
+        state["experiments"] = [
+            {"id": "X1", "question_id": "Q000001", "status": "proposed", "readiness": "evidence_ready"},
+            {"id": "X2", "question_id": "Q000002", "status": "completed", "evidence_refs": ["E2"]},
+        ]
+        state["agenda"]["threads"] = [
+            {"id": "AT000001", "question_id": "Q000001", "created_cycle": 8, "status": "foreground", "priority_score": 0.0, "evidence_refs": [], "last_foreground_cycle": 9, "last_updated_cycle": 9, "history": [], "active_experiment_path": True, "thread_progress_evidence_refs": []},
+            {"id": "AT000002", "question_id": "Q000002", "created_cycle": 8, "status": "suspended", "priority_score": 0.0, "evidence_refs": [], "last_foreground_cycle": 8, "last_updated_cycle": 9, "history": [], "active_experiment_path": False, "thread_progress_evidence_refs": []},
+        ]
+        state["agenda"]["foreground_thread_id"] = "AT000001"
+
+        decision = update_agenda(state, legacy_question=questions[0], cycle=10)
+        item = next(x for x in decision["candidate_telemetry"] if x["thread_id"] == "AT000002")
+        self.assertEqual(item["previous_status"], "suspended")
+        self.assertTrue(item["resumption_opportunity"])
+        self.assertIn("X2", item["new_evidence_refs"])
+
+    def test_decision_telemetry_counts_new_executability_once(self) -> None:
+        state = self._state()
+        questions = [
+            {"id": "Q000001", "text": "Foreground", "status": "open", "created_cycle": 1, "times_selected": 1, "last_selected_cycle": 9},
+            {"id": "Q000002", "text": "Suspended", "status": "open", "created_cycle": 2, "times_selected": 1, "last_selected_cycle": 8},
+        ]
+        state["questions"] = questions
+        state["experiments"] = [
+            {"id": "X1", "question_id": "Q000001", "status": "proposed", "readiness": "evidence_ready"},
+            {"id": "X2", "question_id": "Q000002", "status": "proposed", "readiness": "evidence_ready"},
+        ]
+        state["agenda"]["threads"] = [
+            {"id": "AT000001", "question_id": "Q000001", "created_cycle": 8, "status": "foreground", "priority_score": 0.0, "evidence_refs": [], "last_foreground_cycle": 9, "last_updated_cycle": 9, "history": [], "active_experiment_path": True},
+            {"id": "AT000002", "question_id": "Q000002", "created_cycle": 8, "status": "suspended", "priority_score": 0.0, "evidence_refs": [], "last_foreground_cycle": 8, "last_updated_cycle": 9, "history": [], "active_experiment_path": False},
+        ]
+        state["agenda"]["foreground_thread_id"] = "AT000001"
+
+        first = update_agenda(state, legacy_question=questions[0], cycle=10)
+        first_item = next(x for x in first["candidate_telemetry"] if x["thread_id"] == "AT000002")
+        self.assertTrue(first_item["newly_executable"])
+        self.assertTrue(first_item["resumption_opportunity"])
+
+        second = update_agenda(state, legacy_question=questions[0], cycle=11)
+        second_item = next(x for x in second["candidate_telemetry"] if x["thread_id"] == "AT000002")
+        self.assertFalse(second_item["newly_executable"])
+        self.assertFalse(second_item["resumption_opportunity"])
+
     def test_schema25_migration_activates_agenda_prospectively(self) -> None:
         state = initial_state()
         state["schema_version"] = 24
