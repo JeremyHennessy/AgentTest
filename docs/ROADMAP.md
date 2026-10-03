@@ -144,64 +144,59 @@ A dedicated cross-phase verification gate now checks the class of failure discov
 
 This is a verification-only contract. It does not alter Ora's planning policy or runtime behavior.
 
-## Phase 41 — planned: outcome-aware objective valuation
+## Phase 41 — outcome-aware objective valuation — verified
 
 **Research question:** can the *measured outcome* of previous objectives change which objective Ora selects later?
 
-Phase 41 should allow objective selection to use historical evidence such as:
+Phase 41 is verified at immutable checkpoint `checkpoint/2026-10-02-phase41-success` → `76cc1f73fae48c774070d7a166abfdfbe9260083`.
 
-- realized information gain;
-- whether a hypothesis was supported or refuted;
-- whether a local model was revised;
-- subsequent usefulness of the acquired evidence;
-- action cost required to obtain it.
+### Natural promotion evidence
 
-The phase must not encode hidden environmental truths or hard-code rules such as "boundaries are informative." It should learn only from persisted outcome evidence.
+At cycle 1768, decision `OD000081` preserved the Phase 39 counterfactual target `[-1, -2]` with score `0.640385`, while persisted Phase 40 outcome evidence changed the selected objective to `[2, 2]` with outcome-adjusted score `0.92724` and outcome margin `0.286855`.
 
-### Promotion gate
+The decision cited persisted outcome evidence `OI000002`, `OI000007`, `OI000011`, and `OI000012`. Episodic memory then changed the route, and cycle 1771 completed `PG000440` at `[2, 2]`.
 
-Phase 41 is not ready merely because scoring code exists.
+This is the promotion evidence: measured prior objective outcomes changed a later objective choice while preserving the counterfactual choice and evidence references. The checkpoint is historical and must not be treated as the current production head.
 
-Required evidence should include:
-
-- several naturally occurring Phase 40 realizations with meaningful variation;
-- clean return to ordinary goal pursuit after realizations;
-- stable persistence across reloads;
-- at least one later objective choice that differs because of prior objective-outcome evidence;
-- an explicit counterfactual showing what would have been selected without that evidence;
-- preservation and no-regression gates passing;
-- a capability-handoff test proving Phase 40 output is genuinely consumable by Phase 41.
-
-The exact number of Phase 40 events is intentionally not fixed. Diversity and causal evidence matter more than a quota.
-
-## Phase 42 — planned: persistent multi-thread internal agenda
+## Phase 42 — persistent multi-thread internal agenda — implemented, natural gate pending
 
 **Research question:** can Ora maintain several worthwhile investigations over time rather than living entirely one objective at a time?
 
-A bounded agenda may contain threads that are:
+The pre-Phase-42 immutable reference is `checkpoint/2026-10-02-pre-phase42` → `6493c20940b4d1cadf9887b76c4a9ad73d149331`.
 
-- active;
-- suspended pending a reachable state or missing evidence;
-- resumed after interruption;
-- deprioritized when expected value falls;
-- abandoned with a recorded reason;
-- promoted when new evidence raises their value.
+The live implementation maintains a bounded persistent agenda over existing questions. It preserves:
 
-The agenda must remain bounded, persistent, auditable, and evidence-linked.
+- at most four live inquiry threads;
+- foreground and suspended state;
+- suspension reason and resume condition;
+- bounded decision history;
+- explicit counterfactual and evidence references;
+- one-action bounded internal-world authority.
 
-### Promotion gate
+Subsequent stabilization work tightened the production contract:
 
-Phase 42 should follow only after Phase 41 demonstrates that Ora can use outcome history to value future objectives.
+- source-family provenance remains auditable but does not count as fresh thread-progress evidence;
+- only actually proposed linked experiment work counts as an active experiment path at agenda-scoring time;
+- the autonomous growth workflow runs a Phase 42 live-state integrity check and a read-only resumption-opportunity diagnostic;
+- normal growth and human-interaction workflows do not invoke external model-provider cognition.
 
-Required evidence should include:
+These are implementation and reachability safeguards, not Phase 42 promotion evidence.
 
-- multiple competing investigation threads;
-- at least one genuine suspension and later resumption;
-- at least one priority change caused by new evidence;
+### Natural promotion gate
+
+Phase 42 remains **unpassed** until fresh natural persisted behavior demonstrates all of the following:
+
+- multiple competing inquiry threads;
+- a genuine foreground → suspended transition;
+- later resumption of that **same** prior thread;
+- a priority change causally supported by newly persisted thread-progress evidence;
 - no starvation loop in which one thread permanently monopolizes attention;
-- preserved counterfactual and evidence references for agenda changes;
-- no weakening of the one-action authority boundary;
-- preservation, no-regression, and cross-capability handoff checks passing.
+- preserved counterfactual and evidence references;
+- unchanged one-action authority.
+
+Initial thread creation is not resumption. Synthetic, deterministic, cross-capability, or manually induced tests can prove mechanism reachability but do not satisfy the natural capability gate.
+
+The current read-only opportunity diagnostic is intentionally descriptive: a lack of qualifying resumption opportunities is not itself evidence of a runtime defect and must not be “fixed” by score tuning, timers, round-robin scheduling, hard-coded question IDs, or invented evidence.
 
 ## Later horizon — endogenous cognitive tempo
 
