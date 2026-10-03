@@ -394,6 +394,11 @@ def update_agenda(
         for thread in agenda.get("threads", [])
         if thread.get("question_id")
     }
+    archived_by_question = {
+        str(thread.get("question_id") or ""): thread
+        for thread in reversed(agenda.get("archived_threads", []))
+        if thread.get("question_id")
+    }
     eligible = _eligible_questions(
         state,
         legacy_question_id=legacy_question_id,
@@ -449,11 +454,22 @@ def update_agenda(
         question_id = str(candidate["question_id"])
         thread = existing_by_question.get(question_id)
         if thread is None:
-            thread = _new_thread(
-                agenda,
-                question_id=question_id,
-                cycle=cycle,
-            )
+            archived_thread = archived_by_question.get(question_id)
+            if archived_thread is not None:
+                thread = dict(archived_thread)
+                thread.pop("archived_cycle", None)
+                thread.pop("archive_reason", None)
+                agenda["archived_threads"] = [
+                    item
+                    for item in agenda.get("archived_threads", [])
+                    if item.get("id") != thread.get("id")
+                ]
+            else:
+                thread = _new_thread(
+                    agenda,
+                    question_id=question_id,
+                    cycle=cycle,
+                )
 
         previous_status = str(thread.get("status") or "") or None
         selected = question_id == selected_metrics["question_id"]
@@ -528,9 +544,8 @@ def update_agenda(
         if str(thread.get("id") or "") in retained_ids:
             continue
         archived = dict(thread)
-        archived["status"] = "abandoned"
-        archived["abandoned_cycle"] = cycle
-        archived["abandon_reason"] = "outside_current_bounded_agenda"
+        archived["archived_cycle"] = cycle
+        archived["archive_reason"] = "outside_current_bounded_agenda"
         agenda.setdefault("archived_threads", []).append(archived)
 
     agenda["archived_threads"] = agenda.get("archived_threads", [])[
