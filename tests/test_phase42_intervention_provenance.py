@@ -169,6 +169,66 @@ class Phase42InterventionProvenanceTests(unittest.TestCase):
             {"X_CONTROL", "E_CONTROL", "R_CONTROL"},
         )
 
+    def test_later_real_heartbeats_keep_invalidated_history_excluded(self):
+        after, candidate, completed, invalid_refs = self._run_prediction_case(intervention=True)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "organism.json"
+            StateStore(path).save(after)
+            observation = dict(after["environment_snapshots"][-1])
+            observation.pop("cycle", None)
+            for _ in range(2):
+                result = AgentCore(StateStore(path)).cycle(
+                    observation=dict(observation),
+                    stimulus="autonomous heartbeat",
+                    strict_experiment_admission=True,
+                    planning_lab=True,
+                )
+                reloaded = StateStore(path).load()
+                self.assertEqual(result["prediction_result"]["status"], "confirmed")
+                question = next(
+                    item for item in reloaded["questions"]
+                    if item["id"] == completed["question_id"]
+                )
+                self.assertTrue(invalid_refs.isdisjoint(
+                    _thread_progress_evidence_refs(reloaded, question)
+                ))
+                self.assertTrue(INTEGRITY.evaluate(reloaded)["ok"])
+                self.assertFalse(reloaded["cognition_events"])
+
+    def test_each_explicit_marker_excludes_reflection_and_question_ledger_replay(self):
+        # Local negative controls for alternate provenance routes; no milestone claim.
+        after, candidate, completed, refs = self._run_prediction_case(intervention=True)
+        for removed in ("completion_source", "observed_prediction_status"):
+            with self.subTest(removed=removed):
+                state = copy.deepcopy(after)
+                experiment = next(item for item in state["experiments"] if item["id"] == completed["id"])
+                experiment.pop(removed)
+                question = next(item for item in state["questions"] if item["id"] == completed["question_id"])
+                question["thread_evidence_refs"] = sorted(refs | {"R_LINKED_INVALID"})
+                state["reflections"].append({
+                    "id": "R_LINKED_INVALID", "experiment_id": completed["id"],
+                    "outcome": "inconclusive",
+                })
+                progress = _thread_progress_evidence_refs(state, question)
+                self.assertTrue((refs | {"R_LINKED_INVALID"}).isdisjoint(progress))
+
+    def test_integrity_uses_raw_prediction_even_if_experiment_annotations_are_missing(self):
+        # Evaluator fault injection: do not trust only the collector's annotation.
+        state, candidate, completed, refs = self._run_prediction_case(intervention=True)
+        experiment = next(item for item in state["experiments"] if item["id"] == completed["id"])
+        experiment.pop("observed_prediction_status")
+        experiment.pop("completion_source")
+        bad = copy.deepcopy(candidate)
+        bad["thread_progress_evidence_refs"] = sorted(refs)
+        bad["new_evidence_refs"] = sorted(refs)
+        state["agenda"]["decisions"][-1]["selected"] = bad
+        result = INTEGRITY.evaluate(state)
+        self.assertFalse(result["ok"], result)
+        self.assertTrue(any(
+            item["kind"] == "intervention_invalidated_thread_progress"
+            for item in result["failures"]
+        ), result)
+
 
 if __name__ == "__main__":
     unittest.main()
