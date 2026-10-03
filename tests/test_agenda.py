@@ -608,6 +608,107 @@ class PersistentAgendaTests(unittest.TestCase):
             AGENDA_MAX_THREADS,
         )
 
+    def test_bounded_thread_reentry_preserves_identity_and_suspended_status(self) -> None:
+        state = self._state()
+        state["agenda"]["next_thread_index"] = 5
+        state["agenda"]["archived_threads"] = [
+            {
+                "id": "AT000002",
+                "question_id": "Q000002",
+                "created_cycle": 5,
+                "status": "suspended",
+                "priority_score": 0.2,
+                "evidence_refs": [],
+                "last_foreground_cycle": 5,
+                "last_updated_cycle": 9,
+                "history": [
+                    {
+                        "cycle": 9,
+                        "from": "foreground",
+                        "to": "suspended",
+                        "reason": "lower_priority_but_executable",
+                        "evidence_refs": [],
+                    }
+                ],
+                "archived_cycle": 10,
+                "archive_reason": "outside_current_bounded_agenda",
+            }
+        ]
+        questions = [
+            {
+                "id": "Q000001",
+                "text": "Foreground question",
+                "status": "open",
+                "created_cycle": 1,
+                "times_selected": 10,
+                "last_selected_cycle": 10,
+            },
+            {
+                "id": "Q000002",
+                "text": "Returning question",
+                "status": "open",
+                "created_cycle": 2,
+                "times_selected": 2,
+                "last_selected_cycle": 8,
+                "source": "empirical_frontier_transfer",
+                "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+                "source_evidence_refs": ["P_RETURN", "R_RETURN"],
+            },
+            {
+                "id": "Q000003",
+                "text": "Competing executable question",
+                "status": "open",
+                "created_cycle": 3,
+                "times_selected": 1,
+                "last_selected_cycle": 9,
+            },
+        ]
+        state["empirical_learning"]["families"][REPOSITORY_STABILITY_FAMILY] = {
+            "family": REPOSITORY_STABILITY_FAMILY,
+            "completed_trials": 6,
+            "evaluable_trials": 6,
+            "stable_observations": 6,
+            "change_observations": 0,
+            "inconclusive_trials": 0,
+            "stability_rate": 1.0,
+            "next_expected_status": "confirmed",
+            "experiment_refs": [],
+            "evidence_refs": ["P_RETURN", "R_RETURN"],
+        }
+        state["questions"] = questions
+        state["experiments"] = [
+            {
+                "id": "X_RETURN",
+                "question_id": "Q000002",
+                "status": "completed",
+                "evidence_refs": ["E_RETURN"],
+            },
+            {
+                "id": "X_COMPETING",
+                "question_id": "Q000003",
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            },
+        ]
+
+        decision = update_agenda(
+            state,
+            legacy_question=questions[1],
+            cycle=11,
+        )
+
+        returning = next(
+            item
+            for item in state["agenda"]["threads"]
+            if item["question_id"] == "Q000002"
+        )
+        self.assertEqual(returning["id"], "AT000002")
+        self.assertEqual(decision["resumed_thread_id"], "AT000002")
+        self.assertNotIn(
+            "AT000002",
+            [item.get("id") for item in state["agenda"]["archived_threads"]],
+        )
+
     def test_schema25_migration_activates_agenda_prospectively(self) -> None:
         state = initial_state()
         state["schema_version"] = 24

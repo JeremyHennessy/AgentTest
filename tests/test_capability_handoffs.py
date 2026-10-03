@@ -536,6 +536,153 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
         self.assertTrue(third["priority_change_supported_by_new_evidence"])
         self.assertEqual(state["agenda"]["genuine_resumption_count"], 1)
 
+    def test_phase42_suspended_thread_can_gain_progress_through_normal_cycles(self) -> None:
+        state = initial_state()
+        state["cycles"] = 20
+        state["generation"] = 20
+        state["agenda"]["started_cycle"] = 19
+        state["metrics"].update(
+            {"continuity": 1.0, "self_model": 1.0, "open_endedness": 0.1}
+        )
+        family = {
+            "family": REPOSITORY_STABILITY_FAMILY,
+            "completed_trials": 6,
+            "evaluable_trials": 6,
+            "stable_observations": 6,
+            "change_observations": 0,
+            "inconclusive_trials": 0,
+            "stability_rate": 1.0,
+            "next_expected_status": "confirmed",
+            "experiment_refs": [],
+            "evidence_refs": ["P1", "R1", "P2", "R2", "P3", "R3"],
+        }
+        state["empirical_learning"]["families"][REPOSITORY_STABILITY_FAMILY] = family
+        frontier = {
+            "id": "Q_SUSPENDED_FRONTIER",
+            "text": (
+                "Which distinct measurable relationship should be tested next to "
+                "challenge or extend the learned repository stability pattern?"
+            ),
+            "status": "open",
+            "created_cycle": 2,
+            "times_selected": 5,
+            "last_selected_cycle": 18,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": REPOSITORY_STABILITY_FAMILY,
+            "source_evidence_refs": list(family["evidence_refs"]),
+        }
+        interrupt = {
+            "id": "Q_FOREGROUND_INTERRUPT",
+            "text": "What evidence-ready work should be resolved next?",
+            "status": "open",
+            "created_cycle": 3,
+            "times_selected": 0,
+            "last_selected_cycle": None,
+        }
+        state["questions"] = [frontier, interrupt]
+        state["experiments"] = [
+            {
+                "id": "X_FOREGROUND_INTERRUPT",
+                "question_id": interrupt["id"],
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            }
+        ]
+
+        first = update_agenda(state, legacy_question=frontier, cycle=20)
+        self.assertEqual(first["selected"]["question_id"], frontier["id"])
+        frontier_thread_id = first["selected_thread_id"]
+        second = update_agenda(state, legacy_question=interrupt, cycle=21)
+        self.assertIn(frontier_thread_id, second["suspended_thread_ids"])
+
+        observation = {
+            "branch": "autonomous/growth",
+            "baseline_fingerprint": "stable-baseline",
+            "tracked_files": 100,
+            "python_files": 20,
+            "python_source_lines": 5000,
+            "test_files": 12,
+            "working_tree_clean": True,
+        }
+        state["cycles"] = 21
+        state["generation"] = 21
+        state["environment_snapshots"] = [dict(observation, cycle=21)]
+        before_frontier_completed = {
+            item["id"]
+            for item in state["experiments"]
+            if item.get("question_id") == frontier["id"]
+            and item.get("status") == "completed"
+        }
+
+        with tempfile.TemporaryDirectory() as temp:
+            store = StateStore(Path(temp) / "organism.json")
+            store.save(state)
+            core = AgentCore(store)
+            trace = []
+            for _ in range(4):
+                event = core.cycle(
+                    observation=observation,
+                    strict_experiment_admission=True,
+                )
+                snapshot = store.load()
+                trace.append(
+                    {
+                        "cycle": snapshot["cycles"],
+                        "selected_question_id": event.get("selected_question_id"),
+                        "agenda_decision": event.get("agenda_decision"),
+                        "threads": [
+                            {
+                                "id": item.get("id"),
+                                "question_id": item.get("question_id"),
+                                "status": item.get("status"),
+                                "priority_score": item.get("priority_score"),
+                            }
+                            for item in snapshot["agenda"]["threads"]
+                        ],
+                        "archived": [
+                            {
+                                "id": item.get("id"),
+                                "question_id": item.get("question_id"),
+                                "abandon_reason": item.get("abandon_reason"),
+                                "abandoned_cycle": item.get("abandoned_cycle"),
+                            }
+                            for item in snapshot["agenda"]["archived_threads"]
+                            if item.get("id") == frontier_thread_id
+                        ],
+                    }
+                )
+            after = store.load()
+
+        frontier_after = next(
+            (
+                item
+                for item in after["agenda"]["threads"]
+                if item["id"] == frontier_thread_id
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            frontier_after,
+            "Suspended frontier left the active agenda during normal cycles. "
+            f"Trace: {trace}",
+        )
+        after_frontier_completed = {
+            item["id"]
+            for item in after["experiments"]
+            if item.get("question_id") == frontier["id"]
+            and item.get("status") == "completed"
+        }
+        self.assertEqual(
+            frontier_after["id"],
+            frontier_thread_id,
+            "Bounded eviction and re-entry must not mint a new identity for the same inquiry.",
+        )
+        self.assertEqual(
+            after_frontier_completed,
+            before_frontier_completed,
+            "A suspended inquiry without an existing evidence contract must not manufacture progress.",
+        )
+
     def test_phase42_real_cycle_confirmation_does_not_fake_an_interrupt(self) -> None:
         state = initial_state()
         state["cycles"] = 20
