@@ -7,6 +7,53 @@ from pathlib import Path
 from agenttest.semantic import question_has_active_experiment_path
 
 
+def _intervention_invalidated_refs(state: dict) -> set[str]:
+    """Reconstruct exclusions from raw records, never the agenda collector."""
+    prediction_ids = {
+        str(item["id"])
+        for item in state.get("predictions", [])
+        if isinstance(item, dict) and item.get("id")
+        and item.get("status") == "invalidated_by_intervention"
+    }
+    experiment_ids: set[str] = set()
+    refs = set(prediction_ids)
+    for experiment in state.get("experiments", []):
+        if not isinstance(experiment, dict):
+            continue
+        contract = experiment.get("evidence_contract") or {}
+        prediction_id = contract.get("prediction_id") if isinstance(contract, dict) else None
+        if not (
+            experiment.get("observed_prediction_status") == "invalidated_by_intervention"
+            or experiment.get("completion_source")
+            == "prediction_contract_invalidated_by_intervention"
+            or prediction_id in prediction_ids
+        ):
+            continue
+        experiment_id = experiment.get("id")
+        if isinstance(experiment_id, str) and experiment_id:
+            experiment_ids.add(experiment_id)
+            refs.add(experiment_id)
+        if isinstance(prediction_id, str) and prediction_id:
+            prediction_ids.add(prediction_id)
+            refs.add(prediction_id)
+        refs.update(
+            ref for ref in experiment.get("evidence_refs", [])
+            if isinstance(ref, str) and ref
+        )
+    for reflection in state.get("reflections", []):
+        if not isinstance(reflection, dict):
+            continue
+        if (
+            reflection.get("outcome") == "invalidated_by_intervention"
+            or reflection.get("prediction_id") in prediction_ids
+            or reflection.get("experiment_id") in experiment_ids
+        ):
+            reflection_id = reflection.get("id")
+            if isinstance(reflection_id, str) and reflection_id:
+                refs.add(reflection_id)
+    return refs
+
+
 def evaluate(state: dict) -> dict:
     agenda = state.get("agenda") or {}
     decisions = agenda.get("decisions") or []
@@ -20,6 +67,33 @@ def evaluate(state: dict) -> dict:
             "reason": "no_phase42_agenda_decision",
             "failures": [],
         }
+
+    # Historical provenance may retain these refs. Neither a selected nor a
+    # suspended candidate may credit them as direct progress or fresh evidence.
+    invalidated_refs = _intervention_invalidated_refs(state)
+    candidates = [("selected", latest.get("selected"))]
+    candidates.extend(
+        ("candidate_summaries", item)
+        for item in latest.get("candidate_summaries", [])
+    )
+    for surface, candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        credited_refs = {
+            ref for field in ("thread_progress_evidence_refs", "new_evidence_refs")
+            for ref in candidate.get(field, [])
+            if isinstance(ref, str)
+        }
+        contaminated = credited_refs & invalidated_refs
+        if contaminated:
+            failures.append(
+                {
+                    "kind": "intervention_invalidated_thread_progress",
+                    "question_id": candidate.get("question_id"),
+                    "surface": surface,
+                    "refs": sorted(contaminated),
+                }
+            )
 
     questions = {
         str(item.get("id")): item
