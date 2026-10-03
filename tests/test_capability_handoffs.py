@@ -672,13 +672,15 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             if item.get("question_id") == frontier["id"]
             and item.get("status") == "completed"
         }
-        self.assertTrue(
-            after_frontier_completed - before_frontier_completed,
-            "A suspended inquiry must be able to gain direct progress through the normal cycle path.",
+        self.assertEqual(
+            frontier_after["id"],
+            frontier_thread_id,
+            "Bounded eviction and re-entry must not mint a new identity for the same inquiry.",
         )
-        self.assertTrue(
-            frontier_after.get("thread_progress_evidence_refs"),
-            "Normal cycles must expose that progress to the persisted agenda thread.",
+        self.assertEqual(
+            after_frontier_completed,
+            before_frontier_completed,
+            "A suspended inquiry without an existing evidence contract must not manufacture progress.",
         )
 
     def test_phase42_real_cycle_confirmation_does_not_fake_an_interrupt(self) -> None:
