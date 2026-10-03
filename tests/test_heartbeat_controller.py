@@ -19,6 +19,24 @@ class HeartbeatControllerWorkflowTests(unittest.TestCase):
         self.assertIn("-f delay_seconds=0", workflow)
         self.assertNotIn("cancel-in-progress: true", workflow)
 
+    def test_growth_dispatch_is_correlated_to_the_controller_that_created_it(self) -> None:
+        controller = (ROOT / ".github/workflows/heartbeat-controller.yml").read_text(
+            encoding="utf-8"
+        )
+        growth = (ROOT / ".github/workflows/growth.yml").read_text(encoding="utf-8")
+
+        self.assertIn("dispatch_token:", growth)
+        self.assertIn("run-name:", growth)
+        self.assertIn("inputs.dispatch_token", growth)
+
+        self.assertIn("GITHUB_RUN_ID", controller)
+        self.assertIn("GITHUB_RUN_ATTEMPT", controller)
+        self.assertIn("-f dispatch_token=", controller)
+        self.assertIn("displayTitle", controller)
+        self.assertIn('select(.displayTitle == $title)', controller)
+
+        self.assertNotIn("--limit 1               --json databaseId", controller)
+
 
 if __name__ == "__main__":
     unittest.main()
