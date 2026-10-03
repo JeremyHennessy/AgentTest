@@ -158,10 +158,27 @@ def _thread_progress_evidence_refs(
     add(question.get("thread_evidence_refs"))
     question_id = str(question.get("id") or "")
     completed_experiment_ids: set[str] = set()
+    invalidated_experiment_ids: set[str] = set()
+    excluded_refs: set[str] = set()
     for experiment in _linked_experiments(state, question_id):
         if experiment.get("status") != "completed":
             continue
         experiment_id = str(experiment.get("id") or "")
+        if (
+            experiment.get("observed_prediction_status") == "invalidated_by_intervention"
+            or experiment.get("completion_source")
+            == "prediction_contract_invalidated_by_intervention"
+        ):
+            # Retain the original records as history, but do not credit a
+            # changed experimental baseline as progress on the inquiry.
+            if experiment_id:
+                invalidated_experiment_ids.add(experiment_id)
+                excluded_refs.add(experiment_id)
+            excluded_refs.update(
+                ref for ref in experiment.get("evidence_refs", [])
+                if isinstance(ref, str) and ref
+            )
+            continue
         if experiment_id and experiment_id not in refs:
             refs.append(experiment_id)
             completed_experiment_ids.add(experiment_id)
@@ -170,6 +187,10 @@ def _thread_progress_evidence_refs(
     for reflection in state.get("reflections", []):
         experiment_id = str(reflection.get("experiment_id") or "")
         reflection_id = str(reflection.get("id") or "")
+        if experiment_id in invalidated_experiment_ids:
+            if reflection_id:
+                excluded_refs.add(reflection_id)
+            continue
         if (
             experiment_id in completed_experiment_ids
             and reflection_id
@@ -177,7 +198,10 @@ def _thread_progress_evidence_refs(
         ):
             refs.append(reflection_id)
 
-    return refs[-AGENDA_EVIDENCE_REF_LIMIT:]
+    # Also prevent an explicit question-level ledger from replaying the same
+    # invalidated references through a second route. Other inconclusive results
+    # remain eligible; exclusion requires explicit intervention provenance.
+    return [ref for ref in refs if ref not in excluded_refs][-AGENDA_EVIDENCE_REF_LIMIT:]
 
 
 def _evidence_refs(
