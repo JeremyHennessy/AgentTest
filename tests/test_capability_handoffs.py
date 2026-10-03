@@ -618,17 +618,53 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             store = StateStore(Path(temp) / "organism.json")
             store.save(state)
             core = AgentCore(store)
+            trace = []
             for _ in range(4):
-                core.cycle(
+                event = core.cycle(
                     observation=observation,
                     strict_experiment_admission=True,
+                )
+                snapshot = store.load()
+                trace.append(
+                    {
+                        "cycle": snapshot["cycles"],
+                        "selected_question_id": event.get("selected_question_id"),
+                        "agenda_decision": event.get("agenda_decision"),
+                        "threads": [
+                            {
+                                "id": item.get("id"),
+                                "question_id": item.get("question_id"),
+                                "status": item.get("status"),
+                                "priority_score": item.get("priority_score"),
+                            }
+                            for item in snapshot["agenda"]["threads"]
+                        ],
+                        "archived": [
+                            {
+                                "id": item.get("id"),
+                                "question_id": item.get("question_id"),
+                                "abandon_reason": item.get("abandon_reason"),
+                                "abandoned_cycle": item.get("abandoned_cycle"),
+                            }
+                            for item in snapshot["agenda"]["archived_threads"]
+                            if item.get("id") == frontier_thread_id
+                        ],
+                    }
                 )
             after = store.load()
 
         frontier_after = next(
-            item
-            for item in after["agenda"]["threads"]
-            if item["id"] == frontier_thread_id
+            (
+                item
+                for item in after["agenda"]["threads"]
+                if item["id"] == frontier_thread_id
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            frontier_after,
+            "Suspended frontier left the active agenda during normal cycles. "
+            f"Trace: {trace}",
         )
         after_frontier_completed = {
             item["id"]
