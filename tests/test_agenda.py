@@ -654,6 +654,14 @@ class PersistentAgendaTests(unittest.TestCase):
                 "source_learning_family": REPOSITORY_STABILITY_FAMILY,
                 "source_evidence_refs": ["P_RETURN", "R_RETURN"],
             },
+            {
+                "id": "Q000003",
+                "text": "Competing executable question",
+                "status": "open",
+                "created_cycle": 3,
+                "times_selected": 1,
+                "last_selected_cycle": 9,
+            },
         ]
         state["empirical_learning"]["families"][REPOSITORY_STABILITY_FAMILY] = {
             "family": REPOSITORY_STABILITY_FAMILY,
@@ -674,7 +682,13 @@ class PersistentAgendaTests(unittest.TestCase):
                 "question_id": "Q000002",
                 "status": "completed",
                 "evidence_refs": ["E_RETURN"],
-            }
+            },
+            {
+                "id": "X_COMPETING",
+                "question_id": "Q000003",
+                "status": "proposed",
+                "readiness": "evidence_ready",
+            },
         ]
 
         decision = update_agenda(
