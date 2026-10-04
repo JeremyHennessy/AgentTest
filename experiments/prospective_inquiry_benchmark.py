@@ -10,13 +10,17 @@ from normalized_relation_evidence import normalized_evidence, normalized_relatio
 BENCHMARK_VERSION = "prospective-inquiry-benchmark-v1"
 
 
-def benchmark_trajectory(samples: list[dict[str, Any]]) -> dict[str, Any]:
+def benchmark_trajectory(
+    samples: list[dict[str, Any]],
+    *,
+    split_index: int | None = None,
+) -> dict[str, Any]:
     """Select from prefix evidence only, then evaluate the frozen inquiry on held-out suffix."""
     if len(samples) < 4:
         raise ValueError("prospective benchmark requires at least four observations")
-    split = max(2, len(samples) // 2)
-    if split >= len(samples):
-        split = len(samples) - 1
+    split = max(2, len(samples) // 2) if split_index is None else int(split_index)
+    if split < 2 or split >= len(samples):
+        raise ValueError("split index must leave at least two prefix samples and one unseen sample")
 
     prefix = samples[:split]
     # Keep the final prefix observation only as the boundary condition. All scored
