@@ -89,17 +89,22 @@ class ActionAssociationSemanticsTests(unittest.TestCase):
             interpreted,
             observation_refs=["o1", "o2", "o3", "o4"],
         )
-        self.assertEqual(payload["confirmations"], 8)
-        self.assertEqual(payload["refutations"], 0)
-        self.assertEqual(payload["evaluable"], 8)
+        self.assertEqual(payload["version"], "native-inquiry-evidence-v2")
+        self.assertEqual(payload["measurement_kind"], "comparative_action_exposure")
         self.assertEqual(
-            payload["action_present"],
+            payload["measurement"]["action_present"],
             {"changed": 3, "same": 1, "evaluable": 4},
         )
         self.assertEqual(
-            payload["action_absent"],
+            payload["measurement"]["action_absent"],
             {"changed": 1, "same": 3, "evaluable": 4},
         )
+        self.assertEqual(
+            payload["measurement"]["observed_change_rate_difference"],
+            0.5,
+        )
+        self.assertNotIn("confirmations", payload)
+        self.assertNotIn("refutations", payload)
 
     def test_semantics_module_has_no_world_or_hidden_truth_access(self):
         source = (EXPERIMENTS / "action_association_semantics.py").read_text()
