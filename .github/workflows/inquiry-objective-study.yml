@@ -1,0 +1,52 @@
+name: inquiry-objective-study
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "experiments/inquiry_objectives.py"
+      - "scripts/inquiry_objective_study.py"
+      - "tests/test_inquiry_objective_study.py"
+      - ".github/workflows/inquiry-objective-study.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate deterministic objective comparison
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/inquiry_objective_study.py > artifacts/inquiry_objective_study.json
+          python scripts/inquiry_objective_study.py > "$RUNNER_TEMP/objectives-second.json"
+          cmp artifacts/inquiry_objective_study.json "$RUNNER_TEMP/objectives-second.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/inquiry_objective_study.json").read_text())
+          print(json.dumps({
+              name: {
+                  "winner_counts": result["winner_counts"],
+                  "selection_diversity": result["selection_diversity"],
+              }
+              for name, result in report["objectives"].items()
+          }, sort_keys=True))
+          PY
+      - name: Retain complete objective study
+        uses: actions/upload-artifact@v4
+        with:
+          name: inquiry-objective-study-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/inquiry_objective_study.json
+          if-no-files-found: error
+          retention-days: 30
