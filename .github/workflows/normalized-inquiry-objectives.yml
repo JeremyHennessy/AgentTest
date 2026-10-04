@@ -1,0 +1,51 @@
+name: normalized-inquiry-objectives
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "experiments/normalized_inquiry_objectives.py"
+      - "scripts/normalized_inquiry_objective_study.py"
+      - "tests/test_normalized_inquiry_objectives.py"
+      - ".github/workflows/normalized-inquiry-objectives.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate deterministic normalized objective study
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/normalized_inquiry_objective_study.py > artifacts/normalized_inquiry_objective_study.json
+          python scripts/normalized_inquiry_objective_study.py > "$RUNNER_TEMP/second.json"
+          cmp artifacts/normalized_inquiry_objective_study.json "$RUNNER_TEMP/second.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/normalized_inquiry_objective_study.json").read_text())
+          print(json.dumps({
+              name: {
+                  "relation_counts": result["relation_counts"],
+                  "distinct_winners": result["distinct_winners"],
+                  "distinct_relation_families": result["distinct_relation_families"],
+              } for name, result in report["objectives"].items()
+          }, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: normalized-inquiry-objectives-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/normalized_inquiry_objective_study.json
+          if-no-files-found: error
+          retention-days: 30
