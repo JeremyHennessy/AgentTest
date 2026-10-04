@@ -113,6 +113,14 @@ class NativeInquiryInterfaceTests(unittest.TestCase):
         after = store.load()
         self.assertTrue(result["persisted"])
         self.assertEqual(after["cycles"], before["cycles"])
+        self.assertEqual(
+            after["agenda"]["decisions"],
+            before["agenda"]["decisions"],
+        )
+        self.assertEqual(
+            after["agenda"]["last_decision_cycle"],
+            before["agenda"]["last_decision_cycle"],
+        )
         question = next(
             item for item in after["questions"]
             if item.get("native_inquiry_candidate_id") == "NIC:test:stable-signal"
