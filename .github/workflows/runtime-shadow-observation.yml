@@ -5,6 +5,8 @@ on:
     paths:
       - "scripts/runtime_shadow_observation.py"
       - "tests/test_runtime_shadow_observation.py"
+      - "scripts/runtime_shadow_temporal_eval.py"
+      - "tests/test_runtime_shadow_temporal_eval.py"
       - ".github/workflows/runtime-shadow-observation.yml"
   workflow_dispatch:
 
@@ -33,6 +35,9 @@ jobs:
       - name: Normalize runtime observations
         run: |
           python scripts/runtime_shadow_observation.py             --runs /tmp/runtime-shadow/runs.json             --jobs-dir /tmp/runtime-shadow/jobs             --output artifacts/runtime-shadow-observation.json
+      - name: Prospectively evaluate temporal structure
+        run: |
+          python scripts/runtime_shadow_temporal_eval.py             --input artifacts/runtime-shadow-observation.json             --output artifacts/runtime-shadow-temporal-eval.json
       - uses: actions/upload-artifact@v4
         with:
           name: runtime-shadow-observation-${{ github.run_id }}-${{ github.run_attempt }}
