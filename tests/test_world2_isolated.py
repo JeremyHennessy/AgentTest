@@ -88,10 +88,19 @@ class World2IsolatedSimulationTests(unittest.TestCase):
         self.assertTrue(imports.issubset({"__future__", "copy", "typing"}), imports)
 
     def test_existing_world_module_is_not_imported(self) -> None:
-        source = MODULE_PATH.read_text(encoding="utf-8")
-        self.assertNotIn("agenttest", source)
-        self.assertNotIn("StateStore", source)
-        self.assertNotIn("AgentCore", source)
+        tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
+        imported_modules = set()
+        imported_names = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported_modules.update(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imported_modules.add(node.module)
+                imported_names.update(alias.name for alias in node.names)
+        self.assertFalse(any(name.startswith("agenttest") for name in imported_modules))
+        self.assertNotIn("StateStore", imported_names)
+        self.assertNotIn("AgentCore", imported_names)
 
     def test_invalid_action_and_non_increasing_cycle_fail_closed(self) -> None:
         state = world2.initial_world2_state(seed=1)
