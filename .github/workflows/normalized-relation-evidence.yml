@@ -1,0 +1,49 @@
+name: normalized-relation-evidence
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "experiments/normalized_relation_evidence.py"
+      - "scripts/normalized_relation_corpus_report.py"
+      - "tests/test_normalized_relation_evidence.py"
+      - ".github/workflows/normalized-relation-evidence.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate deterministic normalized corpus
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/normalized_relation_corpus_report.py > artifacts/normalized_relation_corpus.json
+          python scripts/normalized_relation_corpus_report.py > "$RUNNER_TEMP/normalized-second.json"
+          cmp artifacts/normalized_relation_corpus.json "$RUNNER_TEMP/normalized-second.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/normalized_relation_corpus.json").read_text())
+          print(json.dumps({
+              "trajectory_count": report["trajectory_count"],
+              "action_association_status_counts": report["action_association_status_counts"],
+              "comparable_action_association_count": report["comparable_action_association_count"],
+          }, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: normalized-relation-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/normalized_relation_corpus.json
+          if-no-files-found: error
+          retention-days: 30
