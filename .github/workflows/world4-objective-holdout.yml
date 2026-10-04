@@ -1,0 +1,55 @@
+name: world4-objective-holdout
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "experiments/world4_*.py"
+      - "scripts/world4_objective_holdout.py"
+      - "tests/test_world4_objective_holdout.py"
+      - ".github/workflows/world4-objective-holdout.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  holdout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate deterministic World 4 holdout study
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/world4_objective_holdout.py > artifacts/world4_objective_holdout.json
+          python scripts/world4_objective_holdout.py > "$RUNNER_TEMP/second.json"
+          cmp artifacts/world4_objective_holdout.json "$RUNNER_TEMP/second.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/world4_objective_holdout.json").read_text())
+          print(json.dumps({
+              split: {
+                  objective: {
+                      "relation_counts": result["relation_counts"],
+                      "held_out_evaluable_rate": result["held_out_evaluable_rate"],
+                      "mean_realized_posterior_entropy_reduction": result["mean_realized_posterior_entropy_reduction"],
+                  }
+                  for objective, result in report["splits"][split].items()
+              }
+              for split in report["split_protocols"]
+          }, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: world4-objective-holdout-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/world4_objective_holdout.json
+          if-no-files-found: error
+          retention-days: 30
