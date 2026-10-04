@@ -6,6 +6,7 @@ on:
     paths:
       - "experiments/world2_*.py"
       - "scripts/world2_reachability_report.py"
+      - "scripts/world2_ora_compare_report.py"
       - "tests/test_world2_*.py"
       - ".github/workflows/world2-isolated.yml"
 
@@ -15,6 +16,7 @@ permissions:
 jobs:
   simulate:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,10 +32,17 @@ jobs:
         run: python scripts/world2_reachability_report.py
       - name: Show report
         run: cat artifacts/world2_reachability_report.json
-      - name: Compare isolated Ora control and World 2
+      - name: Compare pinned Ora snapshot using matched synthetic sensors
         env:
           PYTHONPATH: src:experiments
+          SOURCE_SHA: f771ce9a79cdf2ccaccc0bf14b284d9cbcf85063
         run: |
-          git fetch --no-tags --depth=1 origin autonomous/growth:refs/remotes/origin/autonomous/growth
-          git show refs/remotes/origin/autonomous/growth:state/organism.json > state/organism.json
-          python scripts/world2_ora_compare_report.py
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$SOURCE_SHA"
+          snapshot="$RUNNER_TEMP/world2-source-$SOURCE_SHA.json"
+          git show "$SOURCE_SHA:state/organism.json" > "$snapshot"
+          blob_sha="$(git rev-parse "$SOURCE_SHA:state/organism.json")"
+          python scripts/world2_ora_compare_report.py \
+            --state "$snapshot" --source-sha "$SOURCE_SHA" \
+            --source-blob-sha "$blob_sha" --code-sha "$(git rev-parse HEAD)" \
+            --seeds 1 --output artifacts/world2_ora_compare_report.json
