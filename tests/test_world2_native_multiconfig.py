@@ -54,10 +54,15 @@ class World2NativeMultiConfigTests(unittest.TestCase):
                         break
                 self.assertTrue(changed)
                 native_state = state[consumer.NATIVE_STATE_KEY]
+                predictions_by_id = {
+                    item["prediction"]["prediction_id"]: item["prediction"]
+                    for item in native_state["predictions"]
+                }
                 self.assertTrue(
                     any(
                         item["status"] == "refuted"
-                        and item["prediction_kind"] == "resource_value_at_position"
+                        and predictions_by_id[item["prediction_id"]]["kind"]
+                        == "resource_value_at_position"
                         for item in native_state["evidence"]
                     )
                 )
