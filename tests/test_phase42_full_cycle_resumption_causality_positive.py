@@ -63,20 +63,22 @@ class Phase42FullCycleResumptionCausalityPositiveControlTests(unittest.TestCase)
         self.assertIsNotNone(second)
         self.assertIn(resume_thread_id, second["suspended_thread_ids"])
 
-        # One specification-backlog item produces 0.25 pressure. If the pending
-        # prediction resolves, specification pressure becomes dominant and the
+        # Two specification-backlog items produce 0.50 pressure. If the pending
+        # prediction resolves, specification pressure wins the fixed-order tie
+        # with novelty and the
         # existing suspended Q_RESUME becomes the legacy question. If that new
         # evidence is withheld, the still-pending evidence-ready prediction
         # produces 0.75 evidence hunger and a different legacy question.
         state["experiments"] = [
             {
-                "id": "X_SPEC_1",
+                "id": f"X_SPEC_{index}",
                 "cycle": 1,
                 "question_id": foreground_question["id"],
                 "status": "needs_specification",
                 "readiness": "needs_specification",
                 "specification": {"actionability": "actionable"},
             }
+            for index in range(1, 3)
         ]
         observation = {
             "branch": "autonomous/growth",
