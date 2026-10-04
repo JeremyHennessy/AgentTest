@@ -37,7 +37,13 @@ def propose_native_question_candidate(state: dict[str, Any]) -> dict[str, Any] |
 
     question = f"What observation would most directly test {subject}?"
     hypothesis = f"The native observation represented by this inquiry will remain stable when it is legitimately measured again."
+    prediction_id = str(target.get("prediction_id") or target.get("hypothesis_key") or "native")
+    candidate_id = "NW2C-" + "".join(
+        char if char.isalnum() else "-"
+        for char in prediction_id
+    )[:48]
     return {
+        "id": candidate_id,
         "version": PROPOSAL_VERSION,
         "question": question,
         "hypothesis": hypothesis,
