@@ -16,15 +16,59 @@ def seeded_state():
     state["cycles"] = 1
     state["generation"] = 1
     state["agenda"]["started_cycle"] = 0
-    state["episodes"].append(
-        {
-            "id": "E000001",
-            "cycle": 1,
-            "time": "2026-10-04T00:00:00+00:00",
-            "kind": "native_observation_evidence",
-            "content": "Measured feature remained stable across a legitimate observation pair.",
-            "concepts": ["native", "observation", "evidence"],
-        }
+    state["episodes"].extend(
+        [
+            {
+                "id": "E000001",
+                "cycle": 1,
+                "time": "2026-10-04T00:00:00+00:00",
+                "kind": "native_inquiry_evidence",
+                "content": json.dumps(
+                    {
+                        "version": "native-inquiry-evidence-v1",
+                        "relation": {
+                            "kind": "same_next_observation",
+                            "feature": "slow_signal",
+                            "action": None,
+                            "comparison_status": "not_applicable",
+                        },
+                        "observation_refs": ["obs-1", "obs-2"],
+                        "evaluable": 1,
+                        "confirmations": 1,
+                        "refutations": 0,
+                        "action_present": None,
+                        "action_absent": None,
+                    },
+                    sort_keys=True,
+                ),
+                "concepts": ["native", "observation", "evidence"],
+            },
+            {
+                "id": "E000002",
+                "cycle": 1,
+                "time": "2026-10-04T00:00:00+00:00",
+                "kind": "native_inquiry_evidence",
+                "content": json.dumps(
+                    {
+                        "version": "native-inquiry-evidence-v1",
+                        "relation": {
+                            "kind": "action_associated_with_change",
+                            "feature": "slow_signal",
+                            "action": "interact",
+                            "comparison_status": "comparable",
+                        },
+                        "observation_refs": ["obs-a", "obs-b", "obs-c"],
+                        "evaluable": 2,
+                        "confirmations": 1,
+                        "refutations": 1,
+                        "action_present": {"evaluable": 1, "changed": 1, "same": 0},
+                        "action_absent": {"evaluable": 1, "changed": 0, "same": 1},
+                    },
+                    sort_keys=True,
+                ),
+                "concepts": ["native", "association", "evidence"],
+            },
+        ]
     )
     return state
 
@@ -64,6 +108,7 @@ def association_candidate():
     candidate["method"] = "Collect additional comparable action-present and action-absent slow_signal transitions."
     candidate["falsification"] = "Additional comparable observations reduce the observed change-rate difference toward zero."
     candidate["predicted_observation"] = "Comparable action-present and action-absent transitions provide another change-rate comparison."
+    candidate["evidence_refs"] = ["E000002"]
     return candidate
 
 
