@@ -174,10 +174,23 @@ class NativeEvidenceInterfaceTests(unittest.TestCase):
             )
         self.assertEqual(store.load(), before)
 
-    def test_action_association_requires_both_exposure_groups(self):
+    def test_v1_action_association_is_rejected_in_favor_of_v2(self):
         store = self.make_store()
-        evidence = association_evidence()
-        evidence["action_absent"] = {"evaluable": 0, "changed": 0, "same": 0}
+        with self.assertRaisesRegex(ValueError, "use v2"):
+            AgentCore(store).record_native_evidence(
+                association_evidence(),
+                enabled=True,
+                persist=True,
+            )
+
+    def test_v2_action_association_requires_both_exposure_groups(self):
+        store = self.make_store()
+        evidence = association_evidence_v2()
+        evidence["measurement"]["action_absent"] = {
+            "evaluable": 0,
+            "changed": 0,
+            "same": 0,
+        }
         with self.assertRaises(ValueError):
             AgentCore(store).record_native_evidence(
                 evidence,
