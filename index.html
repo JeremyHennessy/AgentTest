@@ -408,7 +408,8 @@ function renderNow(o){
  const last=execs[execs.length-1]||{},step=Number(plan.next_step_index||0),actions=Array.isArray(plan.actions)?plan.actions:[],states=Array.isArray(plan.predicted_states)?plan.predicted_states:[],remaining=Math.max(0,actions.length-step);
  const nextAction=step<actions.length?actions[step]:null,nextState=step<states.length?states[step]:null;
  const selfTests=lab.self_experiments||[],latestTest=selfTests[selfTests.length-1]||{},recoveries=phase38RecoveryCount(lab),currentPhase=planningPhaseNumber(o);
- const question=(o.questions||[]).slice().sort((x,y)=>(y.last_selected_cycle||y.created_cycle||0)-(x.last_selected_cycle||x.created_cycle||0))[0]||{};
+ const nowAgenda=o.agenda||{},nowForeground=(nowAgenda.threads||[]).find(x=>x.id===nowAgenda.foreground_thread_id)||(nowAgenda.threads||[]).find(x=>x.status==="foreground")||{};
+ const question=(o.questions||[]).find(x=>x.id===nowForeground.question_id)||(o.questions||[]).slice().sort((x,y)=>(y.last_selected_cycle||y.created_cycle||0)-(x.last_selected_cycle||x.created_cycle||0))[0]||{};
  const objectiveDecision=(lab.objective_decisions||[]).find(d=>d.id===goal.selection?.objective_decision_id)||{};
  const routeReason=plan.memory_influenced?"Past route memory helped choose this route.":plan.reason==="replan_after_invalidation"?"Ora rebuilt this route after an experiment changed its position.":"This route follows Ora’s learned model.";
  const reason=objectiveDecision.outcome_changed_choice===true?"Prior measured outcomes changed this goal from "+vec(objectiveDecision.phase39_counterfactual?.target)+" to "+vec(objectiveDecision.selected?.target)+". "+routeReason:routeReason;
