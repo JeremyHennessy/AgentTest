@@ -6,6 +6,7 @@ from copy import deepcopy
 from typing import Any
 
 from .evidence import known_evidence_ids
+from .native_evidence import validate_native_evidence_payload
 
 NATIVE_INQUIRY_VERSION = "native-inquiry-candidate-v1"
 NATIVE_INQUIRY_SOURCE = "native_inquiry"
@@ -124,7 +125,8 @@ def validate_native_inquiry_candidate(
             payload = json.loads(str(episode.get("content") or ""))
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             raise ValueError("native inquiry evidence episode is not valid JSON") from exc
-        evidence_relation = payload.get("relation") if isinstance(payload, dict) else None
+        validated_evidence = validate_native_evidence_payload(payload)
+        evidence_relation = validated_evidence["relation"]
         if evidence_relation != relation:
             raise ValueError(
                 "native inquiry relation does not match cited normalized evidence"

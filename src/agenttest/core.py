@@ -19,7 +19,7 @@ from .learning import (
     empirical_family,
     expected_prediction_status,
 )
-from .native_evidence import validate_native_evidence
+from .native_evidence import validate_native_evidence_payload
 from .native_inquiry import (
     NATIVE_INQUIRY_SOURCE,
     native_inquiry_metadata,
@@ -832,7 +832,7 @@ class AgentCore:
             raise RuntimeError("native evidence interface is disabled by default")
 
         loaded = self.store.load()
-        normalized = validate_native_evidence(evidence)
+        normalized = validate_native_evidence_payload(evidence)
         state = loaded if persist else deepcopy(loaded)
         cycle = int(state.get("cycles", 0) or 0)
         now = _now_override or utc_now()
