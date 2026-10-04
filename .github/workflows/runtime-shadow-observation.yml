@@ -1,0 +1,41 @@
+name: runtime-shadow-observation
+
+on:
+  pull_request:
+    paths:
+      - "scripts/runtime_shadow_observation.py"
+      - "tests/test_runtime_shadow_observation.py"
+      - ".github/workflows/runtime-shadow-observation.yml"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - name: Fetch recent completed growth runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p /tmp/runtime-shadow/jobs artifacts
+          gh api             -H "Accept: application/vnd.github+json"             "/repos/${GITHUB_REPOSITORY}/actions/workflows/growth.yml/runs?status=completed&per_page=24"             --jq '.workflow_runs | map(select(.event == "workflow_dispatch"))'             > /tmp/runtime-shadow/runs.json
+          jq -r '.[].id' /tmp/runtime-shadow/runs.json | while read -r run_id; do
+            gh api               -H "Accept: application/vnd.github+json"               "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs"               > "/tmp/runtime-shadow/jobs/${run_id}.json"
+          done
+      - name: Normalize runtime observations
+        run: |
+          python scripts/runtime_shadow_observation.py             --runs /tmp/runtime-shadow/runs.json             --jobs-dir /tmp/runtime-shadow/jobs             --output artifacts/runtime-shadow-observation.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-shadow-observation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/runtime-shadow-observation.json
+          if-no-files-found: error
+          retention-days: 30
