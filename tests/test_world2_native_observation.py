@@ -141,6 +141,98 @@ class World2NativeObservationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             native.validate_native_world2_observation(envelope)
 
+    def test_real_sequence_preserves_object_reappearance_without_remote_leak(self):
+        world = world2.initial_world2_state(seed=1)
+        records = []
+        for cycle, action in enumerate(
+            ("north", "interact", "west", "east", "south", "north", "west"), start=1
+        ):
+            world, record = world2.transition_world2(world, action, cycle=cycle)
+            records.append(
+                native.native_world2_observation(
+                    world2.observe_world2(world), action_receipt=record
+                )
+            )
+        self.assertEqual(records[0]["visible_object_ids"], ["O1"])
+        self.assertEqual(records[1]["visible_object_ids"], [])
+        self.assertEqual(records[-1]["visible_object_ids"], ["O1"])
+        for envelope in records:
+            self.assertNotIn("object_position", repr(envelope))
+            self.assertNotIn("pending_slow_effects", repr(envelope))
+
+    def test_delayed_signal_is_observed_only_when_it_matures(self):
+        world = world2.initial_world2_state(seed=1)
+        envelopes = []
+        for cycle, action in enumerate(
+            ("north", "interact", "observe", "observe", "observe", "observe"), start=1
+        ):
+            world, record = world2.transition_world2(world, action, cycle=cycle)
+            envelopes.append(
+                native.native_world2_observation(
+                    world2.observe_world2(world), action_receipt=record
+                )
+            )
+        self.assertEqual([item["slow_signal"]["value"] for item in envelopes], [0, 0, 0, 0, 0, 2])
+        self.assertNotIn("matures_cycle", repr(envelopes))
+
+    def test_resource_changes_are_measurements_not_contract_changes(self):
+        world = world2.initial_world2_state(seed=1)
+        world["position"] = [-1, 0]
+        first = native.native_world2_observation(world2.observe_world2(world))
+        world, record = world2.transition_world2(world, "observe", cycle=1)
+        second = native.native_world2_observation(
+            world2.observe_world2(world), action_receipt=record
+        )
+        self.assertEqual(first["contract_id"], second["contract_id"])
+        self.assertNotEqual(first["local_resource"], second["local_resource"])
+
+    def test_malformed_receipts_fail_closed_instead_of_coercing(self):
+        world = world2.initial_world2_state(seed=1)
+        observation = world2.observe_world2(world)
+        bad = {
+            "action": "observe",
+            "before": [0, 0],
+            "after": [0, 0],
+            "blocked": "false",
+            "interaction_effect": "observation_only",
+        }
+        with self.assertRaises(ValueError):
+            native.native_world2_observation(observation, action_receipt=bad)
+
+    def test_receipt_cannot_smuggle_arbitrary_effect_or_remote_position(self):
+        world = world2.initial_world2_state(seed=1)
+        observation = world2.observe_world2(world)
+        bad_effect = {
+            "action": "observe",
+            "before": [0, 0],
+            "after": [0, 0],
+            "blocked": False,
+            "interaction_effect": "latent_mode=1",
+        }
+        with self.assertRaises(ValueError):
+            native.native_world2_observation(observation, action_receipt=bad_effect)
+        bad_position = {
+            "action": "interact",
+            "before": [0, 0],
+            "after": [0, 1],
+            "blocked": False,
+            "interaction_effect": "no_visible_target",
+        }
+        with self.assertRaises(ValueError):
+            native.native_world2_observation(observation, action_receipt=bad_position)
+
+    def test_receipt_must_end_at_observed_actor_position(self):
+        envelope = self._envelope()
+        envelope["action_receipt"] = {
+            "action": "north",
+            "before": [0, 0],
+            "after": [1, 0],
+            "blocked": False,
+            "observed_effect": None,
+        }
+        with self.assertRaises(ValueError):
+            native.validate_native_world2_observation(envelope)
+
     def test_validator_rejects_contract_or_world_drift(self):
         for key, value in (
             ("contract_id", "other-contract"),
