@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 import tempfile
 import unittest
-from copy import deepcopy
 from pathlib import Path
 
 from agenttest.core import AgentCore
@@ -12,10 +13,15 @@ from agenttest.native_activation import (
 )
 from agenttest.state import StateStore, initial_state
 
-from temporal_activation_harness import (
-    activate_temporal_inquiry,
-    rollback_temporal_activation_state,
-)
+ROOT = Path(__file__).resolve().parents[1]
+HARNESS = ROOT / "experiments" / "temporal_activation_harness.py"
+spec = importlib.util.spec_from_file_location("temporal_activation_harness", HARNESS)
+assert spec is not None and spec.loader is not None
+harness = importlib.util.module_from_spec(spec)
+sys.modules["temporal_activation_harness"] = harness
+spec.loader.exec_module(harness)
+activate_temporal_inquiry = harness.activate_temporal_inquiry
+rollback_temporal_activation_state = harness.rollback_temporal_activation_state
 
 
 class TemporalActivationHarnessTests(unittest.TestCase):
