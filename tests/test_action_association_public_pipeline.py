@@ -63,12 +63,16 @@ class ActionAssociationPublicPipelineTests(unittest.TestCase):
             inquiry["candidate"]["relation"],
         )
         self.assertEqual(
-            evidence["evidence"]["confirmations"],
-            8,
+            evidence["evidence"]["version"],
+            "native-inquiry-evidence-v2",
         )
         self.assertEqual(
-            evidence["evidence"]["refutations"],
-            0,
+            evidence["evidence"]["measurement_kind"],
+            "comparative_action_exposure",
+        )
+        self.assertEqual(
+            evidence["evidence"]["measurement"]["observed_change_rate_difference"],
+            0.5,
         )
         self.assertEqual(
             inquiry["experiment"]["specification"]["actionability"],
