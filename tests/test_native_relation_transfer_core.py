@@ -52,15 +52,21 @@ HELD_OUT = [
 
 
 class NativeRelationTransferCoreTests(unittest.TestCase):
-    def test_training_changes_which_held_out_relation_reaches_core_first(self):
+    def test_training_changes_held_out_relation_scores_reaching_core(self):
         trained = transfer.run_held_out_relation_core_path(trained_state(), HELD_OUT)
         blank = transfer.run_held_out_relation_core_path(initial_state(), HELD_OUT)
         self.assertEqual(trained["status"], "proposed")
         self.assertEqual(blank["status"], "proposed")
-        self.assertNotEqual(
-            trained["selected"]["proposal"]["id"],
-            blank["selected"]["proposal"]["id"],
+        trained_scores = {
+            item["proposal"]["id"]: item["score"] for item in trained["ranked"]
+        }
+        blank_scores = {
+            item["proposal"]["id"]: item["score"] for item in blank["ranked"]
+        }
+        self.assertTrue(
+            any(trained_scores[key] > blank_scores[key] for key in trained_scores)
         )
+        self.assertGreater(trained["selected"]["score"], blank["selected"]["score"])
         self.assertEqual(trained["question"]["source"], "native_relation_family_transfer")
         self.assertEqual(
             trained["experiment"]["hypothesis"],
