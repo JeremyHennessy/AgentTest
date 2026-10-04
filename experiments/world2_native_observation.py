@@ -23,6 +23,13 @@ _ALLOWED_TOP_LEVEL = {
 }
 _ALLOWED_READING = {"status", "value", "scope"}
 _ALLOWED_RECEIPT = {"action", "before", "after", "blocked", "observed_effect"}
+_ALLOWED_EFFECTS = {
+    None,
+    "object_displaced",
+    "no_visible_target",
+    "observation_only",
+    "local_resource_changed",
+}
 _OBJECT_ID = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
 _OBSERVATION_ID = re.compile(r"^sample-[0-9]{6}$")
 
@@ -103,13 +110,22 @@ def _native_action_receipt(receipt: dict[str, Any] | None) -> dict[str, Any] | N
     if action not in WORLD2_ACTIONS:
         raise ValueError("unsupported action receipt")
     effect = receipt.get("interaction_effect")
-    if effect is not None and not isinstance(effect, str):
-        raise ValueError("observed effect must be a string or null")
+    blocked = receipt.get("blocked")
+    if type(blocked) is not bool:
+        raise ValueError("blocked receipt status must be boolean")
+    if effect not in _ALLOWED_EFFECTS:
+        raise ValueError("unsupported observed action effect")
+    before = _position(receipt.get("before"), field="action_receipt.before")
+    after = _position(receipt.get("after"), field="action_receipt.after")
+    if action not in ("north", "east", "south", "west") and after != before:
+        raise ValueError("non-movement receipt cannot move the actor")
+    if blocked and after != before:
+        raise ValueError("blocked action cannot move the actor")
     return {
         "action": action,
-        "before": _position(receipt.get("before"), field="action_receipt.before"),
-        "after": _position(receipt.get("after"), field="action_receipt.after"),
-        "blocked": receipt.get("blocked") is True,
+        "before": before,
+        "after": after,
+        "blocked": blocked,
         "observed_effect": effect,
     }
 
@@ -149,10 +165,16 @@ def validate_native_world2_observation(envelope: dict[str, Any]) -> dict[str, An
             raise ValueError("action receipt fields do not match the contract")
         if receipt["action"] not in WORLD2_ACTIONS or type(receipt["blocked"]) is not bool:
             raise ValueError("invalid action receipt")
-        _position(receipt["before"], field="action_receipt.before")
-        _position(receipt["after"], field="action_receipt.after")
-        if receipt["observed_effect"] is not None and not isinstance(receipt["observed_effect"], str):
+        before = _position(receipt["before"], field="action_receipt.before")
+        after = _position(receipt["after"], field="action_receipt.after")
+        if receipt["observed_effect"] not in _ALLOWED_EFFECTS:
             raise ValueError("invalid observed action effect")
+        if receipt["action"] not in ("north", "east", "south", "west") and after != before:
+            raise ValueError("non-movement receipt cannot move the actor")
+        if receipt["blocked"] and after != before:
+            raise ValueError("blocked action cannot move the actor")
+        if after != envelope["position"]:
+            raise ValueError("action receipt does not end at observed position")
 
     return deepcopy(envelope)
 
