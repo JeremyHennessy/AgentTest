@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import json
 
-from agenttest.state import initial_state
+from agenttest.state import StateStore
 from world2_ora_compare import compare_world2_to_control
 
 
 def main() -> int:
-    source = initial_state()
+    source = StateStore("state/organism.json").load()
     actions = [
         "north", "interact", "south", "observe", "west", "observe",
         "east", "observe", "north", "west", "observe", "south",
