@@ -1,0 +1,49 @@
+name: action-association-semantics
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "experiments/action_association_semantics.py"
+      - "scripts/action_association_prospective_study.py"
+      - "tests/test_action_association_*.py"
+      - ".github/workflows/action-association-semantics.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate deterministic prospective association study
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/action_association_prospective_study.py > artifacts/action_association_prospective_study.json
+          python scripts/action_association_prospective_study.py > "$RUNNER_TEMP/second.json"
+          cmp artifacts/action_association_prospective_study.json "$RUNNER_TEMP/second.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/action_association_prospective_study.json").read_text())
+          print(json.dumps({
+              "trajectory_count": report["trajectory_count"],
+              "selected_prefix_association_count": report["selected_prefix_association_count"],
+              "status_counts": report["status_counts"],
+          }, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: action-association-semantics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/action_association_prospective_study.json
+          if-no-files-found: error
+          retention-days: 30
