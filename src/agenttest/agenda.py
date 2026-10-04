@@ -470,6 +470,7 @@ def update_agenda(
             previous_foreground_question_id = previous.get("question_id")
 
     next_threads: list[dict[str, Any]] = []
+    candidate_telemetry: list[dict[str, Any]] = []
     resumed_thread_id = None
     suspended_thread_ids: list[str] = []
     selected_thread: dict[str, Any] | None = None
@@ -496,6 +497,14 @@ def update_agenda(
                 )
 
         previous_status = str(thread.get("status") or "") or None
+        previous_active_experiment_path = bool(thread.get("active_experiment_path"))
+        lifecycle_source = (
+            "active"
+            if question_id in existing_by_question
+            else "archived_reentry"
+            if question_id in archived_by_question
+            else "new"
+        )
         selected = question_id == selected_metrics["question_id"]
         status = "foreground" if selected else "suspended"
         source = str(candidate.get("source") or "")
@@ -561,6 +570,33 @@ def update_agenda(
         if selected:
             thread["last_foreground_cycle"] = cycle
             selected_thread = thread
+        candidate_telemetry.append(
+            {
+                "thread_id": str(thread["id"]),
+                "question_id": question_id,
+                "lifecycle_source": lifecycle_source,
+                "previous_status": previous_status,
+                "status": status,
+                "active_experiment_path": bool(candidate.get("active_experiment_path")),
+                "newly_executable": bool(
+                    candidate.get("active_experiment_path")
+                    and not previous_active_experiment_path
+                ),
+                "new_evidence_refs": list(candidate.get("new_evidence_refs", [])),
+                "priority_score": float(candidate.get("priority_score", 0.0) or 0.0),
+                "selected": selected,
+                "resumption_opportunity": bool(
+                    previous_status == "suspended"
+                    and (
+                        candidate.get("new_evidence_refs")
+                        or (
+                            candidate.get("active_experiment_path")
+                            and not previous_active_experiment_path
+                        )
+                    )
+                ),
+            }
+        )
         next_threads.append(thread)
 
     retained_ids = {str(thread["id"]) for thread in next_threads}
@@ -623,6 +659,7 @@ def update_agenda(
         ),
         "evidence_refs": list(selected_metrics.get("evidence_refs", [])),
         "candidate_summaries": [dict(item) for item in bounded_metrics],
+        "candidate_telemetry": candidate_telemetry,
         "rationale": (
             "Maintain several persisted inquiry threads, preserve the legacy "
             "question choice as a counterfactual, and foreground the existing "

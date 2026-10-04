@@ -13,67 +13,33 @@ def _refs(value: Any) -> list[str]:
 
 
 def evaluate_resumption_opportunities(state: dict) -> dict:
-    """Classify retained Phase 42 decisions without influencing agenda policy."""
+    """Classify Phase 42 opportunities, preferring decision-time telemetry."""
 
     agenda = state.get("agenda") or {}
     decisions = [
         item for item in agenda.get("decisions", [])
         if isinstance(item, dict)
     ]
-    threads = {
-        str(item.get("id")): item
-        for item in agenda.get("threads", [])
-        if isinstance(item, dict) and item.get("id")
-    }
     opportunities: list[dict] = []
+    telemetry_decision_count = 0
 
     for decision in decisions:
-        previous_foreground = decision.get("previous_foreground_thread_id")
-        selected_thread = decision.get("selected_thread_id")
-        resumed_thread = decision.get("resumed_thread_id")
+        telemetry = decision.get("candidate_telemetry")
+        if not isinstance(telemetry, list):
+            continue
+        telemetry_decision_count += 1
         selected = decision.get("selected") or {}
-        summaries = decision.get("candidate_summaries") or []
-
-        for candidate in summaries:
-            if not isinstance(candidate, dict):
+        selected_priority = float(selected.get("priority_score", 0.0) or 0.0)
+        for item in telemetry:
+            if not isinstance(item, dict) or not item.get("resumption_opportunity"):
                 continue
-            question_id = str(candidate.get("question_id") or "")
-            thread = next(
-                (
-                    item for item in threads.values()
-                    if str(item.get("question_id") or "") == question_id
-                ),
-                None,
-            )
-            if thread is None:
-                continue
-
-            history = [
-                item for item in thread.get("history", [])
-                if isinstance(item, dict)
-                and int(item.get("cycle", -1) or -1) < int(decision.get("cycle", 0) or 0)
-            ]
-            was_suspended = bool(history) and history[-1].get("to") == "suspended"
-            if not was_suspended:
-                continue
-
-            new_refs = _refs(candidate.get("new_evidence_refs"))
-            newly_executable = bool(candidate.get("active_experiment_path")) and any(
-                item.get("to") == "suspended"
-                and item.get("reason") == "waiting_for_executable_path_or_new_evidence"
-                for item in history[-1:]
-            )
-            if not new_refs and not newly_executable:
-                continue
-
-            candidate_score = float(candidate.get("priority_score", 0.0) or 0.0)
-            selected_score = float(selected.get("priority_score", 0.0) or 0.0)
-            should_resume = candidate_score > selected_score or selected_thread == thread.get("id")
-            did_resume = (
-                resumed_thread == thread.get("id")
-                and selected_thread == thread.get("id")
+            candidate_priority = float(item.get("priority_score", 0.0) or 0.0)
+            did_resume = bool(
+                item.get("selected")
+                and decision.get("resumed_thread_id") == item.get("thread_id")
                 and decision.get("foreground_changed") is True
             )
+            should_resume = bool(item.get("selected") or candidate_priority > selected_priority)
             classification = (
                 "resumed"
                 if did_resume
@@ -85,14 +51,15 @@ def evaluate_resumption_opportunities(state: dict) -> dict:
                 {
                     "decision_id": decision.get("id"),
                     "cycle": decision.get("cycle"),
-                    "thread_id": thread.get("id"),
-                    "question_id": question_id,
-                    "new_evidence_refs": new_refs,
-                    "newly_executable": newly_executable,
-                    "candidate_priority": candidate_score,
-                    "selected_priority": selected_score,
-                    "previous_foreground_thread_id": previous_foreground,
-                    "selected_thread_id": selected_thread,
+                    "thread_id": item.get("thread_id"),
+                    "question_id": item.get("question_id"),
+                    "lifecycle_source": item.get("lifecycle_source"),
+                    "previous_status": item.get("previous_status"),
+                    "new_evidence_refs": _refs(item.get("new_evidence_refs")),
+                    "newly_executable": bool(item.get("newly_executable")),
+                    "candidate_priority": candidate_priority,
+                    "selected_priority": selected_priority,
+                    "selected_thread_id": decision.get("selected_thread_id"),
                     "should_resume": should_resume,
                     "did_resume": did_resume,
                     "classification": classification,
@@ -108,8 +75,10 @@ def evaluate_resumption_opportunities(state: dict) -> dict:
         if item["classification"] == "qualified_but_lower_priority"
     ]
     return {
-        "diagnostic_version": "phase42-resumption-opportunities-v1",
+        "diagnostic_version": "phase42-resumption-opportunities-v2",
         "retained_decision_count": len(decisions),
+        "telemetry_decision_count": telemetry_decision_count,
+        "pre_telemetry_decision_count": len(decisions) - telemetry_decision_count,
         "opportunity_count": len(opportunities),
         "resumed_opportunity_count": sum(
             item["classification"] == "resumed" for item in opportunities
@@ -118,8 +87,9 @@ def evaluate_resumption_opportunities(state: dict) -> dict:
         "handoff_or_selection_mismatch_count": len(mismatches),
         "opportunities": opportunities,
         "note": (
-            "Read-only classification of retained agenda decisions. "
-            "This diagnostic does not alter scores, evidence, selection, or state."
+            "Prospective counts use candidate facts recorded at decision time. "
+            "Older decisions without telemetry are reported separately and are "
+            "not reconstructed into the opportunity totals."
         ),
     }
 
