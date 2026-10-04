@@ -62,3 +62,54 @@ jobs:
           git merge --no-commit --no-ff origin/main
           git merge --abort || true
           git status --short
+
+  partial-growth-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Full-history partial clone
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Prepare persistent growth branch
+        shell: bash
+        run: |
+          git config user.name "agenttest-growth-benchmark"
+          git config user.email "agenttest-growth-benchmark@users.noreply.github.com"
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          git checkout -B benchmark-growth origin/autonomous/growth
+          git merge --no-edit origin/main
+      - name: Run full growth logic without preserving state
+        shell: bash
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest cycle --self-observe --grounded-experiments-only --planning-lab --stimulus "checkout benchmark dry run"
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose-change
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest diagnose-change
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/experiment_design_eval.py --state state/organism.json --output state/experiment_design_diagnostic.json
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/blocked_attention_eval.py --state state/organism.json --output state/blocked_attention_diagnostic.json
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/phase42_integrity_eval.py --state state/organism.json
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/phase42_resumption_opportunity_eval.py --state state/organism.json --output state/phase42_resumption_opportunities.json
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/preservation_eval.py --strict --output /tmp/growth-preservation.json
+      - name: Confirm only state changed locally
+        shell: bash
+        run: |
+          unexpected="$(
+            {
+              git diff --name-only origin/main...HEAD
+              git diff --name-only
+              git ls-files --others --exclude-standard
+            } | sort -u | grep -Ev '^state/' || true
+          )"
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected non-state paths:"
+            echo "$unexpected"
+            exit 1
+          fi
