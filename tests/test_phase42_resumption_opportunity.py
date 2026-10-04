@@ -47,6 +47,14 @@ class Phase42ResumptionOpportunityDiagnosticTests(unittest.TestCase):
         self.assertEqual(result["resumed_opportunity_count"], 1)
         self.assertEqual(result["handoff_or_selection_mismatch_count"], 0)
 
+    def test_expected_resume_without_selection_is_flagged(self) -> None:
+        decision = self._decision()
+        decision["candidate_telemetry"][0]["priority_score"] = 1.1
+        state = {"agenda": {"decisions": [decision]}}
+        result = evaluate_resumption_opportunities(state)
+        self.assertEqual(result["handoff_or_selection_mismatch_count"], 1)
+        self.assertTrue(result["opportunities"][0]["should_resume"])
+
     def test_non_opportunity_is_not_counted(self) -> None:
         state = {"agenda": {"decisions": [self._decision(opportunity=False)]}}
         result = evaluate_resumption_opportunities(state)
