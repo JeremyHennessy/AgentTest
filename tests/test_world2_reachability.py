@@ -43,6 +43,16 @@ class World2ReachabilityTests(unittest.TestCase):
         self.assertTrue(any("delayed_process" in item for item in found))
         self.assertTrue(any("persistent_object" in item for item in found))
 
+    def test_latent_condition_is_reachable_without_privileged_state_access(self) -> None:
+        result = reach.enumerate_reachability(
+            seeds=(1, 2, 3, 4, 5),
+            horizon=8,
+            max_sequences=50000,
+        )
+        count = result["phenomenon_path_counts"].get("latent_condition", 0)
+        self.assertGreater(count, 1)
+        self.assertLess(count, result["sequence_count"] // 4)
+
     def test_reachability_is_deterministic(self) -> None:
         kwargs = {
             "seeds": (1, 2),
