@@ -205,6 +205,88 @@ class Phase42FullCycleResumptionCausalityTests(unittest.TestCase):
             0,
         )
 
+    def test_causal_resumption_accounting_survives_save_reload_and_next_cycle(self) -> None:
+        state = initial_state()
+        state["cycles"] = 20
+        state["generation"] = 20
+        state["agenda"]["started_cycle"] = 19
+        state["metrics"].update({"continuity": 1.0, "self_model": 1.0, "open_endedness": 1.0})
+        resume = {
+            "id": "Q_RESUME_RELOAD",
+            "text": "What observable, evidence source, and resolution rule would make experiment X_SPEC_RELOAD evidence-ready?",
+            "status": "open", "created_cycle": 1, "times_selected": 4, "last_selected_cycle": 19,
+        }
+        foreground = {
+            "id": "Q_FOREGROUND_RELOAD",
+            "text": "Which independent foreground inquiry should remain active?",
+            "status": "open", "created_cycle": 2, "times_selected": 1, "last_selected_cycle": 18,
+            "source": "repository_stability_prediction",
+        }
+        state["questions"] = [resume, foreground]
+        first = update_agenda(state, legacy_question=resume, cycle=20)
+        resume_thread_id = first["selected_thread_id"]
+        state["cycles"] = 21
+        state["generation"] = 21
+        second = update_agenda(state, legacy_question=foreground, cycle=21)
+        self.assertIn(resume_thread_id, second["suspended_thread_ids"])
+        state["experiments"] = [
+            {
+                "id": f"X_SPEC_RELOAD_{index}", "cycle": 1,
+                "question_id": foreground["id"], "status": "needs_specification",
+                "readiness": "needs_specification",
+                "specification": {"actionability": "actionable"},
+            }
+            for index in range(1, 3)
+        ]
+        observation = {
+            "branch": "autonomous/growth", "baseline_fingerprint": "stable-baseline",
+            "tracked_files": 100, "python_files": 20, "python_source_lines": 5000,
+            "test_files": 12, "working_tree_clean": True,
+        }
+        state["environment_snapshots"] = [dict(observation, cycle=21)]
+        with tempfile.TemporaryDirectory() as setup_temp:
+            setup_core = AgentCore(StateStore(Path(setup_temp) / "organism.json"))
+            prediction = setup_core._make_prediction(state, observation, "2026-10-04T00:00:00+00:00")
+            state["predictions"].append(prediction)
+            experiment = setup_core._create_prediction_experiment(
+                state, prediction, "2026-10-04T00:00:00+00:00"
+            )
+        experiment["question_id"] = resume["id"]
+
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "organism.json"
+            store = StateStore(path)
+            store.save(state)
+            actual = AgentCore(store).cycle(
+                observation=observation, strict_experiment_admission=True
+            )
+            first_after = store.load()
+            decision = actual["agenda_decision"]
+            self.assertTrue(decision["priority_change_supported_by_new_evidence"])
+            self.assertTrue(decision["resumption_causal_counterfactual"]["causal"])
+            self.assertEqual(first_after["agenda"]["genuine_resumption_count"], 1)
+            persisted_decision = first_after["agenda"]["decisions"][-1]
+            self.assertEqual(
+                persisted_decision["resumption_causal_counterfactual"],
+                decision["resumption_causal_counterfactual"],
+            )
+
+            next_result = AgentCore(StateStore(path)).cycle(
+                observation=observation, strict_experiment_admission=True
+            )
+            second_after = StateStore(path).load()
+
+        self.assertEqual(second_after["agenda"]["genuine_resumption_count"], 1)
+        self.assertEqual(
+            second_after["agenda"]["last_genuine_resumption"]["thread_id"],
+            resume_thread_id,
+        )
+        self.assertEqual(
+            second_after["agenda"]["last_genuine_resumption"]["causal_method"],
+            "same-prior-state-full-cycle-v1",
+        )
+        self.assertIsNotNone(next_result["agenda_decision"])
+
 
 if __name__ == "__main__":
     unittest.main()
