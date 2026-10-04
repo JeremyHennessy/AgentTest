@@ -6,7 +6,10 @@ import unittest
 from pathlib import Path
 
 from agenttest.core import AgentCore
-from agenttest.native_evidence import NATIVE_EVIDENCE_VERSION
+from agenttest.native_evidence import (
+    NATIVE_EVIDENCE_VERSION,
+    NATIVE_EVIDENCE_V2_VERSION,
+)
 from agenttest.native_inquiry import NATIVE_INQUIRY_VERSION
 from agenttest.state import StateStore, initial_state
 
@@ -64,6 +67,48 @@ def candidate(evidence_ref):
         "method": "Collect another legitimate slow_signal observation and compare it with the prior measured value.",
         "falsification": "A later evaluable slow_signal value that differs counts against stability.",
         "predicted_observation": "The next evaluable slow_signal reading matches the prior reading.",
+        "evidence_refs": [evidence_ref],
+    }
+
+
+def association_evidence_v2():
+    return {
+        "version": NATIVE_EVIDENCE_V2_VERSION,
+        "relation": {
+            "kind": "action_associated_with_change",
+            "feature": "slow_signal",
+            "action": "interact",
+            "comparison_status": "comparable",
+        },
+        "observation_refs": ["obs-a", "obs-b", "obs-c", "obs-d", "obs-e"],
+        "measurement_kind": "comparative_action_exposure",
+        "measurement": {
+            "action_present": {"evaluable": 2, "changed": 2, "same": 0},
+            "action_absent": {"evaluable": 2, "changed": 0, "same": 2},
+            "observed_change_rate_action_present": 1.0,
+            "observed_change_rate_action_absent": 0.0,
+            "observed_change_rate_difference": 1.0,
+        },
+    }
+
+
+def association_candidate_v2(evidence_ref):
+    return {
+        "version": NATIVE_INQUIRY_VERSION,
+        "id": "NIC:test:association-v2",
+        "objective": "information_gain",
+        "objective_score": 0.65,
+        "relation": {
+            "kind": "action_associated_with_change",
+            "feature": "slow_signal",
+            "action": "interact",
+            "comparison_status": "comparable",
+        },
+        "question": "What next comparable observation would test whether interact is associated with a different slow_signal change rate?",
+        "hypothesis": "Observed interact is associated with a different subsequent slow_signal change rate than observations without interact.",
+        "method": "Collect additional comparable action-present and action-absent slow_signal transitions.",
+        "falsification": "Additional comparable observations reduce the observed change-rate difference toward zero.",
+        "predicted_observation": "Comparable exposure groups provide another slow_signal change-rate comparison.",
         "evidence_refs": [evidence_ref],
     }
 
@@ -154,6 +199,63 @@ class NativeEvidenceInterfaceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             core.propose_native_inquiry(
                 mismatched,
+                enabled=True,
+                persist=True,
+            )
+
+    def test_v2_comparative_association_records_without_fake_truth_labels(self):
+        store = self.make_store()
+        result = AgentCore(store).record_native_evidence(
+            association_evidence_v2(),
+            enabled=True,
+            persist=True,
+            _now_override="2026-10-04T00:00:00+00:00",
+        )
+        payload = json.loads(result["episode"]["content"])
+        self.assertEqual(payload["version"], NATIVE_EVIDENCE_V2_VERSION)
+        self.assertEqual(payload["measurement_kind"], "comparative_action_exposure")
+        rendered = json.dumps(payload, sort_keys=True)
+        self.assertNotIn("confirmations", rendered)
+        self.assertNotIn("refutations", rendered)
+        self.assertEqual(
+            payload["measurement"]["observed_change_rate_difference"],
+            1.0,
+        )
+
+    def test_v2_comparative_association_can_ground_matching_public_inquiry(self):
+        store = self.make_store()
+        core = AgentCore(store)
+        evidence = core.record_native_evidence(
+            association_evidence_v2(),
+            enabled=True,
+            persist=True,
+            _now_override="2026-10-04T00:00:00+00:00",
+        )
+        inquiry = core.propose_native_inquiry(
+            association_candidate_v2(evidence["evidence_ref"]),
+            enabled=True,
+            persist=True,
+        )
+        self.assertEqual(
+            inquiry["candidate"]["relation"]["kind"],
+            "action_associated_with_change",
+        )
+        self.assertEqual(
+            inquiry["experiment"]["specification"]["actionability"],
+            "actionable",
+        )
+        self.assertNotIn(
+            " causes ",
+            json.dumps(inquiry["experiment"], sort_keys=True).lower(),
+        )
+
+    def test_v2_rejects_inconsistent_derived_change_rates(self):
+        store = self.make_store()
+        evidence = association_evidence_v2()
+        evidence["measurement"]["observed_change_rate_difference"] = 0.5
+        with self.assertRaises(ValueError):
+            AgentCore(store).record_native_evidence(
+                evidence,
                 enabled=True,
                 persist=True,
             )
