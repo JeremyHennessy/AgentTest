@@ -1,0 +1,42 @@
+name: trajectory-transfer-report
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "experiments/trajectory_relation_profiles.py"
+      - "experiments/native_relation_*.py"
+      - "scripts/trajectory_relation_transfer_report.py"
+      - "tests/test_trajectory_relation_transfer*.py"
+      - ".github/workflows/trajectory-transfer-report.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate deterministic trajectory transfer report
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/trajectory_relation_transfer_report.py > artifacts/trajectory_relation_transfer_report.json
+          python scripts/trajectory_relation_transfer_report.py > "$RUNNER_TEMP/report-second.json"
+          cmp artifacts/trajectory_relation_transfer_report.json "$RUNNER_TEMP/report-second.json"
+          cat artifacts/trajectory_relation_transfer_report.json
+      - name: Retain report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trajectory-relation-transfer-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/trajectory_relation_transfer_report.json
+          if-no-files-found: error
+          retention-days: 30
