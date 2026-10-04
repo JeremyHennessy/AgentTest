@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import random
 from collections import Counter
 from typing import Any
 
@@ -123,6 +124,47 @@ def enumerate_reachability(
             for phenomenon in sorted(phenomenon_paths)
         },
         "phenomenon_examples": phenomenon_paths,
+        "combination_counts": {
+            "+".join(combination) if combination else "none": count
+            for combination, count in sorted(combination_counts.items())
+        },
+    }
+
+
+def sample_reachability(
+    *,
+    seeds: tuple[int, ...] = (1, 2, 3, 4, 5),
+    horizon: int = 12,
+    sample_count: int = 20000,
+    sampler_seed: int = 20261004,
+    actions: tuple[str, ...] = WORLD2_ACTIONS,
+) -> dict[str, Any]:
+    """Deterministically sample diverse paths without Ora or adaptive search."""
+
+    rng = random.Random(int(sampler_seed))
+    phenomenon_counts: Counter[str] = Counter()
+    combination_counts: Counter[tuple[str, ...]] = Counter()
+    examples: dict[str, list[dict[str, Any]]] = {}
+
+    for _ in range(sample_count):
+        seed = seeds[rng.randrange(len(seeds))]
+        sequence = tuple(actions[rng.randrange(len(actions))] for _ in range(horizon))
+        result = run_sequence(seed=seed, actions=sequence)
+        phenomena = tuple(result["phenomena"])
+        combination_counts[phenomena] += 1
+        for phenomenon in phenomena:
+            phenomenon_counts[phenomenon] += 1
+            bucket = examples.setdefault(phenomenon, [])
+            if len(bucket) < 5:
+                bucket.append({"seed": seed, "actions": list(sequence)})
+
+    return {
+        "sample_count": sample_count,
+        "horizon": horizon,
+        "seeds": list(seeds),
+        "sampler_seed": int(sampler_seed),
+        "phenomenon_path_counts": dict(sorted(phenomenon_counts.items())),
+        "phenomenon_examples": examples,
         "combination_counts": {
             "+".join(combination) if combination else "none": count
             for combination, count in sorted(combination_counts.items())
