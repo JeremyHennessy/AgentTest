@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from copy import deepcopy
 from typing import Any
@@ -107,6 +108,31 @@ def validate_native_inquiry_candidate(
     if unknown:
         raise ValueError(
             "native inquiry references unknown evidence: " + ", ".join(unknown)
+        )
+
+    matching_native_refs = []
+    episodes_by_id = {
+        str(item.get("id")): item
+        for item in state.get("episodes", [])
+        if item.get("id")
+    }
+    for ref in evidence_refs:
+        episode = episodes_by_id.get(ref)
+        if not isinstance(episode, dict) or episode.get("kind") != "native_inquiry_evidence":
+            continue
+        try:
+            payload = json.loads(str(episode.get("content") or ""))
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("native inquiry evidence episode is not valid JSON") from exc
+        evidence_relation = payload.get("relation") if isinstance(payload, dict) else None
+        if evidence_relation != relation:
+            raise ValueError(
+                "native inquiry relation does not match cited normalized evidence"
+            )
+        matching_native_refs.append(ref)
+    if not matching_native_refs:
+        raise ValueError(
+            "native inquiry requires at least one matching normalized native evidence ref"
         )
 
     normalized = deepcopy(candidate)
