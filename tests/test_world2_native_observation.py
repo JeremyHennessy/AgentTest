@@ -179,7 +179,7 @@ class World2NativeObservationTests(unittest.TestCase):
         world = world2.initial_world2_state(seed=1)
         world["position"] = [-1, 0]
         first = native.native_world2_observation(world2.observe_world2(world))
-        world, record = world2.transition_world2(world, "observe", cycle=1)
+        world, record = world2.transition_world2(world, "observe", cycle=2)
         second = native.native_world2_observation(
             world2.observe_world2(world), action_receipt=record
         )
