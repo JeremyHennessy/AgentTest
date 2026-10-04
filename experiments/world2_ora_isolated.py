@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 from copy import deepcopy
@@ -23,7 +24,7 @@ def world2_repository_shaped_observation(
     payload = json.dumps(world_observation, sort_keys=True)
     return {
         "branch": "isolated/world2",
-        "baseline_fingerprint": f"world2:{hash(payload) & 0xFFFFFFFF:08x}",
+        "baseline_fingerprint": "world2:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16],
         "tracked_files": 100 + len(world_observation.get("visible_objects", [])),
         "python_files": 20,
         "python_source_lines": 5000 + int(world_observation.get("slow_signal", 0) or 0),
