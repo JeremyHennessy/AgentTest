@@ -4,6 +4,7 @@ from copy import deepcopy
 from typing import Any
 
 NATIVE_EVIDENCE_VERSION = "native-inquiry-evidence-v1"
+NATIVE_EVIDENCE_V2_VERSION = "native-inquiry-evidence-v2"
 _ALLOWED_RELATIONS = {
     "same_next_observation",
     "changes_next_observation",
@@ -21,6 +22,17 @@ _REQUIRED = {
 }
 
 
+def validate_native_evidence_payload(evidence: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(evidence, dict):
+        raise ValueError("native evidence must be an object")
+    version = evidence.get("version")
+    if version == NATIVE_EVIDENCE_VERSION:
+        return validate_native_evidence(evidence)
+    if version == NATIVE_EVIDENCE_V2_VERSION:
+        return validate_native_evidence_v2(evidence)
+    raise ValueError("unsupported native evidence version")
+
+
 def validate_native_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(evidence, dict) or set(evidence) != _REQUIRED:
         raise ValueError("native evidence fields do not match the contract")
@@ -28,6 +40,10 @@ def validate_native_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("unsupported native evidence version")
 
     relation = _validate_relation(evidence["relation"])
+    if relation["kind"] == "action_associated_with_change":
+        raise ValueError(
+            "native evidence v1 does not support action associations; use v2"
+        )
     refs = evidence["observation_refs"]
     if (
         not isinstance(refs, list)
@@ -73,6 +89,96 @@ def validate_native_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+
+def validate_native_evidence_v2(evidence: dict[str, Any]) -> dict[str, Any]:
+    required = {
+        "version",
+        "relation",
+        "observation_refs",
+        "measurement_kind",
+        "measurement",
+    }
+    if not isinstance(evidence, dict) or set(evidence) != required:
+        raise ValueError("native evidence v2 fields do not match the contract")
+    if evidence["version"] != NATIVE_EVIDENCE_V2_VERSION:
+        raise ValueError("unsupported native evidence v2 version")
+
+    relation = _validate_relation(evidence["relation"])
+    refs = _refs(evidence["observation_refs"])
+    measurement_kind = evidence["measurement_kind"]
+    measurement = evidence["measurement"]
+
+    if measurement_kind == "binary_transition_outcomes":
+        if relation["kind"] not in {"same_next_observation", "changes_next_observation"}:
+            raise ValueError("binary transition evidence requires a temporal relation")
+        if not isinstance(measurement, dict) or set(measurement) != {
+            "evaluable", "confirmations", "refutations"
+        }:
+            raise ValueError("binary transition measurement fields do not match contract")
+        evaluable = _count(measurement["evaluable"], "measurement.evaluable")
+        confirmations = _count(
+            measurement["confirmations"], "measurement.confirmations"
+        )
+        refutations = _count(
+            measurement["refutations"], "measurement.refutations"
+        )
+        if confirmations + refutations != evaluable:
+            raise ValueError(
+                "binary transition outcomes must partition evaluable observations"
+            )
+        normalized_measurement = {
+            "evaluable": evaluable,
+            "confirmations": confirmations,
+            "refutations": refutations,
+        }
+    elif measurement_kind == "comparative_action_exposure":
+        if relation["kind"] != "action_associated_with_change":
+            raise ValueError(
+                "comparative action evidence requires action association relation"
+            )
+        if not isinstance(measurement, dict) or set(measurement) != {
+            "action_present",
+            "action_absent",
+            "observed_change_rate_action_present",
+            "observed_change_rate_action_absent",
+            "observed_change_rate_difference",
+        }:
+            raise ValueError("comparative action measurement fields do not match contract")
+        present = _exposure(measurement["action_present"], "measurement.action_present")
+        absent = _exposure(measurement["action_absent"], "measurement.action_absent")
+        if not present["evaluable"] or not absent["evaluable"]:
+            raise ValueError("comparative action evidence requires both exposure groups")
+        present_rate = present["changed"] / present["evaluable"]
+        absent_rate = absent["changed"] / absent["evaluable"]
+        expected = {
+            "action_present": present,
+            "action_absent": absent,
+            "observed_change_rate_action_present": round(present_rate, 6),
+            "observed_change_rate_action_absent": round(absent_rate, 6),
+            "observed_change_rate_difference": round(present_rate - absent_rate, 6),
+        }
+        for key in (
+            "observed_change_rate_action_present",
+            "observed_change_rate_action_absent",
+            "observed_change_rate_difference",
+        ):
+            value = measurement[key]
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                raise ValueError(f"{key} must be numeric")
+            if round(float(value), 6) != expected[key]:
+                raise ValueError(f"{key} does not match exposure counts")
+        normalized_measurement = expected
+    else:
+        raise ValueError("unsupported native evidence v2 measurement kind")
+
+    return {
+        "version": NATIVE_EVIDENCE_V2_VERSION,
+        "relation": relation,
+        "observation_refs": refs,
+        "measurement_kind": measurement_kind,
+        "measurement": normalized_measurement,
+    }
+
 def _validate_relation(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict) or set(value) != {
         "kind", "feature", "action", "comparison_status"
@@ -101,6 +207,18 @@ def _validate_relation(value: Any) -> dict[str, Any]:
         "comparison_status": comparison,
     }
 
+
+
+def _refs(value: Any) -> list[str]:
+    if (
+        not isinstance(value, list)
+        or not value
+        or any(not isinstance(ref, str) or not ref for ref in value)
+        or len(value) != len(set(value))
+        or len(value) > 64
+    ):
+        raise ValueError("native evidence requires unique observation references")
+    return list(value)
 
 def _count(value: Any, field: str) -> int:
     if type(value) is not int or value < 0:

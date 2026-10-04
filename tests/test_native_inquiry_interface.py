@@ -50,7 +50,7 @@ def seeded_state():
                 "kind": "native_inquiry_evidence",
                 "content": json.dumps(
                     {
-                        "version": "native-inquiry-evidence-v1",
+                        "version": "native-inquiry-evidence-v2",
                         "relation": {
                             "kind": "action_associated_with_change",
                             "feature": "slow_signal",
@@ -58,11 +58,14 @@ def seeded_state():
                             "comparison_status": "comparable",
                         },
                         "observation_refs": ["obs-a", "obs-b", "obs-c"],
-                        "evaluable": 2,
-                        "confirmations": 1,
-                        "refutations": 1,
-                        "action_present": {"evaluable": 1, "changed": 1, "same": 0},
-                        "action_absent": {"evaluable": 1, "changed": 0, "same": 1},
+                        "measurement_kind": "comparative_action_exposure",
+                        "measurement": {
+                            "action_present": {"evaluable": 1, "changed": 1, "same": 0},
+                            "action_absent": {"evaluable": 1, "changed": 0, "same": 1},
+                            "observed_change_rate_action_present": 1.0,
+                            "observed_change_rate_action_absent": 0.0,
+                            "observed_change_rate_difference": 1.0,
+                        },
                     },
                     sort_keys=True,
                 ),
