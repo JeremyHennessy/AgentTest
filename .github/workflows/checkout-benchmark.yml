@@ -1,0 +1,64 @@
+name: checkout-benchmark
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/checkout-benchmark.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-history:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Full-history checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Validate growth branch preparation
+        shell: bash
+        run: |
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          git checkout -B benchmark-growth origin/autonomous/growth
+          git merge --no-commit --no-ff origin/main
+          git merge --abort || true
+          git status --short
+
+  partial-history:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Full-history partial clone
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+      - name: Validate growth branch preparation
+        shell: bash
+        run: |
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          git checkout -B benchmark-growth origin/autonomous/growth
+          git merge --no-commit --no-ff origin/main
+          git merge --abort || true
+          git status --short
+
+  shallow-partial:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Shallow partial checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 50
+          filter: blob:none
+      - name: Validate bounded growth history
+        shell: bash
+        run: |
+          git fetch --depth=50 origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          git checkout -B benchmark-growth origin/autonomous/growth
+          git merge --no-commit --no-ff origin/main
+          git merge --abort || true
+          git status --short
