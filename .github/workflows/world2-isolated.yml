@@ -34,5 +34,6 @@ jobs:
         env:
           PYTHONPATH: src:experiments
         run: |
-          git show origin/autonomous/growth:state/organism.json > state/organism.json
+          git fetch --no-tags --depth=1 origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          git show refs/remotes/origin/autonomous/growth:state/organism.json > state/organism.json
           python scripts/world2_ora_compare_report.py
