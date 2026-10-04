@@ -1,0 +1,37 @@
+name: phase42-live-reachability
+
+on:
+  pull_request:
+    paths:
+      - "scripts/phase42_live_reachability.py"
+      - "tests/test_phase42_live_reachability.py"
+      - ".github/workflows/phase42-live-reachability.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - name: Fetch current autonomous state
+        shell: bash
+        run: |
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          git show origin/autonomous/growth:state/organism.json > /tmp/live-organism.json
+      - name: Run reachability diagnostic
+        shell: bash
+        run: |
+          python scripts/phase42_live_reachability.py             --state /tmp/live-organism.json             --output /tmp/phase42-live-reachability.json
+          cat /tmp/phase42-live-reachability.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase42-live-reachability-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/phase42-live-reachability.json
+          if-no-files-found: error
+          retention-days: 30
