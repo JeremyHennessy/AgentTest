@@ -13,15 +13,26 @@ on:
 permissions:
   contents: read
 
+env:
+  CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  SOURCE_SHA: f771ce9a79cdf2ccaccc0bf14b284d9cbcf85063
+  SOURCE_BLOB_SHA: f1b5563a5175a220ee4d7c5f31547e7ae62c28a7
+  SOURCE_STATE_SHA256: 511a60d8c4d1c1fe9380a6caf67e45683bff56fc5a4684c86a26e4244c60440b
+
 jobs:
   simulate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Verify exact candidate checkout
+        run: test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
       - name: Run isolated World 2 tests
         env:
           PYTHONPATH: src
@@ -30,19 +41,93 @@ jobs:
         env:
           PYTHONPATH: experiments
         run: python scripts/world2_reachability_report.py
-      - name: Show report
-        run: cat artifacts/world2_reachability_report.json
-      - name: Compare pinned Ora snapshot using matched synthetic sensors
-        env:
-          PYTHONPATH: src:experiments
-          SOURCE_SHA: f771ce9a79cdf2ccaccc0bf14b284d9cbcf85063
+      - name: Retain reachability report (not agent-learning evidence)
+        uses: actions/upload-artifact@v4
+        with:
+          name: world2-reachability-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/world2_reachability_report.json
+          if-no-files-found: error
+          retention-days: 30
+
+  compare:
+    needs: simulate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        # The ecology maps seed through abs(seed) % 5. These cover its five
+        # phase configurations, not five independently designed environments.
+        seed: [1, 2, 3, 4, 5]
+    env:
+      SEED: ${{ matrix.seed }}
+      PYTHONPATH: src:experiments
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compare immutable Ora snapshot with matched synthetic sensors
         run: |
           set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
           git fetch --no-tags --depth=1 origin "$SOURCE_SHA"
           snapshot="$RUNNER_TEMP/world2-source-$SOURCE_SHA.json"
           git show "$SOURCE_SHA:state/organism.json" > "$snapshot"
-          blob_sha="$(git rev-parse "$SOURCE_SHA:state/organism.json")"
+          test "$(git rev-parse "$SOURCE_SHA:state/organism.json")" = "$SOURCE_BLOB_SHA"
+          printf '%s  %s\n' "$SOURCE_STATE_SHA256" "$snapshot" | sha256sum --check
           python scripts/world2_ora_compare_report.py \
             --state "$snapshot" --source-sha "$SOURCE_SHA" \
-            --source-blob-sha "$blob_sha" --code-sha "$(git rev-parse HEAD)" \
-            --seeds 1 --output artifacts/world2_ora_compare_report.json
+            --source-blob-sha "$SOURCE_BLOB_SHA" --code-sha "$CANDIDATE_SHA" \
+            --seeds "$SEED" --output "artifacts/world2-seed-$SEED.json"
+      - name: Validate report provenance
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          seed = int(os.environ["SEED"])
+          report = json.loads(Path(f"artifacts/world2-seed-{seed}.json").read_text())
+          expected = {
+              "study_version": "world2-synthetic-sensor-comparison-v2",
+              "source_growth_sha": os.environ["SOURCE_SHA"],
+              "source_blob_sha": os.environ["SOURCE_BLOB_SHA"],
+              "source_state_sha256": os.environ["SOURCE_STATE_SHA256"],
+              "experiment_checkout_sha": os.environ["CANDIDATE_SHA"],
+              "source_cycle": 3164,
+          }
+          for key, value in expected.items():
+              if report.get(key) != value:
+                  raise ValueError(f"unexpected report provenance: {key}")
+          if report.get("source_unchanged") is not True:
+              raise ValueError("source immutability was not verified")
+          for key in ("cognition_enabled", "action_lab_enabled", "planning_lab_enabled"):
+              if report.get(key) is not False:
+                  raise ValueError(f"unexpected experimental authority: {key}")
+          comparisons = report.get("comparisons", [])
+          if len(comparisons) != 1 or comparisons[0].get("seed") != seed:
+              raise ValueError("missing, duplicate or mismatched seed result")
+          result = comparisons[0]
+          if len(report.get("actions", [])) != 24 or result.get("cycle_count") != 24:
+              raise ValueError("unexpected trial horizon")
+          for arm in ("control", "world2"):
+              summary = result[arm]
+              if (summary.get("start_cycle"), summary.get("end_cycle"), summary.get("cycle_count")) != (3164, 3188, 24):
+                  raise ValueError(f"mismatched {arm} trial window")
+              if summary.get("post_first_sample_intervention_invalidations") != 0:
+                  raise ValueError(f"ordinary {arm} readings were invalidated")
+          # No acceptance condition requires treatment to outperform control.
+          print(json.dumps({"validated_seed": seed, "control": result["control"], "world2": result["world2"]}, sort_keys=True))
+          PY
+      - name: Retain validated per-seed comparison and trace
+        uses: actions/upload-artifact@v4
+        with:
+          name: world2-sensor-seed-${{ matrix.seed }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/world2-seed-${{ matrix.seed }}.json
+          if-no-files-found: error
+          retention-days: 30
