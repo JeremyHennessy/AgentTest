@@ -19,6 +19,11 @@ from .learning import (
     empirical_family,
     expected_prediction_status,
 )
+from .native_inquiry import (
+    NATIVE_INQUIRY_SOURCE,
+    native_inquiry_metadata,
+    validate_native_inquiry_candidate,
+)
 from .perception import COMPARABLE_FIELDS, changed_fields
 from .planning_lab import step_planning_lab
 from .semantic import (
@@ -466,6 +471,9 @@ def _trace_experiment_specifications(state: dict[str, Any]) -> dict[str, Any]:
                 if candidate_id
                 else None
             )
+            native_candidate = experiment.get("native_inquiry")
+            if not isinstance(native_candidate, dict):
+                native_candidate = None
 
             observable_text = experiment.get("predicted_observation")
             if (
@@ -481,23 +489,31 @@ def _trace_experiment_specifications(state: dict[str, Any]) -> dict[str, Any]:
                 else None
             )
 
-            candidate_refs = (
-                [
-                    str(ref)
-                    for ref in candidate.get("evidence_refs", [])
-                    if isinstance(ref, str) and ref in known_ids
-                ]
+            source_refs = (
+                candidate.get("evidence_refs", [])
                 if candidate is not None
-                else []
+                else (
+                    native_candidate.get("evidence_refs", [])
+                    if native_candidate is not None
+                    else []
+                )
             )
+            candidate_refs = [
+                str(ref)
+                for ref in source_refs
+                if isinstance(ref, str) and ref in known_ids
+            ]
             all_candidate_refs_grounded = (
-                candidate is not None
-                and bool(candidate.get("evidence_refs"))
-                and len(candidate_refs) == len(candidate.get("evidence_refs", []))
+                bool(source_refs)
+                and len(candidate_refs) == len(source_refs)
             )
             evidence_source = (
                 {
-                    "kind": "grounded_candidate_evidence",
+                    "kind": (
+                        "native_inquiry_evidence"
+                        if native_candidate is not None
+                        else "grounded_candidate_evidence"
+                    ),
                     "refs": candidate_refs,
                 }
                 if all_candidate_refs_grounded
@@ -554,7 +570,11 @@ def _trace_experiment_specifications(state: dict[str, Any]) -> dict[str, Any]:
                 "grounded_evidence_refs": candidate_refs,
                 "current_grounded_evidence_can_supply": can_supply,
                 "blocking_reason": blocking_reason,
-                "source_candidate_id": str(candidate_id) if candidate_id else None,
+                "source_candidate_id": (
+                    str(native_candidate.get("candidate_id"))
+                    if native_candidate is not None
+                    else (str(candidate_id) if candidate_id else None)
+                ),
             }
             (actionable if can_supply else blocked).append(experiment_id)
 
@@ -797,6 +817,93 @@ class AgentCore:
 
     def __init__(self, store: StateStore | None = None) -> None:
         self.store = store or StateStore()
+
+    def propose_native_inquiry(
+        self,
+        candidate: dict[str, Any],
+        *,
+        enabled: bool = False,
+        persist: bool = False,
+    ) -> dict[str, Any]:
+        """Validate and stage one bounded native inquiry without running a cycle.
+
+        The interface is intentionally disabled by default. Enabling it does not
+        grant action authority, increment the organism cycle, or execute an
+        environment transition. With persist=False it operates on a deep copy.
+        """
+        if enabled is not True:
+            raise RuntimeError("native inquiry interface is disabled by default")
+
+        loaded = self.store.load()
+        validated = validate_native_inquiry_candidate(candidate, loaded)
+        state = loaded if persist else deepcopy(loaded)
+        cycle = int(state.get("cycles", 0) or 0)
+
+        intention = {
+            "id": f"I{len(state.get('intentions', [])) + 1:06d}",
+            "cycle": cycle,
+            "kind": "reduce_uncertainty",
+            "dominant_drive": "uncertainty",
+            "strength": float(validated["objective_score"]),
+            "target": None,
+            "rationale": (
+                "Explicit opt-in native inquiry staged from persisted grounded "
+                f"evidence using {validated['objective']}."
+            ),
+            "evidence_refs": list(validated["evidence_refs"]),
+            "native_inquiry_candidate_id": validated["id"],
+        }
+        state.setdefault("intentions", []).append(intention)
+
+        question = self._upsert_question(state, validated["question"])
+        question["source"] = NATIVE_INQUIRY_SOURCE
+        question["source_evidence_refs"] = list(validated["evidence_refs"])
+        question["native_inquiry_candidate_id"] = validated["id"]
+        question["native_relation"] = deepcopy(validated["relation"])
+
+        thought = {
+            "id": validated["id"],
+            "question": validated["question"],
+            "hypothesis": validated["hypothesis"],
+            "experiment": validated["method"],
+            "falsification": validated["falsification"],
+            "predicted_observation": validated["predicted_observation"],
+        }
+        experiment = self._select_or_propose_experiment(
+            state,
+            question,
+            intention,
+            thought,
+            require_grounded=True,
+        )
+        if experiment is None:
+            raise RuntimeError("grounded native inquiry did not produce an experiment")
+
+        experiment["cognition_candidate_id"] = None
+        experiment["native_inquiry_candidate_id"] = validated["id"]
+        experiment["native_inquiry"] = native_inquiry_metadata(validated)
+        experiment["predicted_observation"] = validated["predicted_observation"]
+        experiment["readiness"] = "awaiting_native_evidence"
+        specification_update = _trace_experiment_specifications(state)
+        specification = experiment.get("specification", {})
+        if specification.get("actionability") != "actionable":
+            raise RuntimeError("native inquiry failed grounded actionability tracing")
+
+        inquiry_update = consolidate_inquiry_families(state)
+        if persist:
+            self.store.save(state)
+
+        return {
+            "enabled": True,
+            "persisted": bool(persist),
+            "candidate": validated,
+            "intention": deepcopy(intention),
+            "question": deepcopy(question),
+            "experiment": deepcopy(experiment),
+            "specification_update": deepcopy(specification_update),
+            "inquiry_update": deepcopy(inquiry_update),
+            "state": deepcopy(state),
+        }
 
     def cycle(
         self,
