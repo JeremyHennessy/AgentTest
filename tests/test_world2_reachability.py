@@ -65,6 +65,24 @@ class World2ReachabilityTests(unittest.TestCase):
             reach.enumerate_reachability(**kwargs),
         )
 
+    def test_sampled_reachability_is_deterministic_and_diverse(self) -> None:
+        kwargs = {
+            "seeds": (1, 2, 3, 4),
+            "horizon": 10,
+            "sample_count": 2000,
+            "sampler_seed": 99,
+        }
+        first = reach.sample_reachability(**kwargs)
+        second = reach.sample_reachability(**kwargs)
+        self.assertEqual(first, second)
+        for phenomenon in (
+            "periodic_resource",
+            "persistent_object",
+            "delayed_process",
+            "latent_condition",
+        ):
+            self.assertGreater(first["phenomenon_path_counts"].get(phenomenon, 0), 0)
+
     def test_harness_has_no_agenttest_dependency(self) -> None:
         source = reach_path.read_text(encoding="utf-8")
         self.assertNotIn("from agenttest", source)
