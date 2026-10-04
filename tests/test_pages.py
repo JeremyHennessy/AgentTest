@@ -63,6 +63,8 @@ class PagesInteractionTests(unittest.TestCase):
         self.assertIn('id="agendaOpportunityStatus"', page)
         self.assertIn("phase42_resumption_opportunities.json", page)
         self.assertIn("renderAgendaOpportunityDiagnostic", page)
+        self.assertIn("phase42-resumption-opportunities-v2", page)
+        self.assertIn("telemetry_decision_count", page)
         self.assertIn("genuine resumptions", page)
         self.assertIn("genuineAgendaResumption", page)
         self.assertIn("agendaGenuineResumptionCount", page)
