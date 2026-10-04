@@ -19,6 +19,7 @@ from .learning import (
     empirical_family,
     expected_prediction_status,
 )
+from .native_evidence import validate_native_evidence
 from .native_inquiry import (
     NATIVE_INQUIRY_SOURCE,
     native_inquiry_metadata,
@@ -817,6 +818,48 @@ class AgentCore:
 
     def __init__(self, store: StateStore | None = None) -> None:
         self.store = store or StateStore()
+
+    def record_native_evidence(
+        self,
+        evidence: dict[str, Any],
+        *,
+        enabled: bool = False,
+        persist: bool = False,
+        _now_override: str | None = None,
+    ) -> dict[str, Any]:
+        """Record one normalized native evidence episode without running a cycle."""
+        if enabled is not True:
+            raise RuntimeError("native evidence interface is disabled by default")
+
+        loaded = self.store.load()
+        normalized = validate_native_evidence(evidence)
+        state = loaded if persist else deepcopy(loaded)
+        cycle = int(state.get("cycles", 0) or 0)
+        now = _now_override or utc_now()
+        before_count = len(state.get("episodes", []))
+        self._remember(
+            state,
+            cycle,
+            now,
+            "native_inquiry_evidence",
+            json.dumps(normalized, sort_keys=True),
+            [
+                "native_evidence",
+                str(normalized["relation"]["kind"]),
+                str(normalized["relation"]["feature"]),
+            ],
+        )
+        episode = deepcopy(state["episodes"][before_count])
+        if persist:
+            self.store.save(state)
+        return {
+            "enabled": True,
+            "persisted": bool(persist),
+            "evidence": normalized,
+            "evidence_ref": str(episode["id"]),
+            "episode": episode,
+            "state": deepcopy(state),
+        }
 
     def propose_native_inquiry(
         self,
