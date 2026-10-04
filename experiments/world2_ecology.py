@@ -57,8 +57,10 @@ def _advance_background(world: dict[str, Any], cycle: int) -> None:
             world["resources"][key] = (int(world["resources"][key]) + 1) % 5
 
     # Deterministic latent mode transition. The label is never exposed by observe().
-    object_position = world["objects"]["O1"]["position"]
-    if cycle > 0 and cycle % 11 == 0 and object_position[0] != 1:
+    # The cadence is intentionally independent of visits, while seed phase keeps
+    # different runs from sharing one privileged discovery path.
+    phase = int(world.get("resource_phase", 0) or 0)
+    if cycle > 0 and (cycle + phase) % 7 == 0:
         world["latent_mode"] = 1 - int(world["latent_mode"])
 
     # Delayed effects mature independently of attention.
