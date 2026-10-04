@@ -138,7 +138,11 @@ def public_evidence_payload(
     *,
     observation_refs: list[str],
 ) -> dict[str, Any]:
-    """Map a verified association interpretation to the public evidence schema."""
+    """Map a verified association interpretation to public evidence v2.
+
+    Comparative exposure measurements remain comparative measurements. They are
+    not collapsed into binary confirmations/refutations.
+    """
     if interpretation.get("status") not in {
         "supported_association",
         "contradicted_association",
@@ -146,8 +150,10 @@ def public_evidence_payload(
         raise ValueError("association interpretation is not public-evidence ready")
     present = interpretation["action_present"]
     absent = interpretation["action_absent"]
+    p_present = present["changed"] / present["evaluable"]
+    p_absent = absent["changed"] / absent["evaluable"]
     return {
-        "version": "native-inquiry-evidence-v1",
+        "version": "native-inquiry-evidence-v2",
         "relation": {
             "kind": "action_associated_with_change",
             "feature": interpretation["feature"],
@@ -155,13 +161,15 @@ def public_evidence_payload(
             "comparison_status": "comparable",
         },
         "observation_refs": list(observation_refs),
-        "evaluable": int(interpretation["evaluable"]),
-        "confirmations": int(interpretation["confirmations"]),
-        "refutations": int(interpretation["refutations"]),
-        "action_present": deepcopy(present),
-        "action_absent": deepcopy(absent),
+        "measurement_kind": "comparative_action_exposure",
+        "measurement": {
+            "action_present": deepcopy(present),
+            "action_absent": deepcopy(absent),
+            "observed_change_rate_action_present": round(p_present, 6),
+            "observed_change_rate_action_absent": round(p_absent, 6),
+            "observed_change_rate_difference": round(p_present - p_absent, 6),
+        },
     }
-
 
 def _insufficient(candidate: dict[str, Any], reason: str) -> dict[str, Any]:
     return {
