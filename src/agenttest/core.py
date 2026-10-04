@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 from collections import Counter
+from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 from .action_lab import step_action_lab
@@ -804,6 +807,9 @@ class AgentCore:
         strict_experiment_admission: bool = False,
         action_lab: bool = False,
         planning_lab: bool = False,
+        _phase42_counterfactual: bool = False,
+        _withhold_current_prediction_evidence: bool = False,
+        _now_override: str | None = None,
     ) -> dict[str, Any]:
         if action_lab and planning_lab:
             raise ValueError("action_lab and planning_lab are mutually exclusive")
@@ -811,7 +817,7 @@ class AgentCore:
         state["cycles"] += 1
         state["generation"] = state["cycles"]
         cycle = state["cycles"]
-        now = utc_now()
+        now = _now_override or utc_now()
         surprise = None
         prediction_result = None
         prediction_experiment = None
@@ -824,7 +830,12 @@ class AgentCore:
         )
 
         if observation is not None:
-            prediction_result = self._evaluate_prediction(state, observation, now)
+            if not _withhold_current_prediction_evidence:
+                prediction_result = self._evaluate_prediction(
+                    state,
+                    observation,
+                    now,
+                )
             previous = (
                 state["environment_snapshots"][-1]
                 if state["environment_snapshots"]
@@ -982,6 +993,156 @@ class AgentCore:
             legacy_question=legacy_question,
             cycle=cycle,
         )
+        if (
+            agenda_decision is not None
+            and not _phase42_counterfactual
+            and agenda_decision.get(
+                "priority_change_supported_by_new_evidence"
+            ) is True
+        ):
+            selected = agenda_decision.get("selected") or {}
+            counterfactual_record = {
+                "method": "same-prior-state-full-cycle-v1",
+                "withheld_source": (
+                    "current_prediction_evaluation"
+                    if prediction_result is not None
+                    else None
+                ),
+                "evidence_refs": list(
+                    selected.get("new_evidence_refs", [])
+                    if isinstance(selected, dict)
+                    else []
+                ),
+                "actual_selected_thread_id": agenda_decision.get(
+                    "selected_thread_id"
+                ),
+                "actual_selected_question_id": (
+                    selected.get("question_id")
+                    if isinstance(selected, dict)
+                    else None
+                ),
+                "counterfactual_selected_thread_id": None,
+                "counterfactual_selected_question_id": None,
+                "counterfactual_intention_kind": None,
+                "counterfactual_legacy_question_id": None,
+                "causal": False,
+                "evaluated": False,
+                "reason": None,
+            }
+            causal = False
+            if prediction_result is None:
+                counterfactual_record["reason"] = (
+                    "no_current_prediction_evidence_to_withhold"
+                )
+            elif cognition:
+                # Never replay a model/provider call merely to satisfy a
+                # scientific diagnostic. Normal autonomous operation is
+                # cognition-free; an unprovable provider-backed event remains
+                # non-genuine rather than being replayed externally.
+                counterfactual_record["reason"] = (
+                    "cognition_enabled_counterfactual_not_replayed"
+                )
+            else:
+                prior_state = self.store.load()
+                with tempfile.TemporaryDirectory() as temp:
+                    counterfactual_store = StateStore(
+                        Path(temp) / "organism.json"
+                    )
+                    counterfactual_store.save(deepcopy(prior_state))
+                    counterfactual_result = AgentCore(
+                        counterfactual_store
+                    ).cycle(
+                        stimulus=stimulus,
+                        observation=observation,
+                        cognition=False,
+                        strict_experiment_admission=strict_experiment_admission,
+                        action_lab=action_lab,
+                        planning_lab=planning_lab,
+                        _phase42_counterfactual=True,
+                        _withhold_current_prediction_evidence=True,
+                        _now_override=now,
+                    )
+                counterfactual_decision = counterfactual_result.get(
+                    "agenda_decision"
+                )
+                counterfactual_record["evaluated"] = True
+                counterfactual_record["counterfactual_intention_kind"] = (
+                    (counterfactual_result.get("intention") or {}).get("kind")
+                )
+                counterfactual_record["counterfactual_legacy_question_id"] = (
+                    (counterfactual_result.get("question") or {}).get("id")
+                )
+                if isinstance(counterfactual_decision, dict):
+                    counterfactual_selected = (
+                        counterfactual_decision.get("selected") or {}
+                    )
+                    counterfactual_record[
+                        "counterfactual_selected_thread_id"
+                    ] = counterfactual_decision.get("selected_thread_id")
+                    counterfactual_record[
+                        "counterfactual_selected_question_id"
+                    ] = (
+                        counterfactual_selected.get("question_id")
+                        if isinstance(counterfactual_selected, dict)
+                        else None
+                    )
+                    causal = (
+                        counterfactual_decision.get("selected_thread_id")
+                        != agenda_decision.get("selected_thread_id")
+                    )
+                    counterfactual_record["reason"] = (
+                        "withholding_current_prediction_evidence_changed_selection"
+                        if causal
+                        else "same_thread_resumed_without_current_prediction_evidence"
+                    )
+                else:
+                    counterfactual_record["reason"] = (
+                        "counterfactual_agenda_decision_unavailable"
+                    )
+            counterfactual_record["causal"] = causal
+            agenda_decision[
+                "priority_change_supported_by_new_evidence"
+            ] = causal
+            agenda_decision["resumption_causal_counterfactual"] = (
+                counterfactual_record
+            )
+            agenda_decision["resumption_causal_evidence_refs"] = list(
+                counterfactual_record["evidence_refs"]
+            )
+
+            if causal:
+                last_resumption = state.get("agenda", {}).get(
+                    "last_genuine_resumption"
+                )
+                if isinstance(last_resumption, dict):
+                    last_resumption["causal_method"] = (
+                        counterfactual_record["method"]
+                    )
+                    last_resumption["causal_evidence_refs"] = list(
+                        counterfactual_record["evidence_refs"]
+                    )
+                    last_resumption["counterfactual_selected_thread_id"] = (
+                        counterfactual_record[
+                            "counterfactual_selected_thread_id"
+                        ]
+                    )
+                    last_resumption[
+                        "counterfactual_selected_question_id"
+                    ] = counterfactual_record[
+                        "counterfactual_selected_question_id"
+                    ]
+            else:
+                # update_agenda provisionally increments the durable counter
+                # from evidence coexistence alone. Restore the exact persisted
+                # pre-cycle accounting unless the full-cycle counterfactual
+                # proves the new evidence changed which thread won.
+                prior_agenda = self.store.load().get("agenda", {})
+                state["agenda"]["genuine_resumption_count"] = int(
+                    prior_agenda.get("genuine_resumption_count", 0) or 0
+                )
+                state["agenda"]["last_genuine_resumption"] = deepcopy(
+                    prior_agenda.get("last_genuine_resumption")
+                )
         question = legacy_question
         if agenda_decision is not None:
             selected_question_id = str(
