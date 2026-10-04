@@ -140,6 +140,24 @@ class NativeEvidenceInterfaceTests(unittest.TestCase):
                 persist=True,
             )
 
+    def test_inquiry_relation_must_match_persisted_normalized_evidence(self):
+        store = self.make_store()
+        core = AgentCore(store)
+        evidence_result = core.record_native_evidence(
+            temporal_evidence(),
+            enabled=True,
+            persist=True,
+            _now_override="2026-10-04T00:00:00+00:00",
+        )
+        mismatched = candidate(evidence_result["evidence_ref"])
+        mismatched["relation"]["kind"] = "changes_next_observation"
+        with self.assertRaises(ValueError):
+            core.propose_native_inquiry(
+                mismatched,
+                enabled=True,
+                persist=True,
+            )
+
     def test_full_public_path_evidence_to_inquiry_to_agenda_reload(self):
         store = self.make_store()
         core = AgentCore(store)
