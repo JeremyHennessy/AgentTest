@@ -1,0 +1,48 @@
+name: prospective-objective-robustness
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "experiments/prospective_inquiry_benchmark.py"
+      - "scripts/prospective_objective_robustness.py"
+      - "tests/test_prospective_objective_robustness.py"
+      - ".github/workflows/prospective-objective-robustness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate deterministic robustness study
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/prospective_objective_robustness.py > artifacts/prospective_objective_robustness.json
+          python scripts/prospective_objective_robustness.py > "$RUNNER_TEMP/second.json"
+          cmp artifacts/prospective_objective_robustness.json "$RUNNER_TEMP/second.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/prospective_objective_robustness.json").read_text())
+          print(json.dumps({
+              "agreement": report["information_gain_discrimination_exact_selection_agreement"],
+              "cross_split": report["cross_split"],
+          }, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prospective-objective-robustness-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/prospective_objective_robustness.json
+          if-no-files-found: error
+          retention-days: 30
