@@ -33,4 +33,6 @@ jobs:
       - name: Compare isolated Ora control and World 2
         env:
           PYTHONPATH: src:experiments
-        run: python scripts/world2_ora_compare_report.py
+        run: |
+          git show origin/autonomous/growth:state/organism.json > state/organism.json
+          python scripts/world2_ora_compare_report.py
