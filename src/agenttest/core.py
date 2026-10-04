@@ -575,11 +575,6 @@ def _trace_experiment_specifications(state: dict[str, Any]) -> dict[str, Any]:
                     if native_candidate is not None
                     else (str(candidate_id) if candidate_id else None)
                 ),
-                "source_kind": (
-                    NATIVE_INQUIRY_SOURCE
-                    if native_candidate is not None
-                    else "cognition_candidate"
-                ),
             }
             (actionable if can_supply else blocked).append(experiment_id)
 
@@ -895,11 +890,6 @@ class AgentCore:
             raise RuntimeError("native inquiry failed grounded actionability tracing")
 
         inquiry_update = consolidate_inquiry_families(state)
-        agenda_preview = update_agenda(
-            state,
-            legacy_question=question,
-            cycle=cycle,
-        )
         if persist:
             self.store.save(state)
 
@@ -912,7 +902,6 @@ class AgentCore:
             "experiment": deepcopy(experiment),
             "specification_update": deepcopy(specification_update),
             "inquiry_update": deepcopy(inquiry_update),
-            "agenda_preview": deepcopy(agenda_preview),
             "state": deepcopy(state),
         }
 
