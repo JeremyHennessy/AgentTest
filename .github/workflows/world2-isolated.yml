@@ -21,6 +21,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run isolated World 2 tests
+        env:
+          PYTHONPATH: src
         run: python -m unittest discover -s tests -p 'test_world2_*.py' -v
       - name: Generate reachability report
         env:
