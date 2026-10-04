@@ -30,3 +30,7 @@ jobs:
         run: python scripts/world2_reachability_report.py
       - name: Show report
         run: cat artifacts/world2_reachability_report.json
+      - name: Compare isolated Ora control and World 2
+        env:
+          PYTHONPATH: src:experiments
+        run: python scripts/world2_ora_compare_report.py
