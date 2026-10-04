@@ -597,13 +597,13 @@ function renderOutcomeValuation(o){
  el("outcomeValuationHistory").innerHTML=tail(decisions,4).map(x=>'<span class="pred '+(x.outcome_changed_choice?'confirmed':'pending')+'">'+esc(x.id)+" · "+esc(x.outcome_changed_choice?"outcomes changed objective":"Phase 39 choice retained")+" · "+esc(vec(x.selected?.target))+"</span>").join("");
 }
 function renderAgendaOpportunityDiagnostic(d){
- const ready=d&&d.diagnostic_version==="phase42-resumption-opportunities-v1";
+ const ready=d&&d.diagnostic_version==="phase42-resumption-opportunities-v2";
  el("agendaOpportunityCount").textContent=ready?Number(d.opportunity_count||0):"—";
  el("agendaLowerPriorityCount").textContent=ready?Number(d.lower_priority_opportunity_count||0):"—";
  el("agendaMismatchCount").textContent=ready?Number(d.handoff_or_selection_mismatch_count||0):"—";
  if(!ready){el("agendaOpportunityStatus").textContent="Waiting for first diagnostic heartbeat.";return}
  const opportunities=Number(d.opportunity_count||0),resumed=Number(d.resumed_opportunity_count||0),lower=Number(d.lower_priority_opportunity_count||0),mismatch=Number(d.handoff_or_selection_mismatch_count||0);
- el("agendaOpportunityStatus").textContent=mismatch?mismatch+" opportunity"+(mismatch===1?"":"ies")+" need handoff/selection review.":opportunities===0?"No qualifying resumption opportunity exists in the retained decision window.":resumed?resumed+" qualifying opportunity"+(resumed===1?" resumed successfully.":"ies resumed successfully."):(lower===opportunities?opportunities+" qualifying opportunity"+(opportunities===1?" was":"ies were")+" recognized but remained lower priority.":opportunities+" qualifying opportunities observed; no selection mismatch detected.");
+ el("agendaOpportunityStatus").textContent=mismatch?mismatch+" opportunity"+(mismatch===1?"":"ies")+" need handoff/selection review.":opportunities===0?(Number(d.telemetry_decision_count||0)+" prospective decision"+(Number(d.telemetry_decision_count||0)===1?"":"s")+" measured · no qualifying opportunity yet."):resumed?resumed+" qualifying opportunity"+(resumed===1?" resumed successfully.":"ies resumed successfully."):(lower===opportunities?opportunities+" qualifying opportunity"+(opportunities===1?" was":"ies were")+" recognized but remained lower priority.":opportunities+" qualifying opportunities observed; no selection mismatch detected.");
 }
 function renderAgenda(o){
  const agenda=o.agenda||{},threads=agenda.threads||[],decisions=agenda.decisions||[];
