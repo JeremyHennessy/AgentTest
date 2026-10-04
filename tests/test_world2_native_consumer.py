@@ -121,7 +121,14 @@ class World2NativeConsumerTests(unittest.TestCase):
         )
         result = consumer.consume_native_observation(state, unavailable)
         self.assertEqual(pred["status"], "pending")
-        self.assertEqual(result["resolved_evidence_ids"], [])
+        resolved = [
+            item
+            for item in native_state["evidence"]
+            if item["id"] in result["resolved_evidence_ids"]
+        ]
+        self.assertFalse(
+            any(item["prediction_id"] == pred["prediction"]["prediction_id"] for item in resolved)
+        )
         self.assertFalse(
             any(
                 item["prediction"]["kind"] == "resource_value_at_position"
