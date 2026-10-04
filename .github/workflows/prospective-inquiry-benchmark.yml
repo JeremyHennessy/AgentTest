@@ -1,0 +1,55 @@
+name: prospective-inquiry-benchmark
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "experiments/prospective_inquiry_benchmark.py"
+      - "scripts/prospective_inquiry_benchmark.py"
+      - "tests/test_prospective_inquiry_benchmark.py"
+      - ".github/workflows/prospective-inquiry-benchmark.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate deterministic prospective benchmark
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/prospective_inquiry_benchmark.py > artifacts/prospective_inquiry_benchmark.json
+          python scripts/prospective_inquiry_benchmark.py > "$RUNNER_TEMP/benchmark-second.json"
+          cmp artifacts/prospective_inquiry_benchmark.json "$RUNNER_TEMP/benchmark-second.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/prospective_inquiry_benchmark.json").read_text())
+          print(json.dumps({
+              name: {
+                  "held_out_evaluable_rate": result["held_out_evaluable_rate"],
+                  "mean_held_out_evidence_count": result["mean_held_out_evidence_count"],
+                  "mean_realized_posterior_entropy_reduction": result["mean_realized_posterior_entropy_reduction"],
+                  "positive_entropy_reduction_count": result["positive_entropy_reduction_count"],
+                  "negative_entropy_reduction_count": result["negative_entropy_reduction_count"],
+                  "relation_counts": result["relation_counts"],
+              }
+              for name, result in report["objectives"].items()
+          }, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prospective-inquiry-benchmark-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/prospective_inquiry_benchmark.json
+          if-no-files-found: error
+          retention-days: 30
