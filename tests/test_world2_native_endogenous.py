@@ -35,13 +35,20 @@ def sample(world, record=None):
 
 
 class World2NativeEndogenousTests(unittest.TestCase):
-    def test_pending_evidence_creates_evidence_hunger(self):
+    def test_initial_focus_follows_declared_drive_competition(self):
         state = initial_state()
         world = world2.initial_world2_state(seed=1)
         consumer.consume_native_observation(state, sample(world))
         intention = endogenous.choose_native_intention(state)
-        self.assertEqual(intention["dominant_drive"], "evidence_hunger")
-        self.assertEqual(intention["kind"], "resolve_native_prediction")
+        self.assertEqual(
+            intention["dominant_drive"],
+            max(
+                endogenous.DRIVE_ORDER,
+                key=lambda name: intention["drives"][name],
+            ),
+        )
+        self.assertEqual(intention["dominant_drive"], "novelty_hunger")
+        self.assertEqual(intention["kind"], "explore_native_novelty")
         self.assertIsNotNone(intention["target"])
 
     def test_refutation_changes_dominant_drive_and_focus(self):
