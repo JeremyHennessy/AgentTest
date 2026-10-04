@@ -116,8 +116,9 @@ class World2NativeConsumerTests(unittest.TestCase):
             item for item in native_state["predictions"]
             if item["prediction"]["kind"] == "resource_value_at_position"
         )
+        world, record = world2.transition_world2(world, "observe", cycle=1)
         unavailable = native.native_world2_observation(
-            world2.observe_world2(world), resource_available=False
+            world2.observe_world2(world), action_receipt=record, resource_available=False
         )
         result = consumer.consume_native_observation(state, unavailable)
         self.assertEqual(pred["status"], "pending")
