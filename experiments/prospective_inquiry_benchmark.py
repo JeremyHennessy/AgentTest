@@ -38,7 +38,9 @@ def benchmark_trajectory(samples: list[dict[str, Any]]) -> dict[str, Any]:
             }
             continue
         selected = eligible[0]
-        held_out = _evaluate_selected(selected["candidate"], suffix_candidates)
+        held_out = _evaluate_selected(
+            selected["candidate"], suffix_candidates, suffix_window
+        )
         results[objective] = {
             "status": "selected",
             "selected": {
@@ -63,6 +65,7 @@ def benchmark_trajectory(samples: list[dict[str, Any]]) -> dict[str, Any]:
 def _evaluate_selected(
     selected: dict[str, Any],
     suffix_candidates: list[dict[str, Any]],
+    suffix_observations: list[dict[str, Any]],
 ) -> dict[str, Any]:
     match = next(
         (
@@ -74,6 +77,12 @@ def _evaluate_selected(
         ),
         None,
     )
+    if selected["relation"] == "action_associated_with_change":
+        return _evaluate_action_association(
+            selected,
+            suffix_observations,
+        )
+
     if match is None:
         return {
             "status": "feature_not_observed",
@@ -81,9 +90,6 @@ def _evaluate_selected(
             "evidence_count": 0,
             "posterior_entropy_reduction": None,
         }
-
-    if selected["relation"] == "action_associated_with_change":
-        return _evaluate_action_association(selected, match)
     return _evaluate_transition(selected, match)
 
 
@@ -111,13 +117,29 @@ def _evaluate_transition(prefix: dict[str, Any], suffix: dict[str, Any]) -> dict
     }
 
 
-def _evaluate_action_association(prefix: dict[str, Any], suffix: dict[str, Any]) -> dict[str, Any]:
+def _evaluate_action_association(
+    prefix: dict[str, Any],
+    suffix_observations: list[dict[str, Any]],
+) -> dict[str, Any]:
     p1 = prefix["action_present"]
     p0 = prefix["action_absent"]
-    s1 = suffix["action_present"]
-    s0 = suffix["action_absent"]
-    held_count = int(s1["evaluable"]) + int(s0["evaluable"])
+    s1 = {"same": 0, "changed": 0, "evaluable": 0}
+    s0 = {"same": 0, "changed": 0, "evaluable": 0}
+    feature = prefix["feature"]
+    selected_action = prefix["action"]
 
+    for left, right in zip(suffix_observations, suffix_observations[1:]):
+        before_value = _feature_value(left, feature)
+        after_value = _feature_value(right, feature)
+        if before_value is _MISSING or after_value is _MISSING:
+            continue
+        receipt = right.get("action_receipt") or {}
+        bucket = s1 if receipt.get("action") == selected_action else s0
+        changed = before_value != after_value
+        bucket["changed" if changed else "same"] += 1
+        bucket["evaluable"] += 1
+
+    held_count = int(s1["evaluable"]) + int(s0["evaluable"])
     before = 0.5 * (
         _beta_binary_entropy(p1["changed"] + 1.0, p1["same"] + 1.0)
         + _beta_binary_entropy(p0["changed"] + 1.0, p0["same"] + 1.0)
@@ -133,7 +155,12 @@ def _evaluate_action_association(prefix: dict[str, Any], suffix: dict[str, Any])
         )
     )
     both_exposures = bool(s1["evaluable"] and s0["evaluable"])
-    effect = suffix.get("effect_difference")
+    effect = None
+    if both_exposures:
+        effect = round(
+            s1["changed"] / s1["evaluable"] - s0["changed"] / s0["evaluable"],
+            6,
+        )
     return {
         "status": (
             "comparable_held_out"
@@ -152,6 +179,18 @@ def _evaluate_action_association(prefix: dict[str, Any], suffix: dict[str, Any])
         "posterior_entropy_after": round(after, 6),
         "posterior_entropy_reduction": round(before - after, 6),
     }
+
+
+_MISSING = object()
+
+
+def _feature_value(observation: dict[str, Any], feature: str) -> Any:
+    if feature == "visible_object_ids":
+        return tuple(observation.get(feature, []))
+    reading = observation.get(feature)
+    if isinstance(reading, dict) and reading.get("status") == "measured":
+        return reading.get("value")
+    return _MISSING
 
 
 def _beta_binary_entropy(alpha: float, beta: float) -> float:
