@@ -51,6 +51,7 @@ class Phase42FullCycleResumptionCausalityTests(unittest.TestCase):
             "created_cycle": 2,
             "times_selected": 1,
             "last_selected_cycle": 18,
+            "source": "repository_stability_prediction",
         }
         state["questions"] = [resume_question, foreground_question]
 
