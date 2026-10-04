@@ -40,6 +40,10 @@ def validate_native_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("unsupported native evidence version")
 
     relation = _validate_relation(evidence["relation"])
+    if relation["kind"] == "action_associated_with_change":
+        raise ValueError(
+            "native evidence v1 does not support action associations; use v2"
+        )
     refs = evidence["observation_refs"]
     if (
         not isinstance(refs, list)
