@@ -400,7 +400,7 @@ class NativeInquiryResolutionTests(unittest.TestCase):
                 "question_id": result["question"]["id"],
                 "question_text": result["question"]["text"],
                 "agenda_selected_question_id": (
-                    result.get("agenda_decision", {})
+                    (result.get("agenda_decision") or {})
                     .get("selected", {})
                     .get("question_id")
                 ),
