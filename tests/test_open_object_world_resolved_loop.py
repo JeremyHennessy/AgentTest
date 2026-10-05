@@ -376,6 +376,233 @@ class OpenObjectWorldResolvedLoopTests(unittest.TestCase):
         self.assertEqual(summary["selected_score_match_count"], 30)
         self.assertEqual(summary["resolved_after_reload_count"], 30)
 
+    def test_all_temporal_native_evidence_recovers_full_ranking_after_reload(self):
+        from agenttest.native_evidence import (
+            NATIVE_EVIDENCE_V2_VERSION,
+            validate_native_evidence_payload,
+        )
+
+        world_mod = sys.modules["open_object_world"]
+        selector_mod = sys.modules["open_object_world_epistemic_actions"]
+        study_mod = sys.modules["open_object_world_epistemic_action_study"]
+        bridge_mod = sys.modules["open_object_world_native_bridge"]
+        objective_mod = sys.modules["normalized_inquiry_objectives"]
+
+        rows = []
+        for seed in range(1, 5):
+            for checkpoint in range(200, 951, 50):
+                world, _attempts, observations, receipts = (
+                    study_mod.run_to_checkpoint(seed, checkpoint)
+                )
+                ranked_before = study_mod.ranked_temporal(observations)
+                selected = ranked_before[0]
+                candidate = selected["candidate"]
+                epistemic = selector_mod.select_epistemic_command(
+                    observations[-1],
+                    feature=candidate["feature"],
+                    relation=candidate["relation"],
+                    prefix_observations=observations,
+                    prefix_receipts=receipts,
+                )
+                if epistemic["mode"] != "seek_disconfirming_observation":
+                    rows.append(
+                        {
+                            "seed": seed,
+                            "checkpoint": checkpoint,
+                            "status": "not_mature",
+                        }
+                    )
+                    continue
+
+                next_world, _receipt = world_mod.transition(
+                    deepcopy(world),
+                    epistemic["command"],
+                    cycle=checkpoint + 1,
+                )
+                after_observation = world_mod.observe_world(next_world)
+                observations_after = [*observations, after_observation]
+                direct_ranked = study_mod.ranked_temporal(observations_after)
+                direct_eligible = [
+                    item for item in direct_ranked if item["eligible"]
+                ]
+
+                with tempfile.TemporaryDirectory() as temp:
+                    store = StateStore(Path(temp) / "organism.json")
+                    state = initial_state()
+                    state["cycles"] = 20
+                    state["generation"] = 20
+                    state["agenda"]["started_cycle"] = 1
+                    store.save(state)
+                    core = AgentCore(store)
+
+                    observation_refs = [
+                        str(item.get("observation_id"))
+                        for item in observations_after
+                        if item.get("observation_id")
+                    ][-64:]
+                    for item in direct_eligible:
+                        direct_candidate = item["candidate"]
+                        core.record_native_evidence(
+                            {
+                                "version": NATIVE_EVIDENCE_V2_VERSION,
+                                "relation": {
+                                    "kind": direct_candidate["relation"],
+                                    "feature": direct_candidate["feature"],
+                                    "action": None,
+                                    "comparison_status": "not_applicable",
+                                },
+                                "observation_refs": observation_refs,
+                                "measurement_kind": "binary_transition_outcomes",
+                                "measurement": {
+                                    "evaluable": int(
+                                        direct_candidate["evaluable"]
+                                    ),
+                                    "confirmations": int(
+                                        direct_candidate["confirmations"]
+                                    ),
+                                    "refutations": int(
+                                        direct_candidate["refutations"]
+                                    ),
+                                },
+                            },
+                            enabled=True,
+                            persist=True,
+                        )
+
+                    reloaded = AgentCore(StateStore(core.store.path))
+                    reloaded_state = reloaded.store.load()
+                    parsed_temporal = []
+                    for episode in reloaded_state.get("episodes", []):
+                        if episode.get("kind") != "native_inquiry_evidence":
+                            continue
+                        payload = validate_native_evidence_payload(
+                            json.loads(str(episode.get("content") or ""))
+                        )
+                        if (
+                            payload.get("measurement_kind")
+                            != "binary_transition_outcomes"
+                        ):
+                            continue
+                        parsed_temporal.append(payload)
+
+                    reconstructed = []
+                    for index, payload in enumerate(
+                        sorted(
+                            parsed_temporal,
+                            key=lambda item: (
+                                item["relation"]["feature"],
+                                item["relation"]["kind"],
+                            ),
+                        ),
+                        start=1,
+                    ):
+                        measurement = payload["measurement"]
+                        reconstructed.append(
+                            {
+                                "id": f"OWC{index:04d}",
+                                "relation": payload["relation"]["kind"],
+                                "feature": payload["relation"]["feature"],
+                                "action": None,
+                                "status": "evaluated",
+                                "evaluable": int(
+                                    measurement["evaluable"]
+                                ),
+                                "confirmations": int(
+                                    measurement["confirmations"]
+                                ),
+                                "refutations": int(
+                                    measurement["refutations"]
+                                ),
+                            }
+                        )
+
+                    recovered_ranked = [
+                        item
+                        for item in objective_mod.rank_normalized_candidates(
+                            reconstructed,
+                            "information_gain",
+                        )
+                        if item["eligible"]
+                    ]
+
+                def signature(ranked):
+                    return [
+                        (
+                            item["candidate"]["feature"],
+                            item["candidate"]["relation"],
+                            item["score"],
+                        )
+                        for item in ranked
+                    ]
+
+                direct_signature = signature(direct_eligible)
+                recovered_signature = signature(recovered_ranked)
+                direct_keys = {
+                    (feature, relation)
+                    for feature, relation, _score in direct_signature
+                }
+                recovered_keys = {
+                    (feature, relation)
+                    for feature, relation, _score in recovered_signature
+                }
+                rows.append(
+                    {
+                        "seed": seed,
+                        "checkpoint": checkpoint,
+                        "status": "completed",
+                        "direct_candidate_count": len(direct_signature),
+                        "persisted_candidate_count": len(
+                            recovered_signature
+                        ),
+                        "full_candidate_coverage": (
+                            direct_keys == recovered_keys
+                        ),
+                        "exact_ranking_match": (
+                            direct_signature == recovered_signature
+                        ),
+                        "top_candidate_match": (
+                            direct_signature[0] == recovered_signature[0]
+                        ),
+                    }
+                )
+
+        completed = [row for row in rows if row["status"] == "completed"]
+        summary = {
+            "case_count": len(rows),
+            "mature_evaluable_count": len(completed),
+            "full_candidate_coverage_count": sum(
+                row["full_candidate_coverage"] for row in completed
+            ),
+            "exact_ranking_match_count": sum(
+                row["exact_ranking_match"] for row in completed
+            ),
+            "top_candidate_match_count": sum(
+                row["top_candidate_match"] for row in completed
+            ),
+            "min_direct_candidate_count": min(
+                row["direct_candidate_count"] for row in completed
+            ),
+            "max_direct_candidate_count": max(
+                row["direct_candidate_count"] for row in completed
+            ),
+            "min_persisted_candidate_count": min(
+                row["persisted_candidate_count"] for row in completed
+            ),
+            "max_persisted_candidate_count": max(
+                row["persisted_candidate_count"] for row in completed
+            ),
+        }
+        print(
+            "NATIVE_TEMPORAL_RANKING_RELOAD_PARITY "
+            + json.dumps(summary, sort_keys=True)
+        )
+
+        self.assertEqual(summary["case_count"], 64)
+        self.assertEqual(summary["mature_evaluable_count"], 30)
+        self.assertEqual(summary["full_candidate_coverage_count"], 30)
+        self.assertEqual(summary["exact_ranking_match_count"], 30)
+        self.assertEqual(summary["top_candidate_match_count"], 30)
+
     def test_resolved_loop_never_uses_core_action_labs(self):
         source = (
             EXPERIMENTS / "open_object_world_resolved_loop.py"
