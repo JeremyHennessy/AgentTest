@@ -405,7 +405,8 @@ class NativeInquiryResolutionTests(unittest.TestCase):
                     .get("question_id")
                 ),
                 "strict_actionable_question_ids": [
-                    item["id"] for item in result["strict_actionable_questions"]
+                    item["id"]
+                    for item in (result.get("strict_actionable_questions") or [])
                 ],
             }
 
