@@ -1,0 +1,132 @@
+name: native-shadow-source-registry
+
+on:
+  push:
+    branches:
+      - experiment/native-shadow-source-registry
+    paths:
+      - experiments/native_shadow_source_registry.py
+      - tests/test_native_shadow_source_registry.py
+      - scripts/native_shadow_source_registry_study.py
+      - docs/native-shadow-source-registry-boundary.md
+      - .github/workflows/native-shadow-source-registry.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-shadow-source-registry-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PRODUCTION_BASE: eb906904d4a30d7427075987f928e0b97699cfe3
+  PINNED_SOURCE_COMMIT: dcb03f13ad37bcc84543bfa9f42c5be04095feb3
+  WORLD_BLOB: f25a43b148a8009fa85a375184a484e6d54434b8
+  EXPLORER_BLOB: afafba3ff6ea59de239b071d81c36a37b5cfe0e8
+
+jobs:
+  source-registry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify exact head and branch scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python - <<'PY'
+          import os
+          import subprocess
+
+          allowed = {
+              "experiments/native_shadow_source_registry.py",
+              "tests/test_native_shadow_source_registry.py",
+              "scripts/native_shadow_source_registry_study.py",
+              "docs/native-shadow-source-registry-boundary.md",
+              ".github/workflows/native-shadow-source-registry.yml",
+          }
+          changed = set(
+              subprocess.check_output(
+                  [
+                      "git",
+                      "diff",
+                      "--name-only",
+                      f"{os.environ['PRODUCTION_BASE']}...HEAD",
+                  ],
+                  text=True,
+              ).splitlines()
+          )
+          if changed != allowed:
+              raise SystemExit(
+                  "unexpected source-registry scope: "
+                  + ", ".join(sorted(changed ^ allowed))
+              )
+          PY
+
+      - name: Run focused registry tests
+        shell: bash
+        env:
+          PYTHONPATH: .
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest tests.test_native_shadow_source_registry -v
+
+      - name: Verify and extract pinned Git objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1             https://github.com/JeremyHennessy/AgentTest.git             "$PINNED_SOURCE_COMMIT"
+          test "$(git rev-parse "$PINNED_SOURCE_COMMIT:experiments/open_object_world.py")" = "$WORLD_BLOB"
+          test "$(git rev-parse "$PINNED_SOURCE_COMMIT:experiments/open_object_world_explorer.py")" = "$EXPLORER_BLOB"
+          mkdir -p "$RUNNER_TEMP/pinned-source" artifacts
+          git show "$PINNED_SOURCE_COMMIT:experiments/open_object_world.py"             > "$RUNNER_TEMP/pinned-source/open_object_world.py"
+          git show "$PINNED_SOURCE_COMMIT:experiments/open_object_world_explorer.py"             > "$RUNNER_TEMP/pinned-source/open_object_world_explorer.py"
+
+      - name: Build reviewed source attestation
+        shell: bash
+        env:
+          PYTHONPATH: .
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from experiments.native_shadow_source_registry import (
+              PINNED_OPEN_OBJECT_WORLD_SOURCE,
+              expected_attestation,
+          )
+          Path("artifacts/source-attestation.json").write_text(
+              json.dumps(
+                  expected_attestation(PINNED_OPEN_OBJECT_WORLD_SOURCE),
+                  indent=2,
+                  sort_keys=True,
+              ) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Run pinned public-output study
+        shell: bash
+        env:
+          PYTHONPATH: .
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python scripts/native_shadow_source_registry_study.py             --source-dir "$RUNNER_TEMP/pinned-source"             --attestation artifacts/source-attestation.json             --output artifacts/source-registry-study.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-shadow-source-registry-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: error
