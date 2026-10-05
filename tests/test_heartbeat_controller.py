@@ -17,6 +17,14 @@ class HeartbeatControllerWorkflowTests(unittest.TestCase):
         self.assertIn("Failed to queue successor controller after 5 attempts.", workflow)
         self.assertIn("-f controller_token=controller-v3", workflow)
         self.assertIn("-f delay_seconds=0", workflow)
+        self.assertIn("for attempt in $(seq 1 10); do", workflow)
+        self.assertIn("gh run view \"$run_id\"", workflow)
+        self.assertIn('grep -q "HTTP 404"', workflow)
+        self.assertIn("retrying in 2 seconds", workflow)
+        self.assertIn(
+            "Growth run $run_id did not become queryable after 10 attempts.",
+            workflow,
+        )
         self.assertNotIn("cancel-in-progress: true", workflow)
 
 
