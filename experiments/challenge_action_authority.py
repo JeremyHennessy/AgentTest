@@ -32,7 +32,7 @@ from open_object_world_challenge import (
 )
 from open_object_world_challenge_explorer import candidate_commands, command_key
 
-VERSION = "challenge-action-authority-v1"
+VERSION = "challenge-action-authority-v2"
 
 
 def _digest(value: Any) -> str:
@@ -63,6 +63,23 @@ def _canonical_command(command: dict[str, Any]) -> dict[str, Any]:
 
 def _observation_hash(observation: dict[str, Any]) -> str:
     return _digest(observation)
+
+
+def _current_source_hash() -> str:
+    root = Path(__file__).resolve().parent
+    names = (
+        "challenge_action_authority.py",
+        "challenge_shadow_recorder.py",
+        "challenge_shadow_epistemic_selector.py",
+        "open_object_world_challenge.py",
+        "open_object_world_challenge_explorer.py",
+        "native_observe_inquire_integration.py",
+        "normalized_inquiry_objectives.py",
+    )
+    return _digest({
+        name: hashlib.sha256((root / name).read_bytes()).hexdigest()
+        for name in names
+    })
 
 
 def _seal(state: dict[str, Any]) -> dict[str, Any]:
@@ -215,6 +232,8 @@ class ChallengeActionExecutor:
             )
 
         ora_state = ora_store.load()
+        if not ora_store.path.is_file():
+            raise ValueError("copied Ora state is unavailable")
         experiment = _find_experiment(ora_state, experiment_id)
         native = experiment["native_inquiry"]
         relation = native["relation"]
@@ -270,12 +289,22 @@ class ChallengeActionExecutor:
             "experiment_id": str(experiment_id),
             "question_id": question_id,
             "native_candidate_id": candidate_id,
+            "ora_state_hash": _digest(ora_state),
+            "source_content_hash": _current_source_hash(),
+            "ora_cycle": ora_state["cycles"],
+            "experiment_hash": _digest(experiment),
+            "ora_store_path": str(ora_store.path.resolve()),
+            "recorder_store_path": str(recorder.store.path.resolve()),
             "feature": feature,
             "relation": relation_kind,
             "observation_id": current_observation["observation_id"],
             "observation_cycle": int(current_observation["cycle"]),
             "observation_hash": _observation_hash(current_observation),
             "recorder_chain_hash": str(cursor.get("chain") or ""),
+            "recorder_checkpoint_hash": _digest(cursor),
+            "association_hash": _digest(associations),
+            "world_hash": _digest(executor["world"]),
+            "max_actions": executor["max_actions"],
             "selector_policy": POLICY,
             "selection_hash": _digest(selection),
             "command": command,
@@ -299,7 +328,13 @@ class ChallengeActionExecutor:
             "association_count": len(associations),
         }
 
-    def execute(self, token: dict[str, Any]) -> dict[str, Any]:
+    def execute(
+        self,
+        token: dict[str, Any],
+        *,
+        ora_store: StateStore,
+        recorder: ChallengeShadowRecorder,
+    ) -> dict[str, Any]:
         executor = _load_executor(self.path)
         if not isinstance(token, dict):
             raise ValueError("challenge capability token must be an object")
@@ -333,6 +368,29 @@ class ChallengeActionExecutor:
             raise RuntimeError("challenge action budget is exhausted")
         if token.get("budget_ordinal") != executor["actions_consumed"] + 1:
             raise ValueError("challenge capability budget ordinal is stale")
+        if token.get("max_actions") != executor["max_actions"]:
+            raise ValueError("challenge capability action budget is stale")
+        if token.get("world_hash") != _digest(executor["world"]):
+            raise ValueError("challenge capability world is stale")
+        if token.get("source_content_hash") != _current_source_hash():
+            raise ValueError("challenge capability source content is stale")
+
+        # Reload the explicit copied stores after restart. A capability reviews
+        # one exact state, not just inquiry IDs or issuance-time metadata.
+        if not ora_store.path.is_file() or not recorder.store.path.is_file():
+            raise ValueError("reviewed copied state is unavailable")
+        if token.get("ora_store_path") != str(ora_store.path.resolve()):
+            raise ValueError("challenge capability copied Ora store mismatch")
+        if token.get("recorder_store_path") != str(recorder.store.path.resolve()):
+            raise ValueError("challenge capability recorder store mismatch")
+        ora_state = ora_store.load()
+        experiment = _find_experiment(ora_state, token["experiment_id"])
+        if (
+            token.get("ora_state_hash") != _digest(ora_state)
+            or token.get("ora_cycle") != ora_state["cycles"]
+            or token.get("experiment_hash") != _digest(experiment)
+        ):
+            raise ValueError("challenge capability copied Ora inquiry is stale")
 
         observation = observe_world(executor["world"])
         if token.get("observation_id") != observation["observation_id"]:
@@ -341,6 +399,37 @@ class ChallengeActionExecutor:
             raise ValueError("challenge capability cycle is stale")
         if token.get("observation_hash") != _observation_hash(observation):
             raise ValueError("challenge capability observation hash is stale")
+
+        # Recorder methods validate the persisted checkpoint checksum. Check its
+        # complete contents as well as recomputing the unchanged selector.
+        if recorder.latest_observation() != observation:
+            raise ValueError("challenge capability recorder observation is stale")
+        cursor = recorder.store.load().get(RECORDER_STATE_KEY)
+        if not isinstance(cursor, dict):
+            raise ValueError("challenge recorder checkpoint is unavailable")
+        if (
+            cursor.get("source_id") != SOURCE_ID
+            or cursor.get("source_descriptor_hash") != SOURCE_DESCRIPTOR_HASH
+            or token.get("recorder_chain_hash") != str(cursor.get("chain") or "")
+            or token.get("recorder_checkpoint_hash") != _digest(cursor)
+        ):
+            raise ValueError("challenge capability recorder checkpoint is stale")
+        associations = recorder.action_associations()
+        relation = experiment["native_inquiry"]["relation"]
+        selection = select_epistemic_command(
+            observation,
+            feature=str(relation["feature"]),
+            relation=str(relation["kind"]),
+            associations=associations,
+        )
+        if (
+            selection.get("policy") != POLICY
+            or token.get("selector_policy") != POLICY
+            or token.get("association_hash") != _digest(associations)
+            or token.get("selection_hash") != _digest(selection)
+            or token.get("command") != _canonical_command(selection["command"])
+        ):
+            raise ValueError("challenge capability selector or command is stale")
 
         command = _canonical_command(token["command"])
         if token.get("command_hash") != _digest(command):
