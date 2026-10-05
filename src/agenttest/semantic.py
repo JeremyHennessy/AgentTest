@@ -4,6 +4,8 @@ import re
 from itertools import combinations
 from typing import Any
 
+from .episode_identity import episode_sequence, infer_episode_sequence_cursor
+
 
 def _tokens(text: str) -> set[str]:
     return {
@@ -17,11 +19,20 @@ def _memory(state: dict[str, Any]) -> dict[str, Any]:
         "semantic_memory",
         {
             "last_episode_index": 0,
+            "last_episode_sequence": 0,
             "concepts": {},
             "associations": {},
         },
     )
     memory.setdefault("last_episode_index", 0)
+    if "last_episode_sequence" not in memory:
+        memory["last_episode_sequence"] = infer_episode_sequence_cursor(
+            state.get("episodes", []),
+            int(memory.get("last_episode_index", 0) or 0),
+        )
+    sequence_cursor = memory.get("last_episode_sequence")
+    if type(sequence_cursor) is not int or sequence_cursor < 0:
+        raise ValueError("semantic last_episode_sequence must be a non-negative integer")
     memory.setdefault("concepts", {})
     memory.setdefault("associations", {})
     return memory
@@ -30,8 +41,16 @@ def _memory(state: dict[str, Any]) -> dict[str, Any]:
 def consolidate_semantic_memory(state: dict[str, Any]) -> dict[str, int]:
     memory = _memory(state)
     episodes = state.get("episodes", [])
-    start = min(int(memory.get("last_episode_index", 0)), len(episodes))
-    new_episodes = episodes[start:]
+    legacy_start = min(int(memory.get("last_episode_index", 0)), len(episodes))
+    sequence_cursor = int(memory.get("last_episode_sequence", 0) or 0)
+    new_episodes = []
+    for index, episode in enumerate(episodes):
+        sequence = episode_sequence(episode.get("id")) if isinstance(episode, dict) else None
+        if sequence is not None:
+            if sequence > sequence_cursor:
+                new_episodes.append(episode)
+        elif index >= legacy_start:
+            new_episodes.append(episode)
     concept_updates = 0
     association_updates = 0
 
@@ -85,6 +104,20 @@ def consolidate_semantic_memory(state: dict[str, Any]) -> dict[str, int]:
                 edge["episode_refs"] = edge["episode_refs"][-32:]
             association_updates += 1
 
+    processed_sequences = [
+        sequence
+        for sequence in (
+            episode_sequence(episode.get("id"))
+            for episode in new_episodes
+            if isinstance(episode, dict)
+        )
+        if sequence is not None
+    ]
+    if processed_sequences:
+        memory["last_episode_sequence"] = max(
+            sequence_cursor,
+            max(processed_sequences),
+        )
     memory["last_episode_index"] = len(episodes)
     return {
         "episodes_consolidated": len(new_episodes),
