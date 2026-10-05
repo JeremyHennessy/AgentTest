@@ -69,6 +69,8 @@ def _evaluate(record: Any, state: dict | None) -> dict:
         return stop("unchecked", "returned_experiment_not_recorded")
     if "experiment" in record and experiment is not None and not isinstance(experiment, dict):
         return stop("unknown", "invalid_returned_experiment")
+    if isinstance(experiment, dict) and not _identifier(experiment.get("id")):
+        return stop("unknown", "embedded_experiment_identity_unavailable")
     xid = record.get("experiment_id", experiment.get("id") if experiment else None)
     result["returned_experiment_id"] = xid
     if "experiment" in record and (
@@ -78,6 +80,8 @@ def _evaluate(record: Any, state: dict | None) -> dict:
         result["raw_contradictions"].append("returned_experiment_id")
         return stop("unknown", "contradictory_returned_experiment")
     if xid is None:
+        # Only an explicitly null field is no_experiment; a missing nested ID
+        # cannot authorize a green null route.
         return stop("no_experiment", "explicit_null_returned_experiment")
     if not _identifier(xid):
         return stop("unknown", "invalid_returned_experiment_id")

@@ -93,6 +93,36 @@ class IndependentRoutingTests(unittest.TestCase):
         record["experiment"] = {"id": "X_GONE"}
         self.assertEqual(self.status(record), "unknown")
 
+    def test_malformed_embedded_experiment_is_never_explicit_null(self):
+        for experiment in ({}, {"question_id": "Q1"}, {"id": None}, {"id": ""}):
+            with self.subTest(experiment=experiment):
+                record = route()
+                record["experiment"] = experiment
+                result = evaluate_experiment_routes([record])
+                self.assertEqual(result["unknown_count"], 1)
+                self.assertNotEqual(result["status"], "routing_valid")
+
+    def test_cli_malformed_experiment_exits_two(self):
+        script = Path(__file__).resolve().parents[1] / "scripts/phase42_experiment_routing_eval.py"
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "records.json"
+            for experiment in ({}, {"question_id": "Q1"}):
+                record = route()
+                record["experiment"] = experiment
+                file.write_text(json.dumps(record))
+                process = subprocess.run([sys.executable, str(script), "--records", str(file)], capture_output=True, text=True)
+                self.assertEqual(process.returncode, 2, process.stdout)
+
+    def test_explicit_null_fields_and_conflicting_dual_representations(self):
+        base = {"cycle": 10, "question": {"id": "Q2", "text": "unrelated inquiry"}}
+        for null in ({"experiment": None}, {"experiment_id": None}, {"experiment": None, "experiment_id": None}):
+            self.assertEqual(self.status(dict(base, **null)), "no_experiment")
+        for conflict in ({"experiment": None, "experiment_id": "X1"}, {"experiment": {"id": "X1", "question_id": "Q1"}, "experiment_id": None}):
+            result = evaluate_experiment_routes([dict(base, **conflict)])
+            self.assertEqual(result["unknown_count"], 1)
+            self.assertEqual(result["raw_contradiction_count"], 1)
+            self.assertEqual(result["no_experiment_count"], 0)
+
     def test_matching_snapshot_resolves_journal_ids_only_at_its_cycle(self):
         record = {"cycle": 10, "selected_question_id": "Q2", "experiment_id": "X1"}
         state = {"cycles": 10, "questions": [{"id": "Q2", "text": "unrelated"}], "experiments": [{"id": "X1", "question_id": "Q2"}]}
