@@ -6,6 +6,7 @@ on:
       - "experiments/open_object_world*.py"
       - "experiments/normalized_inquiry_objectives.py"
       - "scripts/open_object_world_native_bridge_study.py"
+      - "scripts/open_object_world_candidate_spectrum.py"
       - "tests/test_open_object_world_native_bridge.py"
       - ".github/workflows/open-object-world-native-bridge.yml"
   workflow_dispatch:
@@ -45,9 +46,28 @@ jobs:
           for row in report["rows"]:
               print(json.dumps(row, sort_keys=True))
           PY
+      - name: Measure longer-history inquiry spectrum
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          python scripts/open_object_world_candidate_spectrum.py > artifacts/open-object-world-candidate-spectrum.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/open-object-world-candidate-spectrum.json").read_text())
+          print(json.dumps(report["summary"], sort_keys=True))
+          for row in report["rows"]:
+              print(json.dumps({
+                  "seed": row["seed"],
+                  "top_10": row["top_10"],
+                  "entity_state_candidates": row["entity_state_candidates"],
+              }, sort_keys=True))
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: open-object-world-native-bridge-${{ github.run_id }}-${{ github.run_attempt }}
-          path: artifacts/open-object-world-native-bridge.json
+          path: |
+            artifacts/open-object-world-native-bridge.json
+            artifacts/open-object-world-candidate-spectrum.json
           if-no-files-found: error
           retention-days: 30
