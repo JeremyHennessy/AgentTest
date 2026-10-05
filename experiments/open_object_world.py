@@ -146,8 +146,8 @@ def transition(
 
     world["cycle"] = int(cycle)
     receipt["after"] = list(world["position"])
-    receipt["mechanism_observed_state"] = "lit" if _mechanism_active(world) else "dark"
-    receipt["barrier_observed_state"] = "open" if _barrier_open(world) else "closed"
+    receipt["mechanism_observed_state"] = _visible_kind_state(world, "mechanism")
+    receipt["barrier_observed_state"] = _visible_kind_state(world, "barrier")
     record = {
         "id": f"OWA{len(world['history']) + 1:06d}",
         "cycle": int(cycle),
@@ -279,6 +279,26 @@ def _push(world: dict[str, Any], command: dict[str, Any], receipt: dict[str, Any
     receipt["success"] = True
     receipt["observed_effects"].append("position_changed")
     receipt["observed_effects"].append("target_position_changed")
+
+
+def _visible_kind_state(world: dict[str, Any], kind: str) -> str | None:
+    entity = next(
+        (
+            item for item in world["entities"].values()
+            if item.get("_kind") == kind
+        ),
+        None,
+    )
+    if not isinstance(entity, dict):
+        return None
+    position = entity.get("position")
+    if not isinstance(position, list) or _manhattan(world["position"], position) > 1:
+        return None
+    if kind == "mechanism":
+        return "lit" if _mechanism_active(world) else "dark"
+    if kind == "barrier":
+        return "open" if _barrier_open(world) else "closed"
+    return None
 
 
 def _mechanism_active(world: dict[str, Any]) -> bool:
