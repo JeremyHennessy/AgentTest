@@ -2,7 +2,7 @@
 
 Status: isolated research only. No live challenge-world action authority.
 
-Production base: `bd78db8342d267822795f59a395fe5958beeed84`.
+Production base: `73d4765322efd8c7b87ed8c94bdca8bb81098d7a`.
 
 Pinned copied Ora state: `autonomous/growth@825d2c86759f5f4065807508ab7fbfe3462feb8a`, cycle 4522.
 
