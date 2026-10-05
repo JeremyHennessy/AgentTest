@@ -39,7 +39,7 @@ A publication is a cumulative recorder snapshot. It provides:
 - one already-selected temporal inquiry candidate using the frozen `information_gain` objective,
 - cumulative evaluable/confirmation/refutation counts.
 
-Cumulative snapshots are not independent evidence batches. The same publication is idempotent. A newer overlapping cumulative snapshot for the same active source/relation is rejected while the earlier inquiry remains proposed. This prevents accidental stacking of overlapping counts.
+Cumulative snapshots are not independent evidence batches. The same publication is idempotent. A newer overlapping cumulative snapshot for the same active source/feature is rejected while the earlier inquiry remains proposed, even if the inferred relation flips or the source manifest is revised. This prevents accidental stacking of overlapping counts.
 
 The temporal native resolver remains unchanged: a later inquiry outcome must still be recorded as a fresh **single-transition** evidence episode. A cumulative publication must never be handed to the resolver as though it were that one fresh outcome.
 
