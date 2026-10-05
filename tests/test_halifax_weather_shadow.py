@@ -45,6 +45,7 @@ class HalifaxWeatherShadowTests(unittest.TestCase):
         self.assertEqual(item["conditions"], "Cloudy")
         self.assertNotIn("forecast", item)
         self.assertNotIn("prediction", item)
+        self.assertEqual(item["climate_identifier"], "8202250")
 
     def test_thresholds_are_frozen(self):
         self.assertEqual(evaluation.THRESHOLDS["temperature_c"], 1.0)
