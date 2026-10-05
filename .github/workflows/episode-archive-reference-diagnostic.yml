@@ -1,0 +1,82 @@
+name: episode-archive-reference-diagnostic
+
+on:
+  push:
+    branches: [diagnostic/episode-archive-reference-contract]
+
+permissions:
+  contents: read
+
+env:
+  PINNED_STATE_SHA: 6581c367384f88fdbec2e04ae8b83328c72d1096
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify diagnostic-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --depth=1 origin d1a4046b0941788ddf642cf64a279380f08ed1a6
+          python - <<'PY'
+          import subprocess
+          allowed = {
+              "scripts/episode_archive_reference_diagnostic.py",
+              "tests/test_episode_archive_reference_diagnostic.py",
+              "docs/episode-archive-reference-diagnostic.md",
+              ".github/workflows/episode-archive-reference-diagnostic.yml",
+          }
+          changed=set(subprocess.check_output(
+              ["git","diff","--name-only","d1a4046b0941788ddf642cf64a279380f08ed1a6...HEAD"],
+              text=True,
+          ).splitlines())
+          if changed != allowed:
+              raise SystemExit("unexpected diagnostic scope: " + repr(changed ^ allowed))
+          PY
+
+      - name: Run focused structural hazard tests
+        shell: bash
+        env:
+          PYTHONPATH: src:.
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest tests.test_episode_archive_reference_diagnostic -v
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PINNED_STATE_SHA }}
+          path: live
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: state/organism.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Inventory copied live reference surface
+        shell: bash
+        env:
+          PYTHONPATH: src:.
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          mkdir -p artifacts
+          python scripts/episode_archive_reference_diagnostic.py             --state live/state/organism.json             --prior-cycle 4295             --prior-bytes 67004875             --output artifacts/episode-archive-reference-report.json             2>&1 | tee artifacts/diagnostic.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: episode-archive-reference-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: error
