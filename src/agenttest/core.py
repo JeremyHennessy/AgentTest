@@ -861,6 +861,152 @@ class AgentCore:
             "state": deepcopy(state),
         }
 
+    def resolve_native_inquiry(
+        self,
+        experiment_id: str,
+        evidence_ref: str,
+        *,
+        enabled: bool = False,
+        persist: bool = False,
+        _now_override: str | None = None,
+    ) -> dict[str, Any]:
+        """Resolve one temporal native inquiry from one matching outcome transition.
+
+        The interface is disabled and non-persisting by default. It does not
+        increment the organism cycle or grant action authority.
+        """
+        if enabled is not True:
+            raise RuntimeError("native inquiry outcome resolver is disabled by default")
+
+        loaded = self.store.load()
+        experiment = next(
+            (
+                item
+                for item in loaded.get("experiments", [])
+                if str(item.get("id")) == str(experiment_id)
+            ),
+            None,
+        )
+        if experiment is None:
+            raise ValueError("native inquiry experiment was not found")
+        if experiment.get("status") != "proposed":
+            raise ValueError("native inquiry experiment is not proposed")
+        if experiment.get("readiness") != "awaiting_native_evidence":
+            raise ValueError("native inquiry experiment is not awaiting native evidence")
+
+        native = experiment.get("native_inquiry")
+        if not isinstance(native, dict):
+            raise ValueError("experiment is not a native inquiry experiment")
+        expected_relation = native.get("relation")
+        if not isinstance(expected_relation, dict):
+            raise ValueError("native inquiry relation is unavailable")
+
+        episode = next(
+            (
+                item
+                for item in loaded.get("episodes", [])
+                if str(item.get("id")) == str(evidence_ref)
+            ),
+            None,
+        )
+        if episode is None or episode.get("kind") != "native_inquiry_evidence":
+            raise ValueError("native inquiry outcome evidence was not found")
+        try:
+            payload = json.loads(str(episode.get("content") or ""))
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("native inquiry outcome evidence is not valid JSON") from exc
+        evidence = validate_native_evidence_payload(payload)
+        relation = evidence.get("relation")
+        if relation != expected_relation:
+            raise ValueError("native inquiry outcome relation does not match experiment")
+
+        if evidence.get("measurement_kind") != "binary_transition_outcomes":
+            raise ValueError(
+                "native inquiry resolver currently supports temporal binary outcomes only"
+            )
+        if relation.get("kind") not in {
+            "same_next_observation",
+            "changes_next_observation",
+        }:
+            raise ValueError("native inquiry resolver requires a temporal relation")
+
+        measurement = evidence.get("measurement")
+        if not isinstance(measurement, dict):
+            raise ValueError("native inquiry outcome measurement is unavailable")
+        evaluable = int(measurement.get("evaluable", 0) or 0)
+        confirmations = int(measurement.get("confirmations", 0) or 0)
+        refutations = int(measurement.get("refutations", 0) or 0)
+        if evaluable != 1 or confirmations + refutations != 1:
+            raise ValueError(
+                "native inquiry resolution requires exactly one evaluable transition"
+            )
+        if confirmations not in {0, 1} or refutations not in {0, 1}:
+            raise ValueError("native inquiry outcome must be unambiguous")
+        outcome = "supported" if confirmations == 1 else "falsified"
+
+        state = loaded if persist else deepcopy(loaded)
+        resolved_experiment = next(
+            item
+            for item in state["experiments"]
+            if str(item.get("id")) == str(experiment_id)
+        )
+        now = _now_override or utc_now()
+        cycle = int(state.get("cycles", 0) or 0)
+
+        resolved_experiment["status"] = "completed"
+        resolved_experiment["readiness"] = "resolved"
+        resolved_experiment["outcome"] = outcome
+        resolved_experiment["evidence_strength"] = 1.0
+        resolved_experiment["evidence_refs"] = [str(evidence_ref)]
+        resolved_experiment["completion_source"] = "native_evidence_contract"
+        resolved_experiment["completed_at"] = now
+        resolved_experiment["native_resolution"] = {
+            "version": "native-inquiry-resolution-v1",
+            "evidence_ref": str(evidence_ref),
+            "relation": deepcopy(relation),
+            "measurement_kind": evidence["measurement_kind"],
+            "outcome": outcome,
+        }
+        resolved_experiment.setdefault("status_history", []).append(
+            {
+                "cycle": cycle,
+                "from": "proposed",
+                "to": "completed",
+                "reason": "native_evidence_contract_resolved",
+                "evidence_refs": [str(evidence_ref)],
+                "outcome": outcome,
+            }
+        )
+
+        reflection = {
+            "id": f"R{len(state.get('reflections', [])) + 1:06d}",
+            "source": "native_inquiry",
+            "experiment_id": str(experiment_id),
+            "evidence_ref": str(evidence_ref),
+            "cycle": cycle,
+            "outcome": outcome,
+            "evidence_strength": 1.0,
+            "lesson": (
+                "One matching evaluable native transition "
+                f"{outcome} the bounded temporal inquiry. Treat this as an "
+                "experiment outcome, not as a general causal fact."
+            ),
+        }
+        state.setdefault("reflections", []).append(reflection)
+
+        if persist:
+            self.store.save(state)
+
+        return {
+            "enabled": True,
+            "persisted": bool(persist),
+            "resolved": True,
+            "experiment": deepcopy(resolved_experiment),
+            "reflection": deepcopy(reflection),
+            "evidence": deepcopy(evidence),
+            "state": deepcopy(state),
+        }
+
     def propose_native_inquiry(
         self,
         candidate: dict[str, Any],
