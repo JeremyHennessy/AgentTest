@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .action_lab import initial_action_lab_state
-from .episode_identity import ensure_episode_sequence
+from .episode_identity import ensure_episode_sequence, infer_episode_sequence_cursor
 from .agenda import ensure_agenda_state, initial_agenda_state
 from .planning_lab import initial_planning_lab_state
 
@@ -79,6 +79,7 @@ def utc_now() -> str:
 def _empty_semantic_memory() -> dict[str, Any]:
     return {
         "last_episode_index": 0,
+        "last_episode_sequence": 0,
         "concepts": {},
         "associations": {},
     }
@@ -180,6 +181,14 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
 
     semantic = state["semantic_memory"]
     semantic.setdefault("last_episode_index", 0)
+    if "last_episode_sequence" not in semantic:
+        semantic["last_episode_sequence"] = infer_episode_sequence_cursor(
+            state.get("episodes", []),
+            int(semantic.get("last_episode_index", 0) or 0),
+        )
+    sequence_cursor = semantic.get("last_episode_sequence")
+    if type(sequence_cursor) is not int or sequence_cursor < 0:
+        raise ValueError("semantic last_episode_sequence must be a non-negative integer")
     semantic.setdefault("concepts", {})
     semantic.setdefault("associations", {})
 
