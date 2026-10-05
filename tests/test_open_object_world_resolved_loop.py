@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 from agenttest.core import AgentCore
@@ -85,6 +87,204 @@ class OpenObjectWorldResolvedLoopTests(unittest.TestCase):
         self.assertEqual(
             result["resolution_reflection"]["source"],
             "native_inquiry",
+        )
+
+    def test_public_outcome_evidence_followup_adaptation_diagnostic(self):
+        world_mod = sys.modules["open_object_world"]
+        selector_mod = sys.modules["open_object_world_epistemic_actions"]
+        study_mod = sys.modules["open_object_world_epistemic_action_study"]
+        bridge_mod = sys.modules["open_object_world_native_bridge"]
+
+        rows = []
+        for seed in range(1, 5):
+            for checkpoint in range(200, 951, 50):
+                world, attempts, observations, receipts = study_mod.run_to_checkpoint(
+                    seed,
+                    checkpoint,
+                )
+                ranked_before = study_mod.ranked_temporal(observations)
+                selected_before = ranked_before[0]
+                candidate_before = selected_before["candidate"]
+                first_selection = selector_mod.select_epistemic_command(
+                    observations[-1],
+                    feature=candidate_before["feature"],
+                    relation=candidate_before["relation"],
+                    prefix_observations=observations,
+                    prefix_receipts=receipts,
+                )
+                if first_selection["mode"] != "seek_disconfirming_observation":
+                    rows.append(
+                        {
+                            "seed": seed,
+                            "checkpoint": checkpoint,
+                            "status": "not_mature",
+                        }
+                    )
+                    continue
+
+                before_observation = world_mod.observe_world(world)
+                next_world, receipt = world_mod.transition(
+                    deepcopy(world),
+                    first_selection["command"],
+                    cycle=checkpoint + 1,
+                )
+                after_observation = world_mod.observe_world(next_world)
+                before_features = bridge_mod.public_features(before_observation)
+                after_features = bridge_mod.public_features(after_observation)
+                feature = candidate_before["feature"]
+                evaluable = (
+                    feature in before_features
+                    and feature in after_features
+                )
+                if not evaluable:
+                    rows.append(
+                        {
+                            "seed": seed,
+                            "checkpoint": checkpoint,
+                            "status": "not_evaluable",
+                        }
+                    )
+                    continue
+
+                changed = before_features[feature] != after_features[feature]
+                falsified = (
+                    changed
+                    if candidate_before["relation"] == "same_next_observation"
+                    else not changed
+                )
+
+                observations_after = [*observations, after_observation]
+                receipts_after = [*receipts, receipt]
+                ranked_after = study_mod.ranked_temporal(observations_after)
+                selected_after = ranked_after[0]
+                candidate_after = selected_after["candidate"]
+
+                control_action = selector_mod.select_epistemic_command(
+                    after_observation,
+                    feature=candidate_before["feature"],
+                    relation=candidate_before["relation"],
+                    prefix_observations=observations,
+                    prefix_receipts=receipts,
+                )
+                updated_same_inquiry_action = selector_mod.select_epistemic_command(
+                    after_observation,
+                    feature=candidate_before["feature"],
+                    relation=candidate_before["relation"],
+                    prefix_observations=observations_after,
+                    prefix_receipts=receipts_after,
+                )
+                updated_top_action = selector_mod.select_epistemic_command(
+                    after_observation,
+                    feature=candidate_after["feature"],
+                    relation=candidate_after["relation"],
+                    prefix_observations=observations_after,
+                    prefix_receipts=receipts_after,
+                )
+
+                matching_after = next(
+                    (
+                        item for item in ranked_after
+                        if item["candidate"]["feature"] == candidate_before["feature"]
+                        and item["candidate"]["relation"] == candidate_before["relation"]
+                    ),
+                    None,
+                )
+                score_after = (
+                    matching_after["score"]
+                    if matching_after is not None
+                    else None
+                )
+                score_delta = (
+                    round(score_after - selected_before["score"], 6)
+                    if score_after is not None
+                    else None
+                )
+                inquiry_changed = (
+                    candidate_after["feature"],
+                    candidate_after["relation"],
+                ) != (
+                    candidate_before["feature"],
+                    candidate_before["relation"],
+                )
+                same_inquiry_action_changed = (
+                    updated_same_inquiry_action["command"]
+                    != control_action["command"]
+                )
+                next_behavior_changed = (
+                    inquiry_changed
+                    or updated_top_action["command"] != control_action["command"]
+                )
+                rows.append(
+                    {
+                        "seed": seed,
+                        "checkpoint": checkpoint,
+                        "status": "completed",
+                        "falsified": falsified,
+                        "initial_feature": candidate_before["feature"],
+                        "initial_relation": candidate_before["relation"],
+                        "updated_feature": candidate_after["feature"],
+                        "updated_relation": candidate_after["relation"],
+                        "score_delta_for_initial_inquiry": score_delta,
+                        "inquiry_changed": inquiry_changed,
+                        "same_inquiry_action_changed": same_inquiry_action_changed,
+                        "next_behavior_changed": next_behavior_changed,
+                    }
+                )
+
+        completed = [row for row in rows if row["status"] == "completed"]
+        falsified_rows = [row for row in completed if row["falsified"]]
+        supported_rows = [row for row in completed if not row["falsified"]]
+
+        def count(group, field):
+            return sum(bool(row[field]) for row in group)
+
+        def score_decrease_count(group):
+            return sum(
+                row["score_delta_for_initial_inquiry"] is not None
+                and row["score_delta_for_initial_inquiry"] < 0
+                for row in group
+            )
+
+        summary = {
+            "case_count": len(rows),
+            "mature_evaluable_count": len(completed),
+            "falsified_count": len(falsified_rows),
+            "supported_count": len(supported_rows),
+            "falsified_inquiry_changed_count": count(
+                falsified_rows, "inquiry_changed"
+            ),
+            "supported_inquiry_changed_count": count(
+                supported_rows, "inquiry_changed"
+            ),
+            "falsified_same_inquiry_action_changed_count": count(
+                falsified_rows, "same_inquiry_action_changed"
+            ),
+            "supported_same_inquiry_action_changed_count": count(
+                supported_rows, "same_inquiry_action_changed"
+            ),
+            "falsified_next_behavior_changed_count": count(
+                falsified_rows, "next_behavior_changed"
+            ),
+            "supported_next_behavior_changed_count": count(
+                supported_rows, "next_behavior_changed"
+            ),
+            "falsified_initial_inquiry_score_decreased_count": (
+                score_decrease_count(falsified_rows)
+            ),
+            "supported_initial_inquiry_score_decreased_count": (
+                score_decrease_count(supported_rows)
+            ),
+        }
+        print(
+            "OPEN_OBJECT_WORLD_FOLLOWUP_ADAPTATION "
+            + json.dumps(summary, sort_keys=True)
+        )
+
+        self.assertEqual(summary["case_count"], 64)
+        self.assertEqual(summary["mature_evaluable_count"], 30)
+        self.assertEqual(
+            summary["falsified_count"] + summary["supported_count"],
+            30,
         )
 
     def test_resolved_loop_never_uses_core_action_labs(self):
