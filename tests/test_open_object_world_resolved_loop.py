@@ -603,6 +603,267 @@ class OpenObjectWorldResolvedLoopTests(unittest.TestCase):
         self.assertEqual(summary["exact_ranking_match_count"], 30)
         self.assertEqual(summary["top_candidate_match_count"], 30)
 
+    def test_comparative_action_evidence_recovers_epistemic_policy_after_reload(self):
+        from agenttest.native_evidence import (
+            NATIVE_EVIDENCE_V2_VERSION,
+            validate_native_evidence_payload,
+        )
+
+        selector_mod = sys.modules["open_object_world_epistemic_actions"]
+        study_mod = sys.modules["open_object_world_epistemic_action_study"]
+        association_mod = sys.modules["open_object_world_action_association"]
+
+        rows = []
+        for seed in range(1, 5):
+            for checkpoint in range(200, 951, 50):
+                _world, _attempts, observations, receipts = (
+                    study_mod.run_to_checkpoint(seed, checkpoint)
+                )
+                ranked = study_mod.ranked_temporal(observations)
+                selected = ranked[0]
+                candidate = selected["candidate"]
+                direct = selector_mod.select_epistemic_command(
+                    observations[-1],
+                    feature=candidate["feature"],
+                    relation=candidate["relation"],
+                    prefix_observations=observations,
+                    prefix_receipts=receipts,
+                )
+                if direct["mode"] != "seek_disconfirming_observation":
+                    rows.append(
+                        {
+                            "seed": seed,
+                            "checkpoint": checkpoint,
+                            "status": "not_mature",
+                        }
+                    )
+                    continue
+
+                direct_associations = [
+                    item
+                    for item in association_mod.association_candidates(
+                        observations,
+                        receipts,
+                        min_present=1,
+                    )
+                    if item["feature"] == candidate["feature"]
+                ]
+
+                with tempfile.TemporaryDirectory() as temp:
+                    store = StateStore(Path(temp) / "organism.json")
+                    state = initial_state()
+                    state["cycles"] = 20
+                    state["generation"] = 20
+                    state["agenda"]["started_cycle"] = 1
+                    store.save(state)
+                    core = AgentCore(store)
+
+                    observation_refs = [
+                        str(item.get("observation_id"))
+                        for item in observations
+                        if item.get("observation_id")
+                    ][-64:]
+                    for association in direct_associations:
+                        present = association["action_present"]
+                        absent = association["action_absent"]
+                        present_rate = (
+                            present["changed"] / present["evaluable"]
+                        )
+                        absent_rate = (
+                            absent["changed"] / absent["evaluable"]
+                        )
+                        core.record_native_evidence(
+                            {
+                                "version": NATIVE_EVIDENCE_V2_VERSION,
+                                "relation": {
+                                    "kind": "action_associated_with_change",
+                                    "feature": association["feature"],
+                                    "action": association["action"],
+                                    "comparison_status": "comparable",
+                                },
+                                "observation_refs": observation_refs,
+                                "measurement_kind": "comparative_action_exposure",
+                                "measurement": {
+                                    "action_present": {
+                                        "evaluable": int(
+                                            present["evaluable"]
+                                        ),
+                                        "changed": int(present["changed"]),
+                                        "same": int(present["same"]),
+                                    },
+                                    "action_absent": {
+                                        "evaluable": int(
+                                            absent["evaluable"]
+                                        ),
+                                        "changed": int(absent["changed"]),
+                                        "same": int(absent["same"]),
+                                    },
+                                    "observed_change_rate_action_present": round(
+                                        present_rate,
+                                        6,
+                                    ),
+                                    "observed_change_rate_action_absent": round(
+                                        absent_rate,
+                                        6,
+                                    ),
+                                    "observed_change_rate_difference": round(
+                                        present_rate - absent_rate,
+                                        6,
+                                    ),
+                                },
+                            },
+                            enabled=True,
+                            persist=True,
+                        )
+
+                    reloaded = AgentCore(StateStore(core.store.path))
+                    reloaded_state = reloaded.store.load()
+                    recovered_associations = []
+                    for episode in reloaded_state.get("episodes", []):
+                        if episode.get("kind") != "native_inquiry_evidence":
+                            continue
+                        payload = validate_native_evidence_payload(
+                            json.loads(str(episode.get("content") or ""))
+                        )
+                        if (
+                            payload.get("measurement_kind")
+                            != "comparative_action_exposure"
+                        ):
+                            continue
+                        relation = payload["relation"]
+                        measurement = payload["measurement"]
+                        recovered_associations.append(
+                            {
+                                "id": (
+                                    "persisted:"
+                                    + relation["feature"]
+                                    + ":"
+                                    + relation["action"]
+                                ),
+                                "relation": "action_associated_with_change",
+                                "feature": relation["feature"],
+                                "action": relation["action"],
+                                "status": "association_observed",
+                                "effect_difference": measurement[
+                                    "observed_change_rate_difference"
+                                ],
+                                "action_present": deepcopy(
+                                    measurement["action_present"]
+                                ),
+                                "action_absent": deepcopy(
+                                    measurement["action_absent"]
+                                ),
+                                "evaluable": (
+                                    int(
+                                        measurement["action_present"][
+                                            "evaluable"
+                                        ]
+                                    )
+                                    + int(
+                                        measurement["action_absent"][
+                                            "evaluable"
+                                        ]
+                                    )
+                                ),
+                            }
+                        )
+
+                direct_keys = {
+                    (item["feature"], item["action"])
+                    for item in direct_associations
+                }
+                recovered_keys = {
+                    (item["feature"], item["action"])
+                    for item in recovered_associations
+                }
+
+                original_association_candidates = (
+                    selector_mod.association_candidates
+                )
+                try:
+                    selector_mod.association_candidates = (
+                        lambda *_args, **_kwargs: deepcopy(
+                            recovered_associations
+                        )
+                    )
+                    recovered = selector_mod.select_epistemic_command(
+                        observations[-1],
+                        feature=candidate["feature"],
+                        relation=candidate["relation"],
+                        prefix_observations=[],
+                        prefix_receipts=[],
+                    )
+                finally:
+                    selector_mod.association_candidates = (
+                        original_association_candidates
+                    )
+
+                rows.append(
+                    {
+                        "seed": seed,
+                        "checkpoint": checkpoint,
+                        "status": "completed",
+                        "direct_association_count": len(
+                            direct_associations
+                        ),
+                        "persisted_association_count": len(
+                            recovered_associations
+                        ),
+                        "full_association_coverage": (
+                            direct_keys == recovered_keys
+                        ),
+                        "exact_policy_match": direct == recovered,
+                        "command_match": (
+                            direct["command"] == recovered["command"]
+                        ),
+                        "mode_match": direct["mode"] == recovered["mode"],
+                    }
+                )
+
+        completed = [row for row in rows if row["status"] == "completed"]
+        summary = {
+            "case_count": len(rows),
+            "mature_evaluable_count": len(completed),
+            "full_association_coverage_count": sum(
+                row["full_association_coverage"] for row in completed
+            ),
+            "exact_policy_match_count": sum(
+                row["exact_policy_match"] for row in completed
+            ),
+            "command_match_count": sum(
+                row["command_match"] for row in completed
+            ),
+            "mode_match_count": sum(
+                row["mode_match"] for row in completed
+            ),
+            "min_direct_association_count": min(
+                row["direct_association_count"] for row in completed
+            ),
+            "max_direct_association_count": max(
+                row["direct_association_count"] for row in completed
+            ),
+            "min_persisted_association_count": min(
+                row["persisted_association_count"] for row in completed
+            ),
+            "max_persisted_association_count": max(
+                row["persisted_association_count"] for row in completed
+            ),
+        }
+        print(
+            "NATIVE_ACTION_POLICY_RELOAD_PARITY "
+            + json.dumps(summary, sort_keys=True)
+        )
+
+        self.assertEqual(summary["case_count"], 64)
+        self.assertEqual(summary["mature_evaluable_count"], 30)
+        self.assertEqual(
+            summary["full_association_coverage_count"],
+            30,
+        )
+        self.assertEqual(summary["exact_policy_match_count"], 30)
+        self.assertEqual(summary["command_match_count"], 30)
+        self.assertEqual(summary["mode_match_count"], 30)
+
     def test_resolved_loop_never_uses_core_action_labs(self):
         source = (
             EXPERIMENTS / "open_object_world_resolved_loop.py"
