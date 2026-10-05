@@ -36,6 +36,7 @@ from .public_observation import (
     ingest as ingest_public_observation,
     load_bundle as load_public_bundle,
     registry_eligible as public_registry_eligible,
+    validated_contract as validated_public_contract,
 )
 from .semantic import (
     actionable_open_questions,
@@ -1206,11 +1207,17 @@ class AgentCore:
         _withhold_current_prediction_evidence: bool = False,
         _now_override: str | None = None,
         copy_public_observations: str | Path | None = None,
+        copy_early_prospective_admission: bool = False,
+        copy_prospective_fallback: bool = False,
     ) -> dict[str, Any]:
         if action_lab and planning_lab:
             raise ValueError("action_lab and planning_lab are mutually exclusive")
         state = self.store.load()
         public_trace = None
+        if (
+            copy_early_prospective_admission or copy_prospective_fallback
+        ) and self.store.path.resolve() == Path("state/organism.json").resolve():
+            raise ValueError("prospective attention requires an explicit copied store")
         if copy_public_observations is not None:
             if self.store.path.resolve() == Path("state/organism.json").resolve():
                 raise ValueError("public observation inlet requires an explicit copied store")
@@ -1372,18 +1379,24 @@ class AgentCore:
                 cognition_provider,
             )
 
+        if public_trace is not None and copy_early_prospective_admission:
+            contracts = admit_public_observation(
+                state, public_trace["source"], self._upsert_question,
+            )
         legacy_question_text = self._generate_question(
             state,
             surprise,
             intention,
             thought,
             strict_question_attention=strict_question_attention,
+            copy_prospective_fallback=copy_prospective_fallback,
         )
         legacy_question = self._upsert_question(state, legacy_question_text)
         if public_trace is not None:
-            contracts = admit_public_observation(
-                state, public_trace["source"], self._upsert_question,
-            )
+            if not copy_early_prospective_admission:
+                contracts = admit_public_observation(
+                    state, public_trace["source"], self._upsert_question,
+                )
             public_trace["contracts"] = contracts
             public_trace["eligible_families"] = [
                 q["public_observation_family"] for q in state["questions"]
@@ -1486,6 +1499,8 @@ class AgentCore:
                         _withhold_current_prediction_evidence=True,
                         _now_override=now,
                         copy_public_observations=copy_public_observations,
+                        copy_early_prospective_admission=copy_early_prospective_admission,
+                        copy_prospective_fallback=copy_prospective_fallback,
                     )
                 counterfactual_decision = counterfactual_result.get(
                     "agenda_decision"
@@ -1992,6 +2007,7 @@ class AgentCore:
         thought: dict[str, Any] | None,
         *,
         strict_question_attention: bool = False,
+        copy_prospective_fallback: bool = False,
     ) -> str:
         if intention["kind"] == "specify_experiment" and intention.get("target"):
             return (
@@ -2073,6 +2089,7 @@ class AgentCore:
                 state,
                 blocked_question_ids,
                 strict_question_attention=strict_question_attention,
+                copy_prospective_fallback=copy_prospective_fallback,
             )
             if eligible is not None:
                 return str(eligible["text"])
@@ -2098,6 +2115,7 @@ class AgentCore:
         blocked_question_ids: set[str],
         *,
         strict_question_attention: bool = False,
+        copy_prospective_fallback: bool = False,
     ) -> dict[str, Any] | None:
         eligible = [
             question
@@ -2108,6 +2126,10 @@ class AgentCore:
                 and (
                     not strict_question_attention
                     or question_has_active_experiment_path(state, question)
+                    or (
+                        copy_prospective_fallback
+                        and self._unallocated_prospective_question(state, question)
+                    )
                 )
             )
         ]
@@ -2121,6 +2143,15 @@ class AgentCore:
                 int(question.get("created_cycle", 0) or 0),
                 str(question.get("id", "")),
             ),
+        )
+
+    def _unallocated_prospective_question(
+        self, state: dict[str, Any], question: dict[str, Any],
+    ) -> bool:
+        contract = validated_public_contract(state, question)
+        return contract is not None and not any(
+            experiment.get("public_observation_family") == contract["family_id"]
+            for experiment in state.get("experiments", [])
         )
 
     def _question_exists(self, state: dict[str, Any], text: str) -> bool:
