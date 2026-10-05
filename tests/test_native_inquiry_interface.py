@@ -207,6 +207,10 @@ class NativeInquiryInterfaceTests(unittest.TestCase):
             experiment["specification"]["actionability"],
             "actionable",
         )
+        self.assertEqual(
+            experiment["readiness"],
+            "awaiting_native_evidence",
+        )
         decision = result["agenda_decision"]
         self.assertIsNotNone(decision)
         candidate_ids = {
