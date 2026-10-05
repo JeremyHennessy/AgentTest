@@ -20,6 +20,7 @@ from .learning import (
     expected_prediction_status,
 )
 from .native_evidence import validate_native_evidence_payload
+from .native_outcome import resolve_native_outcome
 from .native_inquiry import (
     NATIVE_INQUIRY_SOURCE,
     native_inquiry_metadata,
@@ -858,6 +859,52 @@ class AgentCore:
             "evidence": normalized,
             "evidence_ref": str(episode["id"]),
             "episode": episode,
+            "state": deepcopy(state),
+        }
+
+    def resolve_native_inquiry_outcome(
+        self,
+        experiment_id: str,
+        evidence_ref: str,
+        *,
+        enabled: bool = False,
+        persist: bool = False,
+        _now_override: str | None = None,
+    ) -> dict[str, Any]:
+        """Resolve one native inquiry from matching persisted native evidence."""
+        if enabled is not True:
+            raise RuntimeError("native outcome interface is disabled by default")
+
+        loaded = self.store.load()
+        state = loaded if persist else deepcopy(loaded)
+        cycle = int(state.get("cycles", 0) or 0)
+        now = _now_override or utc_now()
+        resolution = resolve_native_outcome(
+            state,
+            experiment_id=experiment_id,
+            evidence_ref=evidence_ref,
+            cycle=cycle,
+            completed_at=now,
+        )
+        consolidate_world(state)
+        _calibrate_self_model(state)
+        self._update_metrics(state)
+        if persist:
+            self.store.save(state)
+            self.store.append_journal(
+                {
+                    "event": "native_inquiry_outcome",
+                    "time": now,
+                    "cycle": cycle,
+                    "experiment_id": experiment_id,
+                    "evidence_ref": evidence_ref,
+                    "outcome": resolution["outcome"],
+                }
+            )
+        return {
+            "enabled": True,
+            "persisted": bool(persist),
+            "resolution": deepcopy(resolution),
             "state": deepcopy(state),
         }
 
