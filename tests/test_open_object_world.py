@@ -75,9 +75,7 @@ class OpenObjectWorldTests(unittest.TestCase):
         state, receipts = run(
             state,
             [
-                {"action": "south"},
                 {"action": "take", "target": "O001"},
-                {"action": "north"},
                 {"action": "west"},
                 {"action": "north"},
                 {"action": "drop", "target": "O001"},
@@ -86,7 +84,7 @@ class OpenObjectWorldTests(unittest.TestCase):
         )
         self.assertNotIn("O001", state["inventory"])
         self.assertEqual(state["entities"]["O001"]["position"], [1, 1])
-        self.assertEqual(receipts[5]["barrier_observed_state"], "open")
+        self.assertEqual(receipts[3]["barrier_observed_state"], "open")
         self.assertEqual(state["position"], [2, 1])
 
     def test_two_lighter_objects_can_change_same_route_without_interact(self):
@@ -94,13 +92,9 @@ class OpenObjectWorldTests(unittest.TestCase):
         state, receipts = run(
             state,
             [
-                {"action": "west"},
                 {"action": "take", "target": "O002"},
                 {"action": "east"},
-                {"action": "east"},
-                {"action": "north"},
                 {"action": "take", "target": "O003"},
-                {"action": "south"},
                 {"action": "west"},
                 {"action": "west"},
                 {"action": "north"},
@@ -112,7 +106,7 @@ class OpenObjectWorldTests(unittest.TestCase):
         self.assertEqual(state["inventory"], [])
         self.assertEqual(state["entities"]["O002"]["position"], [1, 1])
         self.assertEqual(state["entities"]["O003"]["position"], [1, 1])
-        self.assertEqual(receipts[11]["barrier_observed_state"], "open")
+        self.assertEqual(receipts[7]["barrier_observed_state"], "open")
         self.assertEqual(state["position"], [2, 1])
 
     def test_object_and_mechanism_state_persist_across_unrelated_actions(self):
@@ -120,9 +114,7 @@ class OpenObjectWorldTests(unittest.TestCase):
         state, _ = run(
             state,
             [
-                {"action": "south"},
                 {"action": "take", "target": "O001"},
-                {"action": "north"},
                 {"action": "west"},
                 {"action": "north"},
                 {"action": "drop", "target": "O001"},
