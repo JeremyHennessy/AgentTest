@@ -28,6 +28,7 @@ jobs:
           ref: ${{ github.sha }}
           path: candidate
           fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
 
       - uses: actions/checkout@v4
@@ -35,6 +36,7 @@ jobs:
           ref: 404ea4be0127d14fe419e635b239c2e51e9c4532
           path: baseline
           fetch-depth: 1
+          filter: blob:none
           persist-credentials: false
 
       - uses: actions/checkout@v4
