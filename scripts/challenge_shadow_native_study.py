@@ -33,7 +33,7 @@ from open_object_world_challenge_explorer import (
 )
 from phase42_resumption_opportunity_eval import evaluate_resumption_opportunities
 
-PRODUCTION_BASE = "bd78db8342d267822795f59a395fe5958beeed84"
+PRODUCTION_BASE = "73d4765322efd8c7b87ed8c94bdca8bb81098d7a"
 PINNED_STATE = "825d2c86759f5f4065807508ab7fbfe3462feb8a"
 CHECKPOINT = 600
 MAX_OUTCOME_STEPS = 96
