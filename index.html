@@ -21,13 +21,22 @@ a{color:inherit}.shell{width:min(1400px,calc(100% - 28px));margin:auto;padding:2
 .story-main{font-size:clamp(18px,2vw,25px);line-height:1.35;font-weight:800;letter-spacing:-.02em;padding:14px 15px;border:1px solid rgba(95,224,201,.24);border-radius:15px;background:linear-gradient(135deg,rgba(95,224,201,.08),rgba(122,185,255,.04));margin-bottom:10px}.story-main strong{color:var(--cyan)}.inquiry-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.9fr);gap:9px}.inquiry-panel{border:1px solid var(--line);border-radius:13px;padding:12px;background:#071522;min-width:0}.inquiry-panel.current{border-color:rgba(95,224,201,.28);background:linear-gradient(145deg,rgba(95,224,201,.06),#071522)}.inquiry-panel .t{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:800}.inquiry-panel .v{font-size:13px;font-weight:800;margin-top:5px;overflow-wrap:anywhere}.inquiry-panel .why{font-size:10px;color:var(--muted);margin-top:7px;overflow-wrap:anywhere}.thread-list{display:grid;gap:7px;margin-top:7px}.thread-line{border-top:1px solid rgba(29,59,82,.55);padding-top:7px}.thread-line:first-child{border-top:0;padding-top:0}.attention-log{display:grid;gap:6px;margin-top:7px}.attention-change{font-size:10px;color:var(--muted);border-left:2px solid var(--line);padding-left:8px}.attention-change strong{color:var(--text)}.evidence-trail{margin-top:9px;border:1px solid rgba(29,59,82,.75);border-radius:11px;background:#06131f}.evidence-trail summary{padding:9px 10px;font-size:10px}.evidence-trail .trail-body{padding:0 10px 10px}.evidence-ref{padding:7px 0;border-top:1px solid rgba(29,59,82,.45);font-size:10px}.evidence-ref:first-child{border-top:0}.evidence-ref b{color:var(--blue)}.priority-compare{margin-top:9px;border-top:1px solid rgba(29,59,82,.55);padding-top:9px}.priority-row{display:grid;grid-template-columns:minmax(0,1.35fr) repeat(5,minmax(58px,.55fr));gap:5px;align-items:center;padding:5px 0;font-size:9px}.priority-row.head{color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.priority-row .name{font-weight:800;font-size:10px;overflow-wrap:anywhere}.priority-row .score{text-align:right;font-variant-numeric:tabular-nums}.priority-note{margin-top:7px;font-size:10px;color:var(--muted)}.milestone-phase{font-size:12px;color:var(--cyan);font-weight:900;letter-spacing:.1em;text-transform:uppercase}.milestone-main{font-size:24px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin:8px 0}.milestone-copy{color:var(--muted);font-size:12px;margin:0 0 14px}.milestone-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.milestone-stat{border:1px solid var(--line);border-radius:12px;padding:10px;background:#071522}.milestone-stat b{display:block;font-size:18px}.milestone-stat span{font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}.phase-chip.latest{color:var(--cyan);border-color:rgba(95,224,201,.42);box-shadow:0 0 18px rgba(95,224,201,.08)}.phase-chip.latest .p-dot{background:var(--cyan);box-shadow:0 0 12px var(--cyan)}.map-details{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:#071522}.map-details summary{padding:9px 11px;font-size:10px}.map-details .gate{margin:0 10px 10px}.evidence-drawer{padding:0;overflow:hidden;margin-top:0}.evidence-drawer>summary{list-style:none;padding:17px 19px;display:flex;justify-content:space-between;gap:15px;align-items:center;color:var(--text)}.evidence-drawer>summary::-webkit-details-marker{display:none}.evidence-drawer>summary:after{content:"Open";font-size:10px;color:var(--blue);border:1px solid var(--line);border-radius:999px;padding:5px 8px}.evidence-drawer[open]>summary:after{content:"Close"}.drawer-title{font-weight:900}.drawer-copy{display:block;color:var(--muted);font-size:11px;font-weight:400;margin-top:2px}.detail-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:15px;padding:0 15px 15px}.detail-grid>.card{box-shadow:none;margin:0;background:#081724}
 details{margin-top:15px;border:1px solid var(--line);border-radius:14px;background:#081724}summary{cursor:pointer;padding:13px 15px;color:var(--muted);font-weight:800}.interaction{padding:0 15px 15px}textarea{width:100%;min-height:85px;resize:vertical;border:1px solid var(--line);background:#06131f;color:var(--text);border-radius:11px;padding:11px;font:inherit}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}button,.button{border:1px solid var(--line);background:#112b40;color:var(--text);border-radius:9px;padding:8px 10px;text-decoration:none;font:inherit;font-size:11px;font-weight:800;cursor:pointer}.primary{background:var(--cyan);color:#02231d}.pending{font-size:10px;color:var(--gold);margin-top:7px}footer{display:flex;gap:13px;flex-wrap:wrap;margin-top:17px;color:var(--muted);font-size:10px}.error{color:var(--red)}
 @media(max-width:1080px){.summary{grid-template-columns:repeat(3,1fr)}.s8,.s7,.s6,.s5,.s4{grid-column:span 6}.world-layout{grid-template-columns:1fr}.now-grid{grid-template-columns:repeat(2,1fr)}.inquiry-grid{grid-template-columns:1fr 1fr}.inquiry-panel.current{grid-column:1/-1}.milestone-stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.priority-compare{overflow-x:auto}.priority-row{min-width:620px}.shell{width:min(100% - 18px,1400px);padding-top:18px}.top{flex-direction:column}.summary{grid-template-columns:repeat(2,1fr)}.grid,.detail-grid{display:block}.card{margin-bottom:11px;padding:14px}.evidence-drawer{padding:0}.evidence-drawer>summary{padding:14px}.detail-grid{padding:0 10px 10px}.now-grid,.inquiry-grid,.models,.bars,.changes{grid-template-columns:1fr}.inquiry-panel.current{grid-column:auto}.timeline .event{grid-template-columns:45px 75px 1fr}.row{grid-template-columns:95px 1fr}}
+
+/* Reading order: present state, map, evidence/plan, optional technical trail. */
+.observer-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:380px}.status{white-space:normal}
+.summary{margin-top:22px}.summary .v{font-size:20px}.sub,.micro,.drawer-copy,.roadmap p,.research-copy{font-size:13px;line-height:1.65}.now-item .t,.inquiry-panel .t{font-size:11px}.now-item .v{font-size:16px}
+.capability-levels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;margin:20px 0;padding:20px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}dt{font-weight:800;color:var(--cyan)}dd{margin:7px 0 0;color:var(--muted);font-size:13px}
+.roadmap{padding-left:26px;display:grid;grid-template-columns:1fr 1fr;gap:18px 38px}.roadmap li{padding-left:5px}.roadmap li::marker{color:var(--cyan);font-weight:800}.roadmap p{margin:6px 0 0;color:var(--muted)}.research-copy{padding:0 16px 12px;max-width:1000px}.research-copy a,footer a{text-decoration:underline;text-underline-offset:3px}
+.capability-history{background:transparent}.ladder{padding:0 12px 12px}.skip-link{position:absolute;left:10px;top:-100px;padding:12px;background:var(--cyan);color:var(--bg);z-index:5}.skip-link:focus{top:10px}:focus-visible{outline:3px solid var(--gold);outline-offset:4px}button,.button,summary{min-height:44px}label{display:block;margin-bottom:6px}.row .value{min-width:0}.cell .coord,.cell .visits{color:#a9c0d2}
+@media(max-width:1080px){.capability-levels{grid-template-columns:1fr 1fr}}
+@media(max-width:720px){.roadmap,.capability-levels{grid-template-columns:1fr}.roadmap{gap:16px}.summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.stat{padding:10px}.summary .v{font-size:16px}.world-layout{display:block}.board-wrap{margin-bottom:14px}.observer-controls{max-width:100%}.priority-row{min-width:620px}.priority-compare{overflow-x:auto;max-width:100%}.status{font-size:12px}.top{gap:12px}}
 </style>
 </head>
 <body>
-<main class="shell">
+<a class="skip-link" href="#nowStory">Skip to Ora now</a><main class="shell">
 <header class="top">
 <div><div class="eyebrow">AgentTest · Ora live observer</div><h1>Ora, right now.</h1><p class="lede">A plain-English, read-only view of what Ora is doing and learning. Start here; open Evidence &amp; history only when you want the technical trail.</p></div>
-<div class="status"><span class="dot"></span><span id="liveStatus">Loading live state…</span></div>
+<div class="observer-controls"><div class="status" role="status" aria-live="polite"><span class="dot"></span><span id="liveStatus">Loading persisted state.</span></div><button id="refresh">Refresh now</button><a class="button" href="#futurePlans">Future plans</a></div>
 </header>
 
 <section class="summary">
@@ -39,20 +48,74 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="stat"><div class="k">Updated</div><div class="v" id="stateAge">—</div><div class="s" id="stateAgeSub">last heartbeat</div></div>
 </section>
 
-<section class="grid"></section>
-
 <section class="grid">
 <article class="card s12 now-card">
 <div class="head"><div><h2>Ora · Right now</h2><div class="sub">One sentence first. The evidence IDs and internal mechanics are further down.</div></div><span class="pill blue" id="nowStatus">loading</span></div>
-<div class="story-main" id="nowStory">Loading Ora’s current story…</div>
+<div class="story-main" id="nowStory" tabindex="-1">Loading Ora’s current story…</div>
 <div class="now-grid">
 <div class="now-item"><div class="t">Next planned move</div><div class="v" id="nowPlan">—</div></div>
 <div class="now-item"><div class="t">Latest learning</div><div class="v" id="nowLearning">—</div></div>
 <div class="now-item"><div class="t">Current question</div><div class="v" id="nowQuestion">—</div></div>
 </div>
-<div class="ladder" id="capabilityLadder"></div>
+<details class="capability-history"><summary>Demonstrated capability history</summary><div class="ladder" id="capabilityLadder"></div></details>
 </article>
 
+<article class="card s8">
+<div class="head"><div><h2>Where Ora is exploring</h2><div class="sub">The Bounded Action Lab as a small world: teal is Ora’s lived path and dashed blue is the remaining plan.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
+<div class="world-layout">
+<div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="plannedPath" points="" fill="none" stroke="rgba(122,185,255,.45)" stroke-width="5" stroke-dasharray="9 8" stroke-linecap="round" stroke-linejoin="round"></polyline><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g><g id="blockedEdges"></g><g id="curiosityMarks"></g><g id="transferMarks"></g><g id="selfExperimentMarks"></g></svg><div class="board" id="worldGrid" role="img" aria-label="Bounded world map loading"></div></div></div>
+<div><div class="rows">
+<div class="row"><span class="label">Current goal</span><span class="value" id="latestAction">—</span></div>
+<div class="row"><span class="label">Next move</span><span class="value" id="latestDelta">—</span></div>
+<div class="row"><span class="label">Steps left</span><span class="value" id="latestBlocked">—</span></div>
+<div class="row"><span class="label">Why this route</span><span class="value" id="decisionReason">—</span></div>
+<div class="row"><span class="label">Last move</span><span class="value" id="actionPace">—</span></div>
+</div>
+<details class="map-details"><summary>Map legend &amp; early learning evidence</summary><div class="gate"><div class="gate-top"><div><b>Phase 32 learned-choice gate</b><div class="micro" id="gateCopy">Gathering causal experience.</div></div><span class="pill blue" id="gatePill">—</span></div><div class="progress"><div id="gateProgress" style="width:0%"></div></div></div><div class="micro" style="padding:0 11px 11px">Teal actual · blue dashed planned · red × learned block · gold ? curiosity · violet T transfer · green E self-test</div></details>
+</div>
+</div>
+</article>
+
+<aside class="card s4">
+<div class="head"><div><h2>Latest milestone</h2><div class="sub">The newest capability supported by Ora’s persisted natural behavior.</div></div><span class="pill good" id="milestoneStatus">checking</span></div>
+<div class="milestone-phase" id="milestonePhase">—</div>
+<div class="milestone-main" id="milestoneTitle">Loading evidence…</div>
+<p class="milestone-copy" id="milestoneCopy">—</p>
+<div class="milestone-stats">
+<div class="milestone-stat"><b id="milestoneTests">—</b><span id="milestoneTestsLabel">self-tests</span></div>
+<div class="milestone-stat"><b id="milestoneRecoveries">—</b><span id="milestoneRecoveriesLabel">goals recovered</span></div>
+</div>
+</aside>
+
+<section class="card s12" id="futurePlans" aria-labelledby="futureTitle">
+<div class="head"><div><h2 id="futureTitle">Evidence and future plans</h2><div class="sub">A roadmap of goals and acceptance gates. These plans describe development work; they do not direct Ora's choices.</div></div><span class="pill blue">Reviewed 5 October 2026</span></div>
+<dl class="capability-levels">
+<div><dt>Live demonstrated</dt><dd id="demonstratedSummary">Waiting for persisted evidence.</dd></div>
+<div><dt>Implemented</dt><dd>Native inquiry resolution infrastructure is merged and disabled by default. Implementation alone does not establish a cognitive achievement or grant challenge-world authority.</dd></div>
+<div><dt>Isolated research</dt><dd>Harness-staged copied inquiries, bounded execution, native evidence plumbing and an experience-sensitive selector. The live environment remains the original bounded world.</dd></div>
+<div><dt>Planned</dt><dd>Continuity, causal learning, transfer and useful memory within one identity. Progress depends on the gates below.</dd></div>
+</dl>
+<ol class="roadmap">
+<li><strong>Preserve continuity and lossless storage</strong><p>Gate: exact restored-state parity, restart continuity and preservation checks. A compact storage candidate reduced 71.5 to 49.5 MB with 295 tests and 30 parity checks; publication remains blocked pending approval. It is not live.</p></li>
+<li><strong>Keep copied action authority fresh</strong><p>Gate: recheck current copied state, inquiry, recorder, selector and single-use budget at execution; reject stale or replayed authority. Safety and continuity evidence is available in research #195.</p></li>
+<li><strong>Close the causal learning loop</strong><p>Gate: admit public observations only and require the inquiry to be actually selected upstream under ordinary production heartbeat settings before authorizing an action, without manual inquiry staging or weight tuning; then retain precommitted predictions, observations and resolutions across restarts and layouts. Isolated #194 completed 32 experiments across four layouts: 25 supported, 7 falsified.</p></li>
+<li><strong>Test held-out transfer</strong><p>Gate: useful predictions on unseen layouts against a matched baseline, with uncertainty and failures retained. No live credit from copied tests.</p></li>
+<li><strong>Build useful memory and abstraction</strong><p>Gate: memory improves later decisions on held-out tasks without losing provenance. Temporary reasoning roles remain within Ora's one identity.</p></li>
+<li><strong>Review a small live introduction separately</strong><p>Gate: independent review and explicit approval for a reversible, bounded introduction with preservation and rollback checks. Testing still uses copies. No environment change date is promised.</p></li>
+</ol>
+<details id="researchFrontierCard"><summary>Research frontier · exact sources and historical evidence</summary><div class="research-copy">
+<p><strong>Isolated · not live.</strong> No copied result grants Ora live challenge-world authority or Phase 42 credit.</p>
+<p><a href="https://github.com/JeremyHennessy/AgentTest/commit/a500781a3e26076c177caf8479ba0f6e0e5fb363">#194 at a500781a</a>: four layouts, eight actions each; 32 experiments, 25 supported and 7 falsified. This extends the earlier one-action work. The harness stages an inquiry before each copied cycle; authorization requires its presence among agenda candidates, not its selection as the ordinary foreground inquiry. It does not show Ora independently choosing to enter the richer world. The production CLI/cycle has no challenge-input admission path.</p>
+<p><a href="https://github.com/JeremyHennessy/AgentTest/commit/50441664632d7bc4d9a05db1b917c6e24657e9a0">#195 at 50441664</a>: copied-authority freshness repair. Independent Linux review: 300 tests and 15 stale-authority negative cases passed. At copied cycle 4599, a one-layout eight-action comparison had identical before/after traces, nine full-cycle state/result/agenda/learning hashes and final files: 4 supported, 4 falsified; 0 Phase 42 mismatch or resumption. This is safety and continuity evidence, not a new cognitive achievement. Draft research remains isolated.</p>
+<p><strong>Future admission gate:</strong> test public-observation-only admission and actual ordinary inquiry selection with production <code>--self-observe --grounded-experiments-only --planning-lab</code>. The copied harness uses a fixed repository snapshot with labs off. Candidate presence and green harness results do not close this gate. This Observer update does not implement that bridge.</p>
+<p><strong>Historical evidence, superseded · reviewed 5 October 2026.</strong> <a href="https://github.com/JeremyHennessy/AgentTest/blob/73d4765322efd8c7b87ed8c94bdca8bb81098d7a/index.html">The prior Observer summary at 73d4765</a> reported that 30/30 mature copied cases completed the disabled production-resolver loop: 25 were falsified and 5 supported. Earlier frozen-policy tests reported 83.3% vs 40.0% inquiry falsification. Preserve the initial #188 falsification and exploratory geometry revision as research history; the later multi-action and freshness studies above are the current reference.</p>
+<p><a href="https://github.com/JeremyHennessy/AgentTest/pull/188">Initial #188 falsification and exploratory geometry history</a> · <a href="https://github.com/JeremyHennessy/AgentTest/commit/80c0f63163d08aa2efc04ca60e1c41032ba2e839">#188 final exploratory geometry revision 80c0f631</a> · <a href="https://github.com/JeremyHennessy/AgentTest/tree/73d4765322efd8c7b87ed8c94bdca8bb81098d7a">Observer review baseline 73d4765</a>. The resolver infrastructure is merged but disabled by default; live Ora has no new world from this work.</p>
+</div></details>
+</section>
+
+<details class="card s12 evidence-drawer">
+<summary><span><span class="drawer-title">Evidence & history</span><span class="drawer-copy">Open the scientific trail for planning, surprise, curiosity, memory, transfer, attention and empirical learning.</span></span></summary>
+<div class="detail-grid">
 <article class="card s12" id="inquiryFocusCard">
 <div class="head"><div><h2>What Ora is thinking about</h2><div class="sub">The foreground inquiry, the questions still being kept alive, and the evidence that could change attention.</div></div><span class="pill blue" id="inquiryFocusStatus">loading</span></div>
 <div class="inquiry-grid">
@@ -79,46 +142,7 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 </div>
 </article>
 
-<article class="card s12" id="researchFrontierCard">
-<div class="head"><div><h2>Research frontier</h2><div class="sub">Verified work around Ora that is still isolated from her live cognition and action authority.</div></div><span class="pill violet">isolated · not live</span></div>
-<div class="now-grid">
-<div class="now-item"><div class="t">Richer 5×5 world</div><div class="v">Persistent anonymous objects and open-ended mechanics are discoverable without a scripted solution.</div></div>
-<div class="now-item"><div class="t">Question-directed action</div><div class="v">Frozen epistemic policy beat unguided exploration on mature copied-state tests: 83.3% vs 40.0% inquiry falsification.</div></div>
-<div class="now-item"><div class="t">Closed copied loop</div><div class="v">Using the disabled production resolver, 30/30 mature copied cases completed question → epistemic action → observation → native evidence → experiment resolution; 25 were falsified and 5 supported.</div></div>
-</div>
-<div class="micro" style="margin-top:10px">The resolver infrastructure is merged but disabled by default. The richer world and epistemic action policy remain isolated research only: live Ora has no new world, no new action authority, no Phase 42 credit, and no automatic native-inquiry activation.</div>
-</article>
 
-<article class="card s8">
-<div class="head"><div><h2>Where Ora is exploring</h2><div class="sub">The Bounded Action Lab as a small world: teal is Ora’s lived path and dashed blue is the remaining plan.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
-<div class="world-layout">
-<div><div class="board-wrap"><svg class="trail" viewBox="0 0 500 500"><polyline id="plannedPath" points="" fill="none" stroke="rgba(122,185,255,.45)" stroke-width="5" stroke-dasharray="9 8" stroke-linecap="round" stroke-linejoin="round"></polyline><polyline id="pathLine" points="" fill="none" stroke="rgba(95,224,201,.62)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline><g id="pathDots"></g><g id="blockedEdges"></g><g id="curiosityMarks"></g><g id="transferMarks"></g><g id="selfExperimentMarks"></g></svg><div class="board" id="worldGrid"></div></div></div>
-<div><div class="rows">
-<div class="row"><span class="label">Current goal</span><span class="value" id="latestAction">—</span></div>
-<div class="row"><span class="label">Next move</span><span class="value" id="latestDelta">—</span></div>
-<div class="row"><span class="label">Steps left</span><span class="value" id="latestBlocked">—</span></div>
-<div class="row"><span class="label">Why this route</span><span class="value" id="decisionReason">—</span></div>
-<div class="row"><span class="label">Last move</span><span class="value" id="actionPace">—</span></div>
-</div>
-<details class="map-details"><summary>Map legend &amp; early learning evidence</summary><div class="gate"><div class="gate-top"><div><b>Phase 32 learned-choice gate</b><div class="micro" id="gateCopy">Gathering causal experience.</div></div><span class="pill blue" id="gatePill">—</span></div><div class="progress"><div id="gateProgress" style="width:0%"></div></div></div><div class="micro" style="padding:0 11px 11px">Teal actual · blue dashed planned · red × learned block · gold ? curiosity · violet T transfer · green E self-test</div></details>
-</div>
-</div>
-</article>
-
-<aside class="card s4">
-<div class="head"><div><h2>Latest milestone</h2><div class="sub">The newest capability supported by Ora’s persisted natural behavior.</div></div><span class="pill good" id="milestoneStatus">checking</span></div>
-<div class="milestone-phase" id="milestonePhase">—</div>
-<div class="milestone-main" id="milestoneTitle">Loading evidence…</div>
-<p class="milestone-copy" id="milestoneCopy">—</p>
-<div class="milestone-stats">
-<div class="milestone-stat"><b id="milestoneTests">—</b><span id="milestoneTestsLabel">self-tests</span></div>
-<div class="milestone-stat"><b id="milestoneRecoveries">—</b><span id="milestoneRecoveriesLabel">goals recovered</span></div>
-</div>
-</aside>
-
-<details class="card s12 evidence-drawer">
-<summary><span><span class="drawer-title">Evidence & history</span><span class="drawer-copy">Open the scientific trail for planning, surprise, curiosity, memory, transfer, attention and empirical learning.</span></span></summary>
-<div class="detail-grid">
 <article class="card s4"><div class="head"><div><h2>Learned causal model</h2><div class="sub">Technical action effects learned from outcomes, not action names.</div></div></div><div class="models" id="causalModel"></div></article>
 <article class="card s8"><div class="head"><div><h2>Phase progression</h2><div class="sub">The same capabilities shown above, with scientific framing.</div></div></div><div class="micro">Phase 32 actions → 33 planning → 34 revision → 35 curiosity → 36 episodic memory → 37 transfer → 38 self-generated falsifiable experiments → 39 self-selected objectives → 40 realized information → 41 outcome-aware objectives → 42 persistent inquiry agenda.</div></article>
 <article class="card s12">
@@ -273,17 +297,17 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="evidence">
 <div class="ebox"><div class="n" id="agendaThreadCount">0</div><div class="t">Persisted threads</div></div>
 <div class="ebox"><div class="n" id="agendaSuspendedCount">0</div><div class="t">Suspended threads</div></div>
-<div class="ebox"><div class="n" id="agendaResumptionCount">0</div><div class="t">Genuine resumptions</div></div>
-<div class="ebox"><div class="n" id="agendaOpportunityCount">—</div><div class="t">Resumption opportunities</div></div>
-<div class="ebox"><div class="n" id="agendaLowerPriorityCount">—</div><div class="t">Qualified · lower priority</div></div>
-<div class="ebox"><div class="n" id="agendaMismatchCount">—</div><div class="t">Selection mismatches</div></div>
+<div class="ebox"><div class="n" id="agendaResumptionCount">0</div><div class="t" id="agendaResumptionLabel">Genuine resumptions · scope pending</div></div>
+<div class="ebox"><div class="n" id="agendaOpportunityCount">—</div><div class="t">Retained-window opportunities</div></div>
+<div class="ebox"><div class="n" id="agendaLowerPriorityCount">—</div><div class="t">Window: qualified · lower priority</div></div>
+<div class="ebox"><div class="n" id="agendaMismatchCount">—</div><div class="t">Window: selection mismatches</div></div>
 </div>
 <div class="rows" style="margin-top:10px">
 <div class="row"><span class="label">Foreground inquiry</span><span class="value" id="agendaForeground">—</span></div>
 <div class="row"><span class="label">Core choice without agenda</span><span class="value" id="agendaCounterfactual">—</span></div>
 <div class="row"><span class="label">Latest priority margin</span><span class="value" id="agendaMargin">—</span></div>
 <div class="row"><span class="label">Evidence behind foreground</span><span class="value" id="agendaEvidence">—</span></div>
-<div class="row"><span class="label">Resumption diagnostic</span><span class="value" id="agendaOpportunityStatus">Waiting for first diagnostic heartbeat.</span></div>
+<div class="row"><span class="label">Resumption diagnostic</span><span class="value" id="agendaOpportunityStatus">Waiting for first diagnostic heartbeat.</span></div><div class="row"><span class="label">Diagnostic coverage</span><span class="value" id="agendaCoverage">Unknown retained window.</span></div>
 </div>
 <div class="preds" id="agendaThreads"></div>
 </article>
@@ -319,18 +343,72 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 </details>
 </section>
 
-<details><summary>Optional owner interaction · hidden by default</summary><div class="interaction"><div class="sub" style="margin-bottom:8px">Existing authenticated GitHub handoff; no token is stored in this page.</div><textarea id="message" maxlength="1200" placeholder="Send an evidence-linked interaction…"></textarea><div class="actions"><button class="primary" id="send">Open secure GitHub handoff</button><button id="refresh">Refresh now</button><a class="button" href="https://github.com/JeremyHennessy/AgentTest/actions/workflows/interact.yml" target="_blank" rel="noopener">Advanced workflow</a></div><div class="pending" id="pending"></div><div class="question"><b>Latest response</b><span id="latestResponse">No persisted response yet.</span></div></div></details>
+<details><summary>Optional owner interaction · hidden by default</summary><div class="interaction"><div class="sub" style="margin-bottom:8px">Existing authenticated GitHub handoff; no token is stored in this page.</div><label for="message">Message for Ora</label><textarea id="message" maxlength="1200" placeholder="Send an evidence-linked interaction…"></textarea><div class="actions"><button class="primary" id="send">Open secure GitHub handoff</button><a class="button" href="https://github.com/JeremyHennessy/AgentTest/actions/workflows/interact.yml" target="_blank" rel="noopener">Advanced workflow</a></div><div class="pending" id="pending"></div><div class="question"><b>Latest response</b><span id="latestResponse">No persisted response yet.</span></div></div></details>
 
-<footer><span><a href="https://github.com/JeremyHennessy/AgentTest" target="_blank">Repository</a></span><span><a href="https://github.com/JeremyHennessy/AgentTest/tree/autonomous/growth" target="_blank">Persistent state</a></span><span><a href="https://github.com/JeremyHennessy/AgentTest/pull/4" target="_blank">Growth journal</a></span><span id="refreshFoot">Waiting for refresh…</span></footer>
+<footer><a id="sourceCommit" href="https://github.com/JeremyHennessy/AgentTest/tree/autonomous/growth">Displayed source pending</a><span><a href="https://github.com/JeremyHennessy/AgentTest" target="_blank">Repository</a></span><span><a href="https://github.com/JeremyHennessy/AgentTest/tree/autonomous/growth" target="_blank">Persistent state</a></span><span><a href="https://github.com/JeremyHennessy/AgentTest/pull/4" target="_blank">Growth journal</a></span><span id="refreshFoot">Waiting for refresh…</span></footer>
 </main>
 
+<script id="observerTransport">
+/* Immutable snapshot transport. Never writes Ora's state. */
+function createObserverLoader({fetch, refUrl, rawBase, pollMs, now = Date.now, publish, status}) {
+  let pending = null, epoch = 0, cachedSha = null, checkedAt = 0, snapshot = null;
+  async function json(url, optional = false) {
+    const response = await fetch(url, {cache: "no-store"});
+    if (optional && response.status === 404) return null;
+    if (!response.ok) throw new Error("Snapshot HTTP " + response.status);
+    return response.json();
+  }
+  function refresh({force = false} = {}) {
+    if (pending) return pending;
+    const request = ++epoch;
+    status({kind: "loading", snapshot, checkedAt});
+    pending = Promise.resolve().then(async () => {
+      try {
+        let sha = cachedSha;
+        if (force || !sha || now() - checkedAt >= pollMs) {
+          const ref = await json(refUrl + "?t=" + now());
+          sha = ref?.object?.sha;
+          if (!/^[a-f0-9]{40}$/i.test(sha || "")) throw new Error("Growth ref missing valid SHA");
+          if (request !== epoch) return;
+          cachedSha = sha;
+          checkedAt = now();
+        }
+        if (snapshot?.sha !== sha) {
+          const base = rawBase + "/" + sha + "/state/";
+          const [organism, interaction, diagnostic] = await Promise.all([
+            json(base + "organism.json"), json(base + "last_interaction.json"),
+            json(base + "phase42_resumption_opportunities.json", true)
+          ]);
+          if (request !== epoch) return;
+          if (!organism || !Number.isFinite(organism.generation) || !organism.updated_at || !interaction || typeof interaction !== "object")
+            throw new Error("Invalid snapshot; keeping last verified display");
+          if (snapshot && organism.generation < snapshot.organism.generation)
+            throw new Error("Generation moved backwards; keeping last verified display");
+          const next = {sha, organism, interaction, diagnostic};
+          publish(next);
+          snapshot = next;
+        }
+        status({kind: "ready", snapshot, checkedAt});
+      } catch (error) {
+        if (request === epoch) { cachedSha = null; status({kind: "error", snapshot, checkedAt, error}); }
+      } finally {
+        if (request === epoch) pending = null;
+      }
+    });
+    return pending;
+  }
+  // Invalidate abandoned requests without letting a late response overwrite a newer snapshot.
+  function invalidate() { epoch++; pending = null; cachedSha = null; checkedAt = 0; }
+  return {refresh, invalidate};
+}
+</script>
 <script>
 const ORGANISM_SOURCE="autonomous/growth/state/organism.json";
 const STATE_SOURCE="autonomous/growth/state/last_interaction.json";
 const GROWTH_REF_URL="https://api.github.com/repos/JeremyHennessy/AgentTest/git/ref/heads/autonomous/growth";
 const RAW_BASE="https://raw.githubusercontent.com/JeremyHennessy/AgentTest";
 const ISSUE_BASE="https://github.com/JeremyHennessy/AgentTest/issues/new",REFRESH_MS=15000,REF_POLL_MS=75000,el=id=>document.getElementById(id);
-let organism=null,resolvedGrowthSha=null,lastRefCheck=0,lastLoadedSha=null;
+let organism=null;
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
 const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.isArray(v)?v.slice(-n):[],vec=v=>Array.isArray(v)?"["+v.join(", ")+"]":"—",route=v=>Array.isArray(v)&&v.length?v.join(" → "):"—";
 function age(iso){if(!iso)return"—";const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000));return s<60?s+"s":s<3600?Math.floor(s/60)+"m":(s/3600).toFixed(1)+"h"}
@@ -348,8 +426,9 @@ function phaseLabel(n){
 function genuineAgendaResumption(x){
  return Boolean(x&&x.resumed_thread_id&&x.previous_foreground_thread_id&&x.foreground_changed===true&&x.priority_change_supported_by_new_evidence===true&&x.selected_thread_id===x.resumed_thread_id&&x.previous_foreground_thread_id!==x.resumed_thread_id)
 }
+function agendaResumptionScope(agenda){return agenda?.genuine_resumption_count!=null&&Number.isFinite(Number(agenda.genuine_resumption_count))?"lifetime":"retained-window"}
 function agendaGenuineResumptionCount(agenda){
- const retained=(agenda?.decisions||[]).filter(genuineAgendaResumption).length,durable=Number(agenda?.genuine_resumption_count);
+ const retained=(agenda?.decisions||[]).filter(genuineAgendaResumption).length,durable=agenda?.genuine_resumption_count==null?NaN:Number(agenda.genuine_resumption_count);
  return Number.isFinite(durable)?Math.max(0,durable,retained):retained
 }
 function agendaLifetimeDecisionCount(agenda){
@@ -521,13 +600,13 @@ function renderNow(o){
  }
  el("milestoneTests").textContent=String(currentPhase>=42?agendaLifetimeDecisionCount(agenda):currentPhase>=41?p41changed.length:currentPhase>=40?p40.length:currentPhase>=39?p39changed.length:selfTests.length);
  el("milestoneRecoveries").textContent=String(currentPhase>=42?p42ResumptionCount:currentPhase>=41?p41completed.length:currentPhase>=40?p40.filter(x=>(+x.realized_information_gain||0)>0).length:currentPhase>=39?p39completed.length:recoveries);
- el("milestoneTestsLabel").textContent=currentPhase>=42?"total agenda decisions":"self-tests";
- el("milestoneRecoveriesLabel").textContent=currentPhase>=42?"genuine resumptions":"goals recovered";
+ el("milestoneTestsLabel").textContent=currentPhase>=42?(Number(agenda.next_decision_index)>0?"lifetime total agenda decisions":"retained-window agenda decisions"):"self-tests";
+ el("milestoneRecoveriesLabel").textContent=currentPhase>=42?agendaResumptionScope(agenda)+" genuine resumptions":"goals recovered";
 }
 function renderActionLab(o){
  const lab=o.action_lab||{},pl=o.planning_lab||{},planningActive=pl.bootstrapped_cycle!=null||(pl.executions||[]).length>0;
  const w=planningActive?pl:lab,b=+(w.bounds??2),pos=w.position||[0,0],vis=w.visit_counts||{},h=planningActive?(pl.executions||[]):(lab.history||[]),pathEvents=planningActive?[...(pl.executions||[]),...(pl.curiosity_probes||[]),...(pl.self_experiments||[])].sort((a,b)=>(+a.cycle||0)-(+b.cycle||0)):(lab.history||[]),cells=[],side=b*2+1;
- el("worldGrid").style.gridTemplateColumns="repeat("+side+",1fr)";el("worldGrid").style.gridTemplateRows="repeat("+side+",1fr)";
+ el("worldGrid").setAttribute("aria-label","Bounded world map: Ora at "+vec(pos)+"; "+Object.keys(vis).length+" visited cells. Teal trail shows past actions; dashed blue shows the remaining plan.");el("worldGrid").style.gridTemplateColumns="repeat("+side+",1fr)";el("worldGrid").style.gridTemplateRows="repeat("+side+",1fr)";
  for(let y=b;y>=-b;y--)for(let x=-b;x<=b;x++){const k=x+","+y,n=+vis[k]||0,a=+pos[0]===x&&+pos[1]===y;cells.push('<div class="cell'+(n?' visited':'')+(a?' active':'')+'"><span class="coord">'+x+','+y+'</span>'+(a?'<span class="agent"></span>':'')+(n?'<span class="visits">×'+n+'</span>':'')+'</div>')}
  el("worldGrid").innerHTML=cells.join("");
  const path=[];if(pathEvents.length&&Array.isArray(pathEvents[0].before))path.push(pathEvents[0].before);pathEvents.forEach(a=>Array.isArray(a.after)&&path.push(a.after));
@@ -701,13 +780,14 @@ function renderOutcomeValuation(o){
  el("outcomeValuationHistory").innerHTML=tail(decisions,4).map(x=>'<span class="pred '+(x.outcome_changed_choice?'confirmed':'pending')+'">'+esc(x.id)+" · "+esc(x.outcome_changed_choice?"outcomes changed objective":"Phase 39 choice retained")+" · "+esc(vec(x.selected?.target))+"</span>").join("");
 }
 function renderAgendaOpportunityDiagnostic(d){
+ el("agendaCoverage").textContent=d?.diagnostic_version==="phase42-resumption-opportunities-v2" ? Number(d.telemetry_decision_count||0)+" measured / "+Number(d.retained_decision_count||0)+" retained decisions; "+Number(d.pre_telemetry_decision_count||0)+" older decisions excluded. Window counts are not lifetime totals." : "Diagnostic absent in this source snapshot; window counts unavailable.";
  const ready=d&&d.diagnostic_version==="phase42-resumption-opportunities-v2";
  el("agendaOpportunityCount").textContent=ready?Number(d.opportunity_count||0):"—";
  el("agendaLowerPriorityCount").textContent=ready?Number(d.lower_priority_opportunity_count||0):"—";
  el("agendaMismatchCount").textContent=ready?Number(d.handoff_or_selection_mismatch_count||0):"—";
  if(!ready){el("agendaOpportunityStatus").textContent="Waiting for first diagnostic heartbeat.";return}
  const opportunities=Number(d.opportunity_count||0),resumed=Number(d.resumed_opportunity_count||0),lower=Number(d.lower_priority_opportunity_count||0),mismatch=Number(d.handoff_or_selection_mismatch_count||0);
- el("agendaOpportunityStatus").textContent=mismatch?mismatch+" opportunity"+(mismatch===1?"":"ies")+" need handoff/selection review.":opportunities===0?(Number(d.telemetry_decision_count||0)+" prospective decision"+(Number(d.telemetry_decision_count||0)===1?"":"s")+" measured · no qualifying opportunity yet."):resumed?resumed+" qualifying opportunity"+(resumed===1?" resumed successfully.":"ies resumed successfully."):(lower===opportunities?opportunities+" qualifying opportunity"+(opportunities===1?" was":"ies were")+" recognized but remained lower priority.":opportunities+" qualifying opportunities observed; no selection mismatch detected.");
+ el("agendaOpportunityStatus").textContent=mismatch?mismatch+" opportunity"+(mismatch===1?"":"ies")+" need handoff/selection review.":opportunities===0?(Number(d.telemetry_decision_count||0)+" retained-window prospective decision"+(Number(d.telemetry_decision_count||0)===1?"":"s")+" measured · no qualifying opportunity yet."):resumed?resumed+" retained-window qualifying opportunity"+(resumed===1?" resumed successfully.":"ies resumed successfully."):(lower===opportunities?opportunities+" retained-window qualifying opportunity"+(opportunities===1?" was":"ies were")+" recognized but remained lower priority.":opportunities+" retained-window qualifying opportunities observed; no selection mismatch detected.");
 }
 function renderAgenda(o){
  const agenda=o.agenda||{},threads=agenda.threads||[],decisions=agenda.decisions||[];
@@ -717,7 +797,7 @@ function renderAgenda(o){
  el("agendaStatus").className="pill "+(passed?"good":resumptionCount||switches.length?"warn":"blue");
  el("agendaThreadCount").textContent=threads.length;
  el("agendaSuspendedCount").textContent=suspended.length;
- el("agendaResumptionCount").textContent=resumptionCount;
+ el("agendaResumptionCount").textContent=resumptionCount;el("agendaResumptionLabel").textContent=agendaResumptionScope(agenda)+" genuine resumptions";
  el("agendaForeground").textContent=foreground.question_id?(foreground.question_id+" · "+(foreground.question_text||"")):"—";
  el("agendaCounterfactual").textContent=d.id?(d.legacy_counterfactual?.question_id+" · "+(d.legacy_counterfactual?.question_text||"")):"—";
  el("agendaMargin").textContent=d.id?Number(d.decision_margin||0).toFixed(3):"—";
@@ -747,37 +827,17 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i,phase42Diagnostic){organism=o;el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderNow(o);renderInquiryFocus(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderObjectiveSelection(o);renderObjectiveRealization(o);renderOutcomeValuation(o);renderAgenda(o);renderAgendaOpportunityDiagnostic(phase42Diagnostic);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Live · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
-async function resolveGrowthSha(){
- const now=Date.now();
- if(resolvedGrowthSha&&now-lastRefCheck<REF_POLL_MS)return resolvedGrowthSha;
- const r=await fetch(GROWTH_REF_URL+"?t="+now,{cache:"no-store"});
- if(!r.ok)throw new Error("growth ref HTTP "+r.status);
- const data=await r.json(),sha=data&&data.object&&data.object.sha;
- if(!sha)throw new Error("growth ref missing SHA");
- resolvedGrowthSha=sha;lastRefCheck=now;return sha
-}
-async function load(){
- el("liveStatus").textContent="Refreshing…";
- try{
-  const sha=await resolveGrowthSha();
-  if(sha===lastLoadedSha&&organism){el("liveStatus").textContent="Live · generation "+(organism.generation??"—");return}
-  const base=RAW_BASE+"/"+sha+"/state";
-  const r=await Promise.all([
-   fetch(base+"/organism.json",{cache:"no-store"}),
-   fetch(base+"/last_interaction.json",{cache:"no-store"}),
-   fetch(base+"/phase42_resumption_opportunities.json",{cache:"no-store"})
-  ]);
-  if(!r[0].ok||!r[1].ok)throw new Error("immutable state fetch failed");
-  const d=await Promise.all([r[0].json(),r[1].json(),r[2].ok?r[2].json():Promise.resolve(null)]);
-  lastLoadedSha=sha;
-  render(d[0],d[1],d[2])
- }catch(e){
-  el("liveStatus").innerHTML='<span class="error">Live state unavailable</span>';
-  el("refreshFoot").textContent=e.message
- }
-}
+function render(o,i,phase42Diagnostic){organism=o;el("demonstratedSummary").textContent="Persisted Phase "+planningPhaseNumber(o)+" capability. "+agendaGenuineResumptionCount(o.agenda)+" "+agendaResumptionScope(o.agenda)+" natural resumptions; "+(o.agenda?.phase42_passed===true?"Phase 42 natural gate passed.":"Phase 42 natural gate remains open. Zero resumptions alone is not a failure.");el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderInquiryFocus(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderObjectiveSelection(o);renderObjectiveRealization(o);renderOutcomeValuation(o);renderAgenda(o);renderAgendaOpportunityDiagnostic(phase42Diagnostic);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Persisted snapshot · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+const loader=createObserverLoader({fetch,refUrl:GROWTH_REF_URL,rawBase:RAW_BASE,pollMs:REF_POLL_MS,
+ publish:snapshot=>{render(snapshot.organism,snapshot.interaction,snapshot.diagnostic);el("sourceCommit").href="https://github.com/JeremyHennessy/AgentTest/tree/"+snapshot.sha+"/state";el("sourceCommit").textContent="Displayed source "+snapshot.sha.slice(0,10)},
+ status:({kind,snapshot,checkedAt,error})=>{
+  el("liveStatus").textContent=kind==="loading"?(snapshot?"Checking · previous snapshot displayed":"Loading persisted snapshot"):kind==="error"?(snapshot?"Refresh failed · last good snapshot":"State unavailable"):"Persisted snapshot · generation "+snapshot.organism.generation;
+  el("liveStatus").className=kind==="error"?"error":"";
+  el("refresh").setAttribute("aria-busy",String(kind==="loading"));
+  el("refreshFoot").textContent=kind==="error"?error.message+". "+(snapshot?"Displayed data has not been refreshed.":"No verified data loaded."):kind==="ready"?"Growth ref checked "+new Date(checkedAt).toLocaleTimeString()+" · state updated "+snapshot.organism.updated_at:"Checking source; overlapping refreshes share one request.";
+ }});
+function load(){return loader.refresh()}
 function handoff(){const message=el("message").value.trim();if(!message){el("pending").textContent="Enter a message first.";return}localStorage.setItem("agenttest.pendingMessage",message);const p=new URLSearchParams({title: "AgentTest interaction", body: "/agent " + message});el("pending").textContent="GitHub opened in a new tab. Submit the pre-filled issue as repository owner.";window.open(ISSUE_BASE+"?"+p,"_blank","noopener")}
-el("send").addEventListener("click",handoff);el("refresh").addEventListener("click",load);load();setInterval(load,REFRESH_MS);setInterval(()=>{if(organism)el("stateAge").textContent=age(organism.updated_at)},1000);
+el("send").addEventListener("click",handoff);el("refresh").addEventListener("click",()=>loader.refresh({force:true}));load();setInterval(load,REFRESH_MS);setInterval(()=>{if(organism)el("stateAge").textContent=age(organism.updated_at)},1000);
 </script>
 </body></html>
