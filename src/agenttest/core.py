@@ -1007,6 +1007,103 @@ class AgentCore:
             "state": deepcopy(state),
         }
 
+    def resolve_native_inquiry_outcome(
+        self,
+        evidence: dict[str, Any],
+        *,
+        enabled: bool = False,
+        persist: bool = False,
+        _now_override: str | None = None,
+    ) -> dict[str, Any]:
+        """Resolve one waiting native temporal experiment from exact-match evidence.
+
+        Disabled by default. This method never executes an action or increments
+        the organism cycle. Mixed/insufficient evidence remains unresolved.
+        """
+        if enabled is not True:
+            raise RuntimeError("native outcome resolver is disabled by default")
+
+        loaded = self.store.load()
+        normalized = validate_native_evidence_payload(evidence)
+        relation = normalized["relation"]
+        if relation.get("kind") not in {
+            "same_next_observation",
+            "changes_next_observation",
+        }:
+            raise ValueError("native outcome resolver v1 requires temporal evidence")
+        if normalized.get("measurement_kind") != "binary_transition_outcomes":
+            raise ValueError("native outcome resolver v1 requires binary outcomes")
+
+        measurement = normalized["measurement"]
+        evaluable = int(measurement.get("evaluable", 0) or 0)
+        confirmations = int(measurement.get("confirmations", 0) or 0)
+        refutations = int(measurement.get("refutations", 0) or 0)
+        if evaluable <= 0 or confirmations + refutations != evaluable:
+            raise ValueError("native outcome evidence is not evaluable")
+        if confirmations and refutations:
+            outcome = None
+        elif confirmations == evaluable:
+            outcome = "supported"
+        elif refutations == evaluable:
+            outcome = "falsified"
+        else:
+            outcome = None
+
+        state = loaded if persist else deepcopy(loaded)
+        matches = []
+        for experiment in state.get("experiments", []):
+            if experiment.get("status") != "proposed":
+                continue
+            if experiment.get("readiness") != "awaiting_native_evidence":
+                continue
+            native = experiment.get("native_inquiry")
+            if not isinstance(native, dict):
+                continue
+            expected_relation = native.get("relation")
+            if not isinstance(expected_relation, dict):
+                continue
+            if expected_relation != relation:
+                continue
+            matches.append(experiment)
+
+        if len(matches) > 1:
+            raise RuntimeError("native outcome evidence matches multiple waiting experiments")
+
+        resolved_id = None
+        now = _now_override or utc_now()
+        if len(matches) == 1 and outcome is not None:
+            experiment = matches[0]
+            experiment["status"] = "completed"
+            experiment["readiness"] = "resolved"
+            experiment["outcome"] = outcome
+            experiment["evidence_strength"] = 1.0
+            experiment["evidence_refs"] = list(normalized["observation_refs"])
+            experiment["completion_source"] = "native_temporal_evidence"
+            experiment["completed_at"] = now
+            experiment.setdefault("status_history", []).append(
+                {
+                    "cycle": int(state.get("cycles", 0) or 0),
+                    "from": "proposed",
+                    "to": "completed",
+                    "reason": "native_temporal_evidence_resolved",
+                    "evidence_refs": list(normalized["observation_refs"]),
+                    "outcome": outcome,
+                }
+            )
+            resolved_id = str(experiment.get("id"))
+
+        if persist:
+            self.store.save(state)
+        return {
+            "enabled": True,
+            "persisted": bool(persist),
+            "evidence": normalized,
+            "matched_experiment_count": len(matches),
+            "resolved_experiment_id": resolved_id,
+            "outcome": outcome,
+            "state": deepcopy(state),
+        }
+
     def propose_native_inquiry(
         self,
         candidate: dict[str, Any],
