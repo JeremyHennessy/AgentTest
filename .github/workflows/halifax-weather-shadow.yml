@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts
-          curl --fail --silent --show-error --get             'https://api.weather.gc.ca/collections/climate-hourly/items'             --data-urlencode 'f=csv'             --data-urlencode 'bbox=-63.75,44.45,-63.35,45.05'             --data-urlencode 'limit=500'             --data-urlencode 'sortby=-UTC_DATE'             -o /tmp/halifax-hourly.csv
+          curl --fail --silent --show-error --get             'https://api.weather.gc.ca/collections/climate-hourly/items'             --data-urlencode 'f=csv'             --data-urlencode "filter=properties.CLIMATE_IDENTIFIER='8202251'"             --data-urlencode 'limit=500'             --data-urlencode 'sortby=-UTC_DATE'             -o /tmp/halifax-hourly.csv
           head -n 1 /tmp/halifax-hourly.csv
       - name: Normalize observations
         run: |
