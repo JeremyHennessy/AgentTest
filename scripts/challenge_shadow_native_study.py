@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "experiments"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from agenttest.core import AgentCore
-from agenttest.state import StateStore
+from agenttest.state import StateStore, initial_state
 from challenge_shadow_recorder import (
     ChallengeShadowRecorder,
     reviewed_source_descriptor,
@@ -55,8 +55,8 @@ def _archived_ids(state):
     }
 
 
-def _stream_prefix(store: StateStore, seed: int):
-    recorder = ChallengeShadowRecorder(store, enabled=True)
+def _stream_prefix(recorder_store: StateStore, seed: int):
+    recorder = ChallengeShadowRecorder(recorder_store, enabled=True)
     world = initial_world(seed)
     attempts = Counter()
     observation = observe_world(world)
@@ -132,7 +132,9 @@ def run_one(source_state: Path, seed: int, root: Path):
     baseline_agenda_decisions = len(baseline.get("agenda", {}).get("decisions", []))
     stable_repo_observation = deepcopy(baseline["environment_snapshots"][-1])
 
-    recorder, world, attempts, _ = _stream_prefix(store, seed)
+    recorder_store = StateStore(root / f"seed-{seed}" / "recorder.json")
+    recorder_store.save(initial_state())
+    recorder, world, attempts, _ = _stream_prefix(recorder_store, seed)
     publication = recorder.publication()
     candidate = publication["selected_temporal_candidate"]
 
