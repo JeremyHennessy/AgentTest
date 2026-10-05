@@ -114,3 +114,14 @@ A dedicated workflow also:
 8. uploads the report.
 
 Success proves only the copied-state observation/inquiry handoff. It is not live activation approval.
+
+
+## Verified copied-live-state result — 2026-10-05
+
+Final behavioral head `91dd7c85154bb49b2e4c8d29dec41d4824826150` passed independent PR verify run 37306722724: **267/267 tests**, behavioral preservation, capability-handoff sanity, and baseline-owned no-regression. Dedicated exact-head integration run 37306715583 completed successfully against immutable copied state `autonomous/growth@5654837b64bf3d362050fae2990c27115075e856`.
+
+Staging preserved cycle, agenda decisions/threads, Action Lab state, and Planning Lab state. After a fresh Core reload, one ordinary cycle using the pinned state's stable repository observation admitted native Q000024/AT000005 with an active experiment path while Action Lab and Planning Lab results remained `None`.
+
+Because the production agenda is intentionally capped at four active threads, admitting the fifth eligible inquiry initially moved Phase42 Q000021/AT000003 to the bounded archive. That was not identity loss: it retained the same thread ID/history with the normal `outside_current_bounded_agenda` reason. Under four additional copied heartbeats with stable repository observations, AT000003 remained archived for cycles 4191–4192 and **naturally re-entered the active agenda at cycle 4193 with the same identity**, remaining active at cycle 4194. No Phase42 handoff/selection mismatch was observed, and no false Phase42 resumption opportunity was credited.
+
+This demonstrates copied-state compatibility with the existing bounded agenda; it does not authorize live activation. The source remains a fixed unsigned fixture. A production proposal still requires a legitimate source identity/authenticity boundary and explicit cumulative-evidence retention semantics before live use.
