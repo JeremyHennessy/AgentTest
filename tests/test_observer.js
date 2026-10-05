@@ -134,10 +134,15 @@ function liveView(){
 }
 test('valid JSON with malformed nested agenda leaves every displayed data node, source and age state at last good generation',async()=>{
   const h=liveView();await h.initial();const before=displayedData(h);
-  h.next(shaB,{...state(4600),agenda:{started_cycle:1,decisions:[],threads:{invalid:true}}});await h.refresh();
+  const rejected={...state(4600),updated_at:new Date().toISOString(),agenda:{started_cycle:1,decisions:[],threads:{invalid:true}}};
+  h.next(shaB,rejected);await h.refresh();
   assert.deepEqual(displayedData(h),before);
   assert.equal(h.nodes.generation.textContent,'4599');assert.equal(h.nodes.sourceCommit.attrs.href,'https://github.com/JeremyHennessy/AgentTest/tree/'+shaA+'/state');
   assert.equal(vm.runInContext('organism.generation',h.box),4599);
+  h.intervals.find(interval=>interval.ms===1000).fn();
+  assert.equal(h.nodes.stateAge.textContent,h.box.age(state(4599).updated_at));
+  assert.notEqual(h.nodes.stateAge.textContent,h.box.age(rejected.updated_at));
+  assert.equal(h.nodes.sourceCommit.attrs.href,'https://github.com/JeremyHennessy/AgentTest/tree/'+shaA+'/state');
   assert.match(h.nodes.liveStatus.textContent,/Refresh failed.*last good snapshot/);
   assert.match(h.nodes.refreshFoot.textContent,/has not been refreshed/);
   h.next(shaB,state(4600));await h.refresh();
