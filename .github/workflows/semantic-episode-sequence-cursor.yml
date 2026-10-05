@@ -65,10 +65,16 @@ jobs:
                   ["git","-C",folder,"ls-tree","-r","HEAD"],
                   text=True,
               ).splitlines()
-              return {
-                  row.split("\\t",1)[1]: row.split()[2]
-                  for row in rows
-              }
+              result = {}
+              for row in rows:
+                  if "\\t" not in row:
+                      continue
+                  meta, path = row.split("\\t", 1)
+                  parts = meta.split()
+                  if len(parts) < 3:
+                      continue
+                  result[path] = parts[2]
+              return result
           before, after = tree("baseline"), tree("candidate")
           changed={
               path
