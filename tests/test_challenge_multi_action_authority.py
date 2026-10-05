@@ -80,7 +80,9 @@ class ChallengeMultiActionAuthorityTests(unittest.TestCase):
         self.assertEqual(first_token["id"], "CAC000001")
         self.assertEqual(first_token["budget_ordinal"], 1)
         first_before = recorder.latest_observation()
-        first_result = ChallengeActionExecutor(executor.path).execute(first_token)
+        first_result = ChallengeActionExecutor(executor.path).execute(
+            first_token, ora_store=ora, recorder=recorder,
+        )
         recorder.ingest(first_result["observation"], first_result["receipt"])
 
         with self.assertRaisesRegex(RuntimeError, "already received"):
@@ -136,10 +138,14 @@ class ChallengeMultiActionAuthorityTests(unittest.TestCase):
             second_token["recorder_chain_hash"],
             first_token["recorder_chain_hash"],
         )
-        second_result = ChallengeActionExecutor(executor.path).execute(second_token)
+        second_result = ChallengeActionExecutor(executor.path).execute(
+            second_token, ora_store=ora, recorder=recorder,
+        )
         self.assertEqual(second_result["remaining_budget"], 0)
         with self.assertRaisesRegex(RuntimeError, "already consumed"):
-            ChallengeActionExecutor(executor.path).execute(second_token)
+            ChallengeActionExecutor(executor.path).execute(
+                second_token, ora_store=ora, recorder=recorder,
+            )
 
 
 if __name__ == "__main__":

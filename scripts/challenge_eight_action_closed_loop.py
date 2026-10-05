@@ -69,10 +69,12 @@ def _stream_prefix(recorder_store: StateStore, seed: int):
     return world, attempts
 
 
-def _expect_replay_rejection(executor_path: Path, token: dict):
+def _expect_replay_rejection(executor_path: Path, token: dict, ora_store, recorder):
     before = executor_path.read_bytes()
     try:
-        ChallengeActionExecutor(executor_path).execute(token)
+        ChallengeActionExecutor(executor_path).execute(
+            token, ora_store=ora_store, recorder=recorder,
+        )
     except RuntimeError as exc:
         if "already consumed" not in str(exc):
             raise AssertionError(f"unexpected replay rejection: {exc}") from exc
@@ -232,13 +234,17 @@ def run_one(source_state: Path, seed: int, root: Path):
         unguided = choose_command(before_observation, attempts)
 
         # Restart again before execution.
-        executed = ChallengeActionExecutor(executor_path).execute(token)
+        executed = ChallengeActionExecutor(executor_path).execute(
+            token, ora_store=StateStore(ora_path), recorder=recorder,
+        )
         if int(executed["actions_consumed"]) != step:
             raise AssertionError(f"step {step}: executor consumption count mismatch")
         if int(executed["remaining_budget"]) != ACTION_BUDGET - step:
             raise AssertionError(f"step {step}: remaining budget mismatch")
 
-        replay_error = _expect_replay_rejection(executor_path, token)
+        replay_error = _expect_replay_rejection(
+            executor_path, token, StateStore(ora_path), recorder,
+        )
 
         # Actual selected action becomes part of the observable action history.
         attempts[
