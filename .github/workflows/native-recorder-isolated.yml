@@ -1,0 +1,33 @@
+name: native-recorder-isolated
+on:
+  push:
+    branches: [experiment/native-stream-recorder]
+    paths:
+      - .github/workflows/native-recorder-isolated.yml
+      - experiments/native_stream_recorder.py
+      - tests/test_native_stream_recorder.py
+      - scripts/native_stream_recorder_study.py
+permissions:
+  contents: read
+jobs:
+  source-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Package reviewed code only, never organism state or Git credentials
+        run: |
+          mkdir -p artifacts
+          git rev-parse HEAD > artifacts/source-sha.txt
+          git archive --format=tar.gz HEAD src experiments scripts tests .github/workflows > artifacts/research-source.tar.gz
+          git ls-tree -r HEAD -- src experiments scripts tests .github/workflows > artifacts/source-blobs.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-recorder-source-${{ github.sha }}
+          path: artifacts/
+          retention-days: 7
+          if-no-files-found: error
