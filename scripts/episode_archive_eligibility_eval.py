@@ -200,7 +200,7 @@ def derive_protection(
         for values in external.values()
         for identifier in values
     }
-    hot = set(ids[-max(0, hot_suffix):])
+    hot = set(ids[-hot_suffix:]) if hot_suffix > 0 else set()
     planning = pending_planning_episode_ids(state)
     world = pending_world_episode_ids(state)
     current_cycle = int(state.get("cycles", 0) or 0)
