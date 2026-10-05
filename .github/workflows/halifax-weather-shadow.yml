@@ -1,0 +1,42 @@
+name: halifax-weather-shadow
+
+on:
+  pull_request:
+    paths:
+      - "scripts/halifax_weather_shadow.py"
+      - "scripts/halifax_weather_shadow_eval.py"
+      - "tests/test_halifax_weather_shadow.py"
+      - ".github/workflows/halifax-weather-shadow.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - name: Fetch official Halifax-area hourly observations
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          curl --fail --silent --show-error --get             'https://api.weather.gc.ca/collections/climate-hourly/items'             --data-urlencode 'f=csv'             --data-urlencode 'bbox=-63.75,44.45,-63.35,45.05'             --data-urlencode 'limit=500'             --data-urlencode 'sortby=-UTC_DATE'             -o /tmp/halifax-hourly.csv
+          head -n 1 /tmp/halifax-hourly.csv
+      - name: Normalize observations
+        run: |
+          python scripts/halifax_weather_shadow.py             --input /tmp/halifax-hourly.csv             --output artifacts/halifax-weather-shadow.json
+      - name: Prospectively evaluate temporal relations
+        run: |
+          python scripts/halifax_weather_shadow_eval.py             --input artifacts/halifax-weather-shadow.json             --output artifacts/halifax-weather-shadow-eval.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: halifax-weather-shadow-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/halifax-weather-shadow.json
+            artifacts/halifax-weather-shadow-eval.json
+          if-no-files-found: error
+          retention-days: 30
