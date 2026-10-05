@@ -67,9 +67,10 @@ jobs:
               ).splitlines()
               result = {}
               for row in rows:
-                  if "\\t" not in row:
+                  tab = chr(9)
+                  if tab not in row:
                       continue
-                  meta, path = row.split("\\t", 1)
+                  meta, path = row.split(tab, 1)
                   parts = meta.split()
                   if len(parts) < 3:
                       continue
