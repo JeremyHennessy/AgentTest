@@ -43,7 +43,7 @@ jobs:
           import json
           from pathlib import Path
           report = json.loads(Path("artifacts/open-object-world-study.json").read_text())
-          print(json.dumps(report["summary"], sort_keys=True))
+          print(json.dumps({"short_summary": report["summary"], "extended_summary": report["extended_summary"]}, sort_keys=True))
           for row in report["rows"]:
               print(json.dumps({
                   "seed": row["seed"],
@@ -53,6 +53,18 @@ jobs:
                   "observed_effect_counts": row["observed_effect_counts"],
                   "entities_with_multiple_observed_states": row["entities_with_multiple_observed_states"],
                   "final_observation": row["final_observation"],
+              }, sort_keys=True))
+          for row in report["extended_rows"]:
+              print(json.dumps({
+                  "extended_seed": row["seed"],
+                  "steps": row["steps"],
+                  "unique_observation_count": row["unique_observation_count"],
+                  "unique_position_count": row["unique_position_count"],
+                  "unique_inventory_state_count": row["unique_inventory_state_count"],
+                  "first_effect_cycle": row["first_effect_cycle"],
+                  "first_visible_state_change_cycle": row["first_visible_state_change_cycle"],
+                  "observed_effect_counts": row["observed_effect_counts"],
+                  "entities_with_multiple_observed_states": row["entities_with_multiple_observed_states"],
               }, sort_keys=True))
           PY
       - uses: actions/upload-artifact@v4
