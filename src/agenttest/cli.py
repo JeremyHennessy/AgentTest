@@ -72,6 +72,14 @@ def main() -> None:
         "--copy-public-observations", default=None,
         help="Research only: ingest one reviewed public observation bundle on an explicit copied store.",
     )
+    cycle.add_argument(
+        "--copy-early-prospective-admission", action="store_true",
+        help="Copy-only research: register prospective questions before legacy generation.",
+    )
+    cycle.add_argument(
+        "--copy-prospective-fallback", action="store_true",
+        help="Copy-only research: include validated unallocated contracts in strict fallback.",
+    )
 
     interact = sub.add_parser(
         "interact",
@@ -126,6 +134,8 @@ def main() -> None:
     core = AgentCore(store)
 
     if args.command == "cycle":
+        if (args.copy_early_prospective_admission or args.copy_prospective_fallback) and Path(args.state).resolve() == Path("state/organism.json").resolve():
+            parser.error("prospective attention flags require an explicit copied --state")
         if args.copy_public_observations is not None and Path(args.state).resolve() == Path("state/organism.json").resolve():
             parser.error("--copy-public-observations requires an explicit copied --state")
         observation = repository_snapshot(args.root) if args.self_observe else None
@@ -138,6 +148,8 @@ def main() -> None:
                 action_lab=args.action_lab,
                 planning_lab=args.planning_lab,
                 copy_public_observations=args.copy_public_observations,
+                copy_early_prospective_admission=args.copy_early_prospective_admission,
+                copy_prospective_fallback=args.copy_prospective_fallback,
             )
         )
     elif args.command == "interact":
