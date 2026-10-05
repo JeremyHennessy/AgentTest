@@ -205,6 +205,14 @@ class ChallengeActionExecutor:
             raise RuntimeError("challenge action budget is exhausted")
         if any(row.get("status") == "issued" for row in executor["capabilities"]):
             raise RuntimeError("an unconsumed challenge capability already exists")
+        if any(
+            isinstance(row.get("token"), dict)
+            and str(row["token"].get("experiment_id")) == str(experiment_id)
+            for row in executor["capabilities"]
+        ):
+            raise RuntimeError(
+                "native experiment already received a challenge capability"
+            )
 
         ora_state = ora_store.load()
         experiment = _find_experiment(ora_state, experiment_id)
