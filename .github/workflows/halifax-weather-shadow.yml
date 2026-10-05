@@ -28,7 +28,7 @@ jobs:
           head -n 1 /tmp/halifax-hourly.csv
       - name: Normalize observations
         run: |
-          python scripts/halifax_weather_shadow.py             --input /tmp/halifax-hourly.csv             --output artifacts/halifax-weather-shadow.json
+          python scripts/halifax_weather_shadow.py             --input /tmp/halifax-hourly.csv             --output artifacts/halifax-weather-shadow.json             --climate-identifier 8202251             --station-name "HALIFAX STANFIELD INT'L A"
       - name: Prospectively evaluate temporal relations
         run: |
           python scripts/halifax_weather_shadow_eval.py             --input artifacts/halifax-weather-shadow.json             --output artifacts/halifax-weather-shadow-eval.json
