@@ -1,0 +1,52 @@
+name: open-object-world-resolved-loop
+
+on:
+  pull_request:
+    paths:
+      - "src/agenttest/native_outcome.py"
+      - "src/agenttest/core.py"
+      - "tests/test_native_outcome.py"
+      - "tests/test_open_object_world_copied_loop_resolution.py"
+      - "scripts/open_object_world_resolved_loop_study.py"
+      - ".github/workflows/open-object-world-resolved-loop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run strict native resolver tests
+        env:
+          PYTHONPATH: src:experiments:scripts
+        run: |
+          python -m unittest tests.test_native_outcome -v
+          python -m unittest tests.test_open_object_world_copied_loop_resolution -v
+      - name: Run resolved copied-loop study
+        env:
+          PYTHONPATH: src:experiments:scripts
+        run: |
+          mkdir -p artifacts
+          python scripts/open_object_world_resolved_loop_study.py > artifacts/open-object-world-resolved-loop.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/open-object-world-resolved-loop.json").read_text())
+          print(json.dumps(report["summary"], sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: open-object-world-resolved-loop-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/open-object-world-resolved-loop.json
+          if-no-files-found: error
+          retention-days: 30
