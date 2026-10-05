@@ -1,0 +1,132 @@
+name: challenge-shadow-epistemic-actions
+
+on:
+  push:
+    branches:
+      - experiment/challenge-shadow-epistemic-actions
+    paths:
+      - experiments/open_object_world_challenge.py
+      - experiments/open_object_world_challenge_explorer.py
+      - experiments/normalized_inquiry_objectives.py
+      - experiments/native_observe_inquire_integration.py
+      - experiments/challenge_shadow_recorder.py
+      - experiments/challenge_shadow_epistemic_selector.py
+      - tests/test_challenge_shadow_epistemic_selector.py
+      - scripts/challenge_shadow_epistemic_action_study.py
+      - docs/challenge-shadow-epistemic-actions.md
+      - .github/workflows/challenge-shadow-epistemic-actions.yml
+
+permissions:
+  contents: read
+
+env:
+  PRODUCTION_BASE: 73d4765322efd8c7b87ed8c94bdca8bb81098d7a
+  PINNED_STATE_SHA: 825d2c86759f5f4065807508ab7fbfe3462feb8a
+
+jobs:
+  epistemic-action-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          ref: 825d2c86759f5f4065807508ab7fbfe3462feb8a
+          path: source
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: state/organism.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify exact reviewed sources and research-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C candidate rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C source rev-parse HEAD)" = "$PINNED_STATE_SHA"
+          python - <<'PY'
+          import os, subprocess
+          allowed = {
+              "experiments/open_object_world_challenge.py",
+              "experiments/open_object_world_challenge_explorer.py",
+              "experiments/normalized_inquiry_objectives.py",
+              "experiments/native_observe_inquire_integration.py",
+              "experiments/challenge_shadow_recorder.py",
+              "experiments/challenge_shadow_epistemic_selector.py",
+              "tests/test_challenge_shadow_epistemic_selector.py",
+              "scripts/challenge_shadow_epistemic_action_study.py",
+              "docs/challenge-shadow-epistemic-actions.md",
+              ".github/workflows/challenge-shadow-epistemic-actions.yml",
+          }
+          changed = set(subprocess.check_output(
+              ["git","-C","candidate","diff","--name-only",f"{os.environ['PRODUCTION_BASE']}...HEAD"],
+              text=True,
+          ).splitlines())
+          if changed != allowed:
+              raise SystemExit("unexpected scope: " + repr(changed ^ allowed))
+          expected = {
+              "experiments/open_object_world_challenge.py": "49683553596400e8c7b49b5ed5fdec5f937b7a22",
+              "experiments/open_object_world_challenge_explorer.py": "db5415b17077fdad65bf1671700f79979ff92be1",
+              "experiments/normalized_inquiry_objectives.py": "e25fbd9f75ec642971c372a08a476d4fe6bd1641",
+              "experiments/native_observe_inquire_integration.py": "57452a114e972408aafd1f97a0c4970298ec5bbe",
+              "experiments/challenge_shadow_recorder.py": "6305d73feb564cc9de3ff048f97c5aaa93e4a843",
+          }
+          rows = subprocess.check_output(
+              ["git","-C","candidate","ls-tree","-r","HEAD"], text=True
+          ).splitlines()
+          blobs = {row.split("\t",1)[1]: row.split()[2] for row in rows if "\t" in row}
+          for path, wanted in expected.items():
+              if blobs.get(path) != wanted:
+                  raise SystemExit(f"reviewed source mismatch: {path}")
+          PY
+
+      - name: Run focused selector tests
+        working-directory: candidate
+        shell: bash
+        env:
+          PYTHONPATH: src:experiments
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python -m unittest tests.test_challenge_shadow_epistemic_selector -v
+
+      - name: Run four-layout epistemic action study
+        shell: bash
+        env:
+          PYTHONPATH: candidate/src:candidate/experiments:candidate/scripts
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          mkdir -p artifacts
+          sha256sum source/state/organism.json > artifacts/source-state.sha256
+          python candidate/scripts/challenge_shadow_epistemic_action_study.py             --state source/state/organism.json             --output artifacts/epistemic-action-study.json             2>&1 | tee artifacts/epistemic-action-study.log
+
+      - name: Verify pinned state remained read-only
+        shell: bash
+        run: sha256sum -c artifacts/source-state.sha256
+
+      - name: Package reviewed evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          git -C candidate rev-parse HEAD > artifacts/candidate-sha.txt
+          git -C candidate archive --format=tar.gz HEAD             experiments/open_object_world_challenge.py             experiments/open_object_world_challenge_explorer.py             experiments/normalized_inquiry_objectives.py             experiments/native_observe_inquire_integration.py             experiments/challenge_shadow_recorder.py             experiments/challenge_shadow_epistemic_selector.py             tests/test_challenge_shadow_epistemic_selector.py             scripts/challenge_shadow_epistemic_action_study.py             docs/challenge-shadow-epistemic-actions.md             .github/workflows/challenge-shadow-epistemic-actions.yml             > artifacts/reviewed-source.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: challenge-shadow-epistemic-actions-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: error
