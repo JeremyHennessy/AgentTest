@@ -76,6 +76,14 @@ def _thread_ids(state: dict) -> set[str]:
     }
 
 
+def _archived_threads(state: dict) -> dict[str, dict]:
+    return {
+        str(item.get("id")): item
+        for item in state.get("agenda", {}).get("archived_threads", [])
+        if isinstance(item, dict) and item.get("id")
+    }
+
+
 def run(state_path: Path, live_state_sha: str) -> dict:
     store = StateStore(state_path)
     baseline = store.load()
@@ -141,8 +149,19 @@ def run(state_path: Path, live_state_sha: str) -> dict:
         raise AssertionError("native inquiry lost its active experiment path")
 
     after_threads = _thread_ids(after_cycle)
-    if not baseline_threads <= after_threads:
-        raise AssertionError("ordinary integration cycle lost preexisting agenda threads")
+    after_archived = _archived_threads(after_cycle)
+    preserved_thread_ids = after_threads | set(after_archived)
+    if not baseline_threads <= preserved_thread_ids:
+        raise AssertionError(
+            "ordinary integration cycle lost preexisting agenda thread identity"
+        )
+    moved_to_archive = sorted(baseline_threads - after_threads)
+    for thread_id in moved_to_archive:
+        archived = after_archived.get(thread_id)
+        if not isinstance(archived, dict):
+            raise AssertionError("bounded agenda eviction did not preserve thread")
+        if archived.get("archive_reason") != "outside_current_bounded_agenda":
+            raise AssertionError("preexisting thread archived for unexpected reason")
 
     after_diag = evaluate_resumption_opportunities(after_cycle)
     if after_diag["handoff_or_selection_mismatch_count"] != 0:
@@ -178,7 +197,9 @@ def run(state_path: Path, live_state_sha: str) -> dict:
             "active_experiment_path": True,
             "action_lab_result": None,
             "planning_lab_result": None,
-            "preexisting_threads_preserved": True,
+            "preexisting_thread_identity_preserved": True,
+            "preexisting_active_threads_moved_to_archive": moved_to_archive,
+            "bounded_active_thread_count": len(after_threads),
             "selected_question_id": decision.get("selected", {}).get("question_id"),
             "selected_thread_id": decision.get("selected_thread_id"),
             "foreground_changed": bool(decision.get("foreground_changed")),
