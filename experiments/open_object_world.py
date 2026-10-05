@@ -222,9 +222,11 @@ def _interact(world: dict[str, Any], command: dict[str, Any], receipt: dict[str,
 def _take(world: dict[str, Any], command: dict[str, Any], receipt: dict[str, Any]) -> None:
     target_id = str(command.get("target") or "")
     entity = world["entities"].get(target_id)
+    position = entity.get("position") if isinstance(entity, dict) else None
     if (
         not isinstance(entity, dict)
-        or entity.get("position") != world["position"]
+        or not isinstance(position, list)
+        or _manhattan(world["position"], position) > 1
         or not bool(entity.get("_carryable"))
     ):
         receipt["observed_effects"].append("target_unavailable")
