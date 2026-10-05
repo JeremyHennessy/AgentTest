@@ -238,12 +238,27 @@ class OpenObjectWorldResolvedLoopTests(unittest.TestCase):
         def count(group, field):
             return sum(bool(row[field]) for row in group)
 
-        def score_decrease_count(group):
-            return sum(
-                row["score_delta_for_initial_inquiry"] is not None
-                and row["score_delta_for_initial_inquiry"] < 0
+        def score_stats(group):
+            deltas = [
+                row["score_delta_for_initial_inquiry"]
                 for row in group
-            )
+                if row["score_delta_for_initial_inquiry"] is not None
+            ]
+            return {
+                "increased_count": sum(delta > 0 for delta in deltas),
+                "decreased_count": sum(delta < 0 for delta in deltas),
+                "unchanged_count": sum(delta == 0 for delta in deltas),
+                "mean_delta": (
+                    round(sum(deltas) / len(deltas), 6)
+                    if deltas
+                    else None
+                ),
+                "min_delta": min(deltas) if deltas else None,
+                "max_delta": max(deltas) if deltas else None,
+            }
+
+        falsified_score_stats = score_stats(falsified_rows)
+        supported_score_stats = score_stats(supported_rows)
 
         summary = {
             "case_count": len(rows),
@@ -268,12 +283,8 @@ class OpenObjectWorldResolvedLoopTests(unittest.TestCase):
             "supported_next_behavior_changed_count": count(
                 supported_rows, "next_behavior_changed"
             ),
-            "falsified_initial_inquiry_score_decreased_count": (
-                score_decrease_count(falsified_rows)
-            ),
-            "supported_initial_inquiry_score_decreased_count": (
-                score_decrease_count(supported_rows)
-            ),
+            "falsified_initial_inquiry_score_stats": falsified_score_stats,
+            "supported_initial_inquiry_score_stats": supported_score_stats,
         }
         print(
             "OPEN_OBJECT_WORLD_FOLLOWUP_ADAPTATION "
