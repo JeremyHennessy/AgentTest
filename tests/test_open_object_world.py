@@ -40,6 +40,16 @@ class OpenObjectWorldTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, rendered)
 
+    def test_action_receipt_does_not_leak_remote_fixture_state(self):
+        state = world.initial_world(seed=1)
+        state, receipt = world.transition(
+            state,
+            {"action": "inspect", "target": "O001"},
+            cycle=1,
+        )
+        self.assertIsNone(receipt["mechanism_observed_state"])
+        self.assertIsNone(receipt["barrier_observed_state"])
+
     def test_closed_structure_blocks_route_until_world_state_changes(self):
         state = world.initial_world(seed=1)
         state, receipts = run(
@@ -67,7 +77,9 @@ class OpenObjectWorldTests(unittest.TestCase):
         )
         self.assertTrue(receipts[1]["success"])
         self.assertIn("target_state_changed", receipts[1]["observed_effects"])
-        self.assertEqual(receipts[1]["barrier_observed_state"], "open")
+        self.assertEqual(receipts[1]["mechanism_observed_state"], "lit")
+        self.assertIsNone(receipts[1]["barrier_observed_state"])
+        self.assertEqual(receipts[2]["barrier_observed_state"], "open")
         self.assertEqual(state["position"], [2, 1])
 
     def test_heavier_anonymous_object_can_change_same_route_without_interact(self):
