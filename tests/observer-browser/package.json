@@ -1,0 +1,14 @@
+{
+  "name": "agenttest-observer-browser-checks",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Isolated synthetic Observer browser checks; no live Ora state or writes",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "npm run test:unit && npm run test:browser",
+    "test:unit": "node --test ../test_observer.js",
+    "test:browser": "playwright test --config playwright.config.js",
+    "list": "playwright test --config playwright.config.js --list"
+  },
+  "devDependencies": { "@playwright/test": "1.62.1" }
+}
