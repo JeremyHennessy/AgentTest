@@ -18,7 +18,7 @@ from agenttest.state import StateStore, initial_state
 from challenge_action_authority import ChallengeActionExecutor
 from challenge_shadow_recorder import (
     ChallengeShadowRecorder,
-    RECORDER_STATE_KEY,
+    STATE_KEY as RECORDER_STATE_KEY,
     single_transition_outcome,
     source_manifest,
 )
