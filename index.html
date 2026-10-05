@@ -407,8 +407,8 @@ const ORGANISM_SOURCE="autonomous/growth/state/organism.json";
 const STATE_SOURCE="autonomous/growth/state/last_interaction.json";
 const GROWTH_REF_URL="https://api.github.com/repos/JeremyHennessy/AgentTest/git/ref/heads/autonomous/growth";
 const RAW_BASE="https://raw.githubusercontent.com/JeremyHennessy/AgentTest";
-const ISSUE_BASE="https://github.com/JeremyHennessy/AgentTest/issues/new",REFRESH_MS=15000,REF_POLL_MS=75000,el=id=>document.getElementById(id);
-let organism=null;
+const ISSUE_BASE="https://github.com/JeremyHennessy/AgentTest/issues/new",REFRESH_MS=15000,REF_POLL_MS=75000,el=id=>renderTransaction?renderTransaction.get(id):document.getElementById(id);
+let organism=null,renderTransaction=null;
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
 const pretty=v=>String(v==null?"—":v).replaceAll("_"," "),tail=(v,n)=>Array.isArray(v)?v.slice(-n):[],vec=v=>Array.isArray(v)?"["+v.join(", ")+"]":"—",route=v=>Array.isArray(v)&&v.length?v.join(" → "):"—";
 function age(iso){if(!iso)return"—";const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000));return s<60?s+"s":s<3600?Math.floor(s/60)+"m":(s/3600).toFixed(1)+"h"}
@@ -787,7 +787,8 @@ function renderAgendaOpportunityDiagnostic(d){
  el("agendaMismatchCount").textContent=ready?Number(d.handoff_or_selection_mismatch_count||0):"—";
  if(!ready){el("agendaOpportunityStatus").textContent="Waiting for first diagnostic heartbeat.";return}
  const opportunities=Number(d.opportunity_count||0),resumed=Number(d.resumed_opportunity_count||0),lower=Number(d.lower_priority_opportunity_count||0),mismatch=Number(d.handoff_or_selection_mismatch_count||0);
- el("agendaOpportunityStatus").textContent=mismatch?mismatch+" opportunity"+(mismatch===1?"":"ies")+" need handoff/selection review.":opportunities===0?(Number(d.telemetry_decision_count||0)+" retained-window prospective decision"+(Number(d.telemetry_decision_count||0)===1?"":"s")+" measured · no qualifying opportunity yet."):resumed?resumed+" retained-window qualifying opportunity"+(resumed===1?" resumed successfully.":"ies resumed successfully."):(lower===opportunities?opportunities+" retained-window qualifying opportunity"+(opportunities===1?" was":"ies were")+" recognized but remained lower priority.":opportunities+" retained-window qualifying opportunities observed; no selection mismatch detected.");
+ const opportunityWord=count=>count===1?"opportunity":"opportunities";
+ el("agendaOpportunityStatus").textContent=mismatch?mismatch+" "+opportunityWord(mismatch)+(mismatch===1?" needs":" need")+" handoff/selection review.":opportunities===0?(Number(d.telemetry_decision_count||0)+" retained-window prospective decision"+(Number(d.telemetry_decision_count||0)===1?"":"s")+" measured · no qualifying opportunity yet."):resumed?resumed+" retained-window qualifying "+opportunityWord(resumed)+" resumed successfully.":(lower===opportunities?opportunities+" retained-window qualifying "+opportunityWord(opportunities)+(opportunities===1?" was":" were")+" recognized but remained lower priority.":opportunities+" retained-window qualifying opportunities observed; no selection mismatch detected.");
 }
 function renderAgenda(o){
  const agenda=o.agenda||{},threads=agenda.threads||[],decisions=agenda.decisions||[];
@@ -827,9 +828,43 @@ function events(o){const out=[],eps=o.episodes||[],at={};eps.filter(e=>e.kind===
  return out.sort((a,b)=>b.c-a.c||String(b.t||"").localeCompare(String(a.t||""))).slice(0,13)}
 function renderTimeline(o){const es=events(o);el("eventCount").textContent=es.length+" events";el("timeline").innerHTML=es.map(e=>'<div class="event"><div class="cycle">C'+e.c+'</div><div class="kind">'+esc(e.k)+'</div><div class="body">'+e.b+(e.t?'<div class="micro">'+esc(new Date(e.t).toLocaleString())+'</div>':'')+'</div></div>').join("")}
 function renderChanges(o){const pm=Object.fromEntries((o.change_proposals||[]).map(p=>[p.id,p])),a=tail(o.accepted_changes,6).reverse();el("acceptedCount").textContent=(o.accepted_changes||[]).length+" accepted";el("changeHistory").innerHTML=a.map(c=>{const p=pm[c.proposal_id]||{};return'<div class="change"><b>'+esc(p.title||c.proposal_id||c.id)+'</b><div>cycle '+esc(c.accepted_cycle)+' · '+esc(pretty(c.target_dimension||p.target_dimension))+' · '+esc(String(c.commit_sha||"").slice(0,10))+(c.pr_number?' · PR #'+c.pr_number:'')+'</div></div>'}).join("")}
-function render(o,i,phase42Diagnostic){organism=o;el("demonstratedSummary").textContent="Persisted Phase "+planningPhaseNumber(o)+" capability. "+agendaGenuineResumptionCount(o.agenda)+" "+agendaResumptionScope(o.agenda)+" natural resumptions; "+(o.agenda?.phase42_passed===true?"Phase 42 natural gate passed.":"Phase 42 natural gate remains open. Zero resumptions alone is not a failure.");el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderInquiryFocus(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderObjectiveSelection(o);renderObjectiveRealization(o);renderOutcomeValuation(o);renderAgenda(o);renderAgendaOpportunityDiagnostic(phase42Diagnostic);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Persisted snapshot · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+function renderContents(o,i,phase42Diagnostic){el("demonstratedSummary").textContent="Persisted Phase "+planningPhaseNumber(o)+" capability. "+agendaGenuineResumptionCount(o.agenda)+" "+agendaResumptionScope(o.agenda)+" natural resumptions; "+(o.agenda?.phase42_passed===true?"Phase 42 natural gate passed.":"Phase 42 natural gate remains open. Zero resumptions alone is not a failure.");el("generation").textContent=o.generation??"—";el("generationSub").textContent="schema v"+(o.schema_version||"—")+" · persistent state";renderInquiryFocus(o);renderActionLab(o);renderPlanning(o);renderModelRevision(o);renderCuriosity(o);renderMemory(o);renderTransfer(o);renderSelfExperiment(o);renderObjectiveSelection(o);renderObjectiveRealization(o);renderOutcomeValuation(o);renderAgenda(o);renderAgendaOpportunityDiagnostic(phase42Diagnostic);renderAttention(o);renderEvidence(o);renderNow(o);bars("driveBars",o.drives);bars("metricBars",o.metrics);renderTimeline(o);renderChanges(o);el("latestResponse").textContent=i?.response_text||"No persisted response yet.";el("liveStatus").textContent="Persisted snapshot · generation "+(o.generation??"—");el("stateAge").textContent=age(o.updated_at);el("stateAgeSub").textContent=o.updated_at?new Date(o.updated_at).toLocaleTimeString():"unknown";el("refreshFoot").textContent="Observer refreshed "+new Date().toLocaleTimeString()}
+// Compute a complete view on detached clones before touching any displayed node.
+// Existing nodes (and their event handlers/focus/disclosure state) stay in place.
+function createRenderTransaction(){
+ const staged=new Map();
+ const get=id=>{
+  if(!staged.has(id)){
+   const original=document.getElementById(id);
+   if(!original)throw new Error("Observer element missing: "+id);
+   staged.set(id,{original,next:original.cloneNode(true)});
+  }
+  return staged.get(id).next;
+ };
+ const apply=(original,next)=>{
+  for(const attribute of Array.from(original.attributes))if(!next.hasAttribute(attribute.name))original.removeAttribute(attribute.name);
+  for(const attribute of Array.from(next.attributes))original.setAttribute(attribute.name,attribute.value);
+  original.innerHTML=next.innerHTML;
+ };
+ const commit=()=>{
+  const previous=Array.from(staged.values(),entry=>({...entry,previous:entry.original.cloneNode(true)}));
+  try{for(const entry of previous)apply(entry.original,entry.next)}
+  catch(error){for(const entry of previous)apply(entry.original,entry.previous);throw error}
+ };
+ return {get,commit};
+}
+function render(o,i,phase42Diagnostic,sha){
+ const transaction=createRenderTransaction();
+ renderTransaction=transaction;
+ try{
+  renderContents(o,i,phase42Diagnostic);
+  if(sha){el("sourceCommit").href="https://github.com/JeremyHennessy/AgentTest/tree/"+sha+"/state";el("sourceCommit").textContent="Displayed source "+sha.slice(0,10)}
+  transaction.commit();
+  organism=o;
+ }finally{renderTransaction=null}
+}
 const loader=createObserverLoader({fetch,refUrl:GROWTH_REF_URL,rawBase:RAW_BASE,pollMs:REF_POLL_MS,
- publish:snapshot=>{render(snapshot.organism,snapshot.interaction,snapshot.diagnostic);el("sourceCommit").href="https://github.com/JeremyHennessy/AgentTest/tree/"+snapshot.sha+"/state";el("sourceCommit").textContent="Displayed source "+snapshot.sha.slice(0,10)},
+ publish:snapshot=>render(snapshot.organism,snapshot.interaction,snapshot.diagnostic,snapshot.sha),
  status:({kind,snapshot,checkedAt,error})=>{
   el("liveStatus").textContent=kind==="loading"?(snapshot?"Checking · previous snapshot displayed":"Loading persisted snapshot"):kind==="error"?(snapshot?"Refresh failed · last good snapshot":"State unavailable"):"Persisted snapshot · generation "+snapshot.organism.generation;
   el("liveStatus").className=kind==="error"?"error":"";

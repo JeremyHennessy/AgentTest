@@ -101,14 +101,82 @@ test('malformed SHA and JSON fail without publishing',async()=>{
     const h=setup(fetch);await h.loader.refresh();assert.equal(h.published.length,0);assert.equal(h.statuses.at(-1).kind,'error');
   }
 });
-function view() {
+class MockElement {
+  constructor() {this._text='';this._html='';this.value='';this.style={};this.listeners={};this.attrs={};}
+  get textContent(){return this._text}
+  set textContent(value){this._text=String(value);this._html=String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}
+  get innerHTML(){return this._html}
+  set innerHTML(value){this._html=String(value);this._text=String(value).replace(/<[^>]*>/g,'').replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll('&amp;','&')}
+  get attributes(){return Object.entries(this.attrs).map(([name,value])=>({name,value}))}
+  get href(){return this.attrs.href}
+  set href(value){this.attrs.href=value}
+  get className(){return this.attrs.class||''}
+  set className(value){this.attrs.class=value}
+  addEventListener(event,fn){this.listeners[event]=fn}
+  setAttribute(k,v){this.attrs[k]=String(v)}
+  hasAttribute(k){return Object.hasOwn(this.attrs,k)}
+  removeAttribute(k){delete this.attrs[k]}
+  cloneNode(){const copy=new MockElement();copy._text=this._text;copy._html=this._html;copy.value=this.value;copy.style={...this.style};copy.attrs={...this.attrs};return copy}
+}
+function view(customFetch) {
   const ids=[...page.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);assert.equal(new Set(ids).size,ids.length,'unique DOM ids');
-  const nodes=Object.fromEntries(ids.map(id=>[id,{textContent:'',innerHTML:'',value:'',style:{},listeners:{},attrs:{},addEventListener(event,fn){this.listeners[event]=fn},setAttribute(k,v){this.attrs[k]=v}}]));
+  const nodes=Object.fromEntries(ids.map(id=>[id,new MockElement()]));
   const opened=[],stored=[],intervals=[];
-  const box={document:{getElementById:id=>{assert.ok(nodes[id],id+' exists');return nodes[id]}},fetch:async()=>response({object:{sha:shaA}}),setInterval:(fn,ms)=>intervals.push({fn,ms}),URLSearchParams,localStorage:{setItem:(...args)=>stored.push(args)},window:{open:(...args)=>opened.push(args)}};
+  const box={document:{getElementById:id=>{assert.ok(nodes[id],id+' exists');return nodes[id]}},fetch:customFetch|| (async()=>response({object:{sha:shaA}})),setInterval:(fn,ms)=>intervals.push({fn,ms}),URLSearchParams,localStorage:{setItem:(...args)=>stored.push(args)},window:{open:(...args)=>opened.push(args)}};
   vm.createContext(box);vm.runInContext(transport,box);vm.runInContext(page.match(/<script>\s*(const ORGANISM_SOURCE[\s\S]*?)<\/script>/)[1],box);
   return {box,nodes,opened,stored,intervals};
 }
+const displayedData=h=>Object.fromEntries(Object.entries(h.nodes).filter(([id])=>!['liveStatus','refresh','refreshFoot'].includes(id)).map(([id,node])=>[id,{html:node.innerHTML,attrs:{...node.attrs}}]));
+function liveView(){
+  let sha=shaA, organism=state(4599);
+  const h=view(async url=>url.startsWith('https://api.github.com/')?response({object:{sha}}):response(url.endsWith('/organism.json')?organism:url.endsWith('/last_interaction.json')?{response_text:'response '+organism.generation}:null));
+  return {...h,next:(nextSha,nextState)=>{sha=nextSha;organism=nextState},refresh:()=>vm.runInContext('loader.refresh({force:true})',h.box),initial:()=>vm.runInContext('load()',h.box)};
+}
+test('valid JSON with malformed nested agenda leaves every displayed data node, source and age state at last good generation',async()=>{
+  const h=liveView();await h.initial();const before=displayedData(h);
+  h.next(shaB,{...state(4600),agenda:{started_cycle:1,decisions:[],threads:{invalid:true}}});await h.refresh();
+  assert.deepEqual(displayedData(h),before);
+  assert.equal(h.nodes.generation.textContent,'4599');assert.equal(h.nodes.sourceCommit.attrs.href,'https://github.com/JeremyHennessy/AgentTest/tree/'+shaA+'/state');
+  assert.equal(vm.runInContext('organism.generation',h.box),4599);
+  assert.match(h.nodes.liveStatus.textContent,/Refresh failed.*last good snapshot/);
+  assert.match(h.nodes.refreshFoot.textContent,/has not been refreshed/);
+  h.next(shaB,state(4600));await h.refresh();
+  assert.equal(h.nodes.generation.textContent,'4600');assert.match(h.nodes.sourceCommit.textContent,/bbbbbbbbbb/);
+  assert.equal(vm.runInContext('organism.generation',h.box),4600);assert.match(h.nodes.liveStatus.textContent,/generation 4600/);
+});
+test('late renderer exception after staging many panels cannot partially replace last good view',async()=>{
+  const h=liveView();await h.initial();const before=displayedData(h);
+  vm.runInContext('renderTimeline=()=>{throw new Error("late renderer failure")}',h.box);
+  h.next(shaB,state(4600));await h.refresh();
+  assert.deepEqual(displayedData(h),before);assert.equal(vm.runInContext('organism.generation',h.box),4599);
+  assert.match(h.nodes.liveStatus.textContent,/Refresh failed/);assert.match(h.nodes.refreshFoot.textContent,/late renderer failure/);
+});
+test('DOM commit exception rolls back already-applied panels and retains source/global snapshot',async()=>{
+  const h=liveView();await h.initial();const before=displayedData(h);
+  const originalSet=h.nodes.sourceCommit.setAttribute.bind(h.nodes.sourceCommit);let rejectOnce=true;
+  h.nodes.sourceCommit.setAttribute=(name,value)=>{if(rejectOnce&&name==='href'){rejectOnce=false;throw Error('commit failure')}originalSet(name,value)};
+  h.next(shaB,state(4600));await h.refresh();
+  assert.deepEqual(displayedData(h),before);assert.equal(vm.runInContext('organism.generation',h.box),4599);
+  assert.match(h.nodes.refreshFoot.textContent,/commit failure/);
+  await h.refresh();assert.equal(h.nodes.generation.textContent,'4600');
+});
+test('first malformed render shows unavailable and does not invent a displayed generation',async()=>{
+  const h=liveView();h.next(shaA,{...state(4600),agenda:{decisions:[],threads:'invalid'}});await h.initial();
+  assert.equal(h.nodes.generation.textContent,'');assert.equal(h.nodes.sourceCommit.textContent,'');
+  assert.equal(vm.runInContext('organism',h.box),null);assert.equal(h.nodes.liveStatus.textContent,'State unavailable');
+});
+test('opportunity diagnostics use complete singular and plural nouns for every branch',()=>{
+  const h=view(),base={diagnostic_version:'phase42-resumption-opportunities-v2',retained_decision_count:128,telemetry_decision_count:127};
+  const cases=[
+    [{opportunity_count:1,handoff_or_selection_mismatch_count:1},'1 opportunity needs handoff/selection review.'],
+    [{opportunity_count:2,handoff_or_selection_mismatch_count:2},'2 opportunities need handoff/selection review.'],
+    [{opportunity_count:1,resumed_opportunity_count:1},'1 retained-window qualifying opportunity resumed successfully.'],
+    [{opportunity_count:2,resumed_opportunity_count:2},'2 retained-window qualifying opportunities resumed successfully.'],
+    [{opportunity_count:1,lower_priority_opportunity_count:1},'1 retained-window qualifying opportunity was recognized but remained lower priority.'],
+    [{opportunity_count:127,lower_priority_opportunity_count:127},'127 retained-window qualifying opportunities were recognized but remained lower priority.']
+  ];
+  for(const [counts,expected] of cases){h.box.renderAgendaOpportunityDiagnostic({...base,...counts});assert.equal(h.nodes.agendaOpportunityStatus.textContent,expected)}
+});
 test('whole Observer script compiles and renders map, plan, inquiry and zero-resumption evidence',()=>{
   const h=view();h.box.render(state(12),{response_text:'hello'},null);
   assert.match(h.nodes.nowStory.textContent,/Ora|ora/);
