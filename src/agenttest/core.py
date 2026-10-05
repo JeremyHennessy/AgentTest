@@ -13,7 +13,7 @@ from .agenda import update_agenda
 from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
 from .evidence import known_evidence_ids
-from .episode_identity import allocate_episode_id
+from .episode_identity import allocate_episode_id, episode_sequence
 from .learning import (
     REPOSITORY_STABILITY_FAMILY,
     consolidate_empirical_learning,
@@ -901,8 +901,16 @@ class AgentCore:
         expected_relation = native.get("relation")
         if not isinstance(expected_relation, dict):
             raise ValueError("native inquiry relation is unavailable")
-        evidence_floor = native.get("resolution_evidence_floor_episode_count")
-        if type(evidence_floor) is not int or evidence_floor < 0:
+        sequence_floor = native.get(
+            "resolution_evidence_floor_episode_sequence"
+        )
+        legacy_floor = native.get("resolution_evidence_floor_episode_count")
+        if sequence_floor is not None:
+            if type(sequence_floor) is not int or sequence_floor < 0:
+                raise ValueError(
+                    "native inquiry resolution evidence sequence floor is unavailable"
+                )
+        elif type(legacy_floor) is not int or legacy_floor < 0:
             raise ValueError("native inquiry resolution evidence floor is unavailable")
 
         episodes = loaded.get("episodes", [])
@@ -917,8 +925,27 @@ class AgentCore:
         episode = episodes[episode_index] if episode_index is not None else None
         if episode is None or episode.get("kind") != "native_inquiry_evidence":
             raise ValueError("native inquiry outcome evidence was not found")
-        if episode_index < evidence_floor:
-            raise ValueError("native inquiry outcome evidence predates the inquiry")
+
+        if sequence_floor is not None:
+            evidence_sequence = episode_sequence(episode.get("id"))
+            if evidence_sequence is None:
+                raise ValueError(
+                    "native inquiry outcome evidence has no monotonic episode sequence"
+                )
+            if evidence_sequence <= sequence_floor:
+                raise ValueError("native inquiry outcome evidence predates the inquiry")
+        else:
+            next_episode_index = loaded.get("next_episode_index")
+            if (
+                type(next_episode_index) is int
+                and next_episode_index != len(episodes) + 1
+            ):
+                raise ValueError(
+                    "legacy native inquiry evidence floor cannot be used after "
+                    "episode archival"
+                )
+            if episode_index < legacy_floor:
+                raise ValueError("native inquiry outcome evidence predates the inquiry")
         try:
             payload = json.loads(str(episode.get("content") or ""))
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
@@ -1118,6 +1145,12 @@ class AgentCore:
         experiment["native_inquiry"]["resolution_evidence_floor_episode_count"] = len(
             state.get("episodes", [])
         )
+        next_episode_index = int(state.get("next_episode_index", 1) or 1)
+        if next_episode_index < 1:
+            raise RuntimeError("native inquiry episode sequence is unavailable")
+        experiment["native_inquiry"][
+            "resolution_evidence_floor_episode_sequence"
+        ] = next_episode_index - 1
         experiment["predicted_observation"] = validated["predicted_observation"]
         experiment["readiness"] = "awaiting_native_evidence"
         specification_update = _trace_experiment_specifications(state)
