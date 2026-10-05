@@ -1,0 +1,92 @@
+name: reconcile-verified-change
+
+on:
+  workflow_run:
+    workflows:
+      - verify
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: agenttest-autonomous-growth
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Prepare persistent state branch
+        shell: bash
+        run: |
+          git config user.name "agenttest-governance"
+          git config user.email "agenttest-governance@users.noreply.github.com"
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth || true
+          if git show-ref --verify --quiet refs/remotes/origin/autonomous/growth; then
+            git checkout -B autonomous/growth origin/autonomous/growth
+            git merge --no-edit origin/main
+          else
+            git checkout -b autonomous/growth origin/main
+          fi
+
+      - name: Resolve verified merged change
+        id: evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_SHA: ${{ github.event.workflow_run.head_sha }}
+          VERIFY_RUN_ID: ${{ github.event.workflow_run.id }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          mapfile -t CHANGED_FILES < <(git diff-tree --no-commit-id --name-only -r "$VERIFIED_SHA")
+          if [ "${#CHANGED_FILES[@]}" -eq 0 ]; then
+            echo "No changed files; nothing to reconcile."
+            exit 0
+          fi
+
+          PR_NUMBER="$(gh api             -H "Accept: application/vnd.github+json"             "/repos/$REPOSITORY/commits/$VERIFIED_SHA/pulls"             --jq '[.[] | select(.merged_at != null and .base.ref == "main")] | first | .number // empty')"
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "Verified commit is not attributable to a merged main-branch PR; refusing reconciliation."
+            exit 0
+          fi
+
+          ATTRIBUTION_TEXT="$(git log -1 --format=%B "$VERIFIED_SHA")"
+
+          ARGS=()
+          for path in "${CHANGED_FILES[@]}"; do
+            ARGS+=(--changed-file "$path")
+          done
+
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/reconcile_verified_change.py             --commit-sha "$VERIFIED_SHA"             --verify-run-id "$VERIFY_RUN_ID"             --pr-number "$PR_NUMBER"             --attribution-text "$ATTRIBUTION_TEXT"             "${ARGS[@]}"             --output /tmp/reconciliation.json
+
+          cat /tmp/reconciliation.json
+
+      - name: Verify state invariants
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
+
+      - name: Preserve reconciliation
+        shell: bash
+        run: |
+          git add state/
+          if git diff --cached --quiet; then
+            echo "No verified intervention matched an active supported proposal."
+            exit 0
+          fi
+          git commit -m "Record verified intervention reconciliation"
+          git push origin autonomous/growth

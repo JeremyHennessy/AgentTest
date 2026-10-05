@@ -1,0 +1,87 @@
+name: episode-identity-preservation
+on:
+  push:
+    branches: [fix/episode-identity-watermark]
+permissions:
+  contents: read
+jobs:
+  copied-state-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: eb906904d4a30d7427075987f928e0b97699cfe3
+          path: baseline
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: d13d81914f442d610f142ac1e4f6753abc0b5fbc
+          path: source
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: state/organism.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact candidate, pinned inputs and bounded diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C candidate rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C baseline rev-parse HEAD)" = eb906904d4a30d7427075987f928e0b97699cfe3
+          test "$(git -C source rev-parse HEAD)" = d13d81914f442d610f142ac1e4f6753abc0b5fbc
+          mkdir -p artifacts
+          python - <<'PY'
+          import hashlib,json,subprocess
+          from pathlib import Path
+          def tree(folder):
+              rows=subprocess.check_output(['git','-C',folder,'ls-tree','-r','HEAD'],text=True).splitlines()
+              return {row.split('\t',1)[1]:row.split()[2] for row in rows}
+          before,after=tree('baseline'),tree('candidate')
+          allowed={'src/agenttest/core.py','src/agenttest/state.py','src/agenttest/episode_identity.py','tests/test_episode_identity.py','scripts/episode_identity_study.py','docs/episode-identity-contract.md','.github/workflows/episode-identity-preservation.yml'}
+          changed={p for p in set(before)|set(after) if before.get(p)!=after.get(p)}
+          if changed!=allowed: raise SystemExit('unexpected scope: '+repr(changed^allowed))
+          expected={'src/agenttest/core.py':'0cb728ae17f05c0bae0dd20f6e6cf67756789e3a','src/agenttest/state.py':'bfbe20e9e7dd82fc539838048f1013e405936504','src/agenttest/episode_identity.py':'fcd0f0ecad74e67433cae976102ed07fdcb26fb8','tests/test_episode_identity.py':'2eaa8a026e2c6f836ccf56573ac735f054be2605','scripts/episode_identity_study.py':'b5289ab5b524b39e4b5ea678c399413f8f3a0cae'}
+          for p,wanted in expected.items():
+              data=(Path('candidate')/p).read_bytes()
+              got=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+              if got!=wanted or after[p]!=wanted: raise SystemExit('source mismatch: '+p)
+          Path('artifacts/source-manifest.json').write_text(json.dumps({'base':'eb906904d4a30d7427075987f928e0b97699cfe3','changed':{p:after[p] for p in sorted(changed)},'source_state_blob':tree('source')['state/organism.json']},indent=2)+'\n')
+          PY
+      - name: Run focused tests on exact candidate
+        working-directory: candidate
+        shell: bash
+        env:
+          PYTHONPATH: src
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -m unittest tests.test_episode_identity -v 2>&1 | tee ../artifacts/focused-tests.log
+      - name: Compare five copied planning heartbeats against production baseline
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python candidate/scripts/episode_identity_study.py --state source/state/organism.json --baseline-src baseline/src --candidate-src candidate/src --source-sha d13d81914f442d610f142ac1e4f6753abc0b5fbc --steps 5 --output artifacts/episode-identity-study.json 2>&1 | tee artifacts/study.log
+      - name: Package only reviewed code and verification evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          git -C candidate rev-parse HEAD > artifacts/candidate-sha.txt
+          git -C candidate archive --format=tar.gz HEAD src scripts tests docs .github > artifacts/reviewed-source.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: episode-identity-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: error
