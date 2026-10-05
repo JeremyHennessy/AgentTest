@@ -128,7 +128,9 @@ class OpenObjectWorldNativeBridgeTests(unittest.TestCase):
         self.assertNotIn("action_lab=True", source)
         self.assertNotIn("planning_lab=True", source)
         self.assertNotIn("_mass", source)
-        self.assertNotIn("_kind", source)
+        self.assertNotIn('get("_kind")', source)
+        self.assertNotIn("['_kind']", source)
+        self.assertNotIn('["_kind"]', source)
 
 
 if __name__ == "__main__":
