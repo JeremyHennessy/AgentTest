@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -369,6 +370,50 @@ class NativeInquiryResolutionTests(unittest.TestCase):
                 persist=True,
             )
         self.assertEqual(core.store.load(), before)
+
+    def test_supported_and_falsified_native_outcomes_have_same_next_cycle_choice(self):
+        choices = {}
+        for label, confirmations, refutations in (
+            ("supported", 1, 0),
+            ("falsified", 0, 1),
+        ):
+            core = self.make_core()
+            experiment_id = self.stage_temporal(core)
+            outcome = self.record_outcome(
+                core,
+                confirmations=confirmations,
+                refutations=refutations,
+            )
+            core.resolve_native_inquiry(
+                experiment_id,
+                outcome["evidence_ref"],
+                enabled=True,
+                persist=True,
+            )
+            result = core.cycle(
+                stimulus="native outcome retention diagnostic",
+                strict_experiment_admission=True,
+            )
+            choices[label] = {
+                "intention_kind": result["intention"]["kind"],
+                "intention_target": result["intention"].get("target"),
+                "question_id": result["question"]["id"],
+                "question_text": result["question"]["text"],
+                "agenda_selected_question_id": (
+                    result.get("agenda_decision", {})
+                    .get("selected", {})
+                    .get("question_id")
+                ),
+                "strict_actionable_question_ids": [
+                    item["id"] for item in result["strict_actionable_questions"]
+                ],
+            }
+
+        print(
+            "NATIVE_OUTCOME_RETENTION_DIAGNOSTIC "
+            + json.dumps(choices, sort_keys=True)
+        )
+        self.assertEqual(choices["supported"], choices["falsified"])
 
     def test_completed_experiment_cannot_be_resolved_twice(self):
         core = self.make_core()
