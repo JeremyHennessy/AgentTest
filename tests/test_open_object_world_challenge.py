@@ -48,10 +48,12 @@ class OpenObjectWorldChallengeTests(unittest.TestCase):
 
     def test_wall_partition_blocks_direct_crossing(self):
         world = initial_world(1)
-        world, receipt = step(world, 1, "north")
+        world, first = step(world, 1, "north")
+        self.assertTrue(first["success"])
+        world, receipt = step(world, 2, "north")
         self.assertFalse(receipt["success"])
         self.assertTrue(receipt["blocked"])
-        self.assertEqual(world["position"], [-2, 0])
+        self.assertEqual(world["position"], [-1, 0])
 
     def test_heavy_object_on_pressure_plate_opens_pressure_gate(self):
         world = initial_world(1)
@@ -84,12 +86,13 @@ class OpenObjectWorldChallengeTests(unittest.TestCase):
     def test_required_portable_object_activates_socket_by_drop(self):
         world = initial_world(1)
         world, _ = step(world, 1, "west")
-        world, _ = step(world, 2, "take", "O003")
-        world, _ = step(world, 3, "north")
-        world, _ = step(world, 4, "drop", "O003")
+        world, _ = step(world, 2, "west")
+        world, _ = step(world, 3, "take", "O003")
+        world, _ = step(world, 4, "north")
+        world, _ = step(world, 5, "drop", "O003")
         observation = observe_world(world)
         self.assertEqual(public_state(observation, "M002"), "active")
-        world, _ = step(world, 5, "east")
+        world, _ = step(world, 6, "east")
         observation = observe_world(world)
         self.assertEqual(public_state(observation, "B002"), "open")
 
@@ -121,7 +124,6 @@ class OpenObjectWorldChallengeTests(unittest.TestCase):
 
         world, _ = step(world, 12, "south")
         world, _ = step(world, 13, "east")
-        world, _ = step(world, 14, "east")
         observation = observe_world(world)
         self.assertEqual(public_state(observation, "B001"), "open")
 
