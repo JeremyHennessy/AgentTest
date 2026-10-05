@@ -23,11 +23,15 @@ No scoring, admission timing, fixture bytes or attention policy changes are made
 
 The historical execution-freeze file remains unchanged as evidence. Its listed
 working-file hashes do not establish the old packaged Git bytes: two files match
-after CRLF-to-LF normalization and three do not. The exact old pre-commit working
-bytes for those three files are not preserved, so their normalization history is
-unverified. Git core.autocrlf is true locally, but this alone does not explain the
-discrepancy. The published old Git blobs are independently verified; the old
-working-byte proof is withdrawn. Corrected validation uses a preserved canonical
+after CRLF-to-LF normalization and three do not. Later inspection retained the
+unchanged mixed-line-ending agenda/CLI files and recovered Core by reversing the
+single replay edit and restoring its changed context newline. Those exact bytes
+match the old frozen SHA256 values; module/test bytes recovered from LF-normalized
+old archive do too. All five normalize to the independently verified old Git blobs.
+Recovery is separately labelled; the original archive/freeze are never rewritten.
+Ordinary git archive with core.autocrlf=true emits CRLF working representations,
+which discarded the original mixed-newline byte identities. The old package alone
+cannot prove those working bytes. Corrected validation uses a preserved canonical
 Git archive extracted into a separate runtime directory, frozen before authoritative
 tests with each file's Git blob and byte SHA256 identities. Results and new freeze
 are supplied separately; the historical results below remain limited historical
