@@ -11,7 +11,7 @@ permissions:
 env:
   MERGED_MAIN_SHA: d1a4046b0941788ddf642cf64a279380f08ed1a6
   FIRST_POST_MERGE_STATE_SHA: 2c9dfabd2c54b6267d5eab437c8116a1b63ac56b
-  PRE_MERGE_STATE_SHA: 53270cf5e535b630aae225abbf16904314d02e67
+  PRE_CYCLE_STATE_SHA: 36b549be6559137f0aadefe4985ae76f3234805a
 
 jobs:
   inspect:
@@ -82,7 +82,7 @@ jobs:
           }
           report = {
               "merged_main_sha": "d1a4046b0941788ddf642cf64a279380f08ed1a6",
-              "pre_state_sha": "53270cf5e535b630aae225abbf16904314d02e67",
+              "pre_cycle_state_sha": "36b549be6559137f0aadefe4985ae76f3234805a",
               "post_state_sha": "2c9dfabd2c54b6267d5eab437c8116a1b63ac56b",
               "pre": {
                   "cycle": pre.get("cycles"),
