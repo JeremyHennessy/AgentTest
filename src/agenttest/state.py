@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .action_lab import initial_action_lab_state
+from .episode_identity import ensure_episode_sequence
 from .agenda import ensure_agenda_state, initial_agenda_state
 from .planning_lab import initial_planning_lab_state
 
@@ -114,6 +115,7 @@ def initial_state() -> dict[str, Any]:
         "generation": 0,
         "concept_counts": {},
         "episodes": [],
+        "next_episode_index": 1,
         "semantic_memory": _empty_semantic_memory(),
         "environment_snapshots": [],
         "surprises": [],
@@ -147,6 +149,7 @@ def initial_state() -> dict[str, Any]:
 
 
 def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
+    ensure_episode_sequence(state)
     prior_schema_version = int(state.get("schema_version", 0) or 0)
     for key, default in (
         ("semantic_memory", _empty_semantic_memory()),

@@ -13,6 +13,7 @@ from .agenda import update_agenda
 from .cognition import CognitionProvider, run_cognition
 from .drives import choose_intention, compute_drives
 from .evidence import known_evidence_ids
+from .episode_identity import allocate_episode_id
 from .learning import (
     REPOSITORY_STABILITY_FAMILY,
     consolidate_empirical_learning,
@@ -1869,7 +1870,7 @@ class AgentCore:
         content: str,
         concepts: list[str],
     ) -> None:
-        episode_id = f"E{len(state['episodes']) + 1:06d}"
+        episode_id = allocate_episode_id(state)
         state["episodes"].append(
             {
                 "id": episode_id,
