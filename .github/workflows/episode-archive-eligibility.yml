@@ -92,6 +92,7 @@ jobs:
       - name: Run copied-state archive eligibility replay
         shell: bash
         env:
+          PYTHONPATH: candidate/src
           PYTHONDONTWRITEBYTECODE: "1"
         run: |
           mkdir -p artifacts
