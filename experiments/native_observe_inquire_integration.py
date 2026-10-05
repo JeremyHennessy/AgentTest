@@ -15,8 +15,8 @@ PUBLICATION_VERSION = "native-recorder-publication-v1"
 POLICY_VERSION = "native-observe-inquire-policy-v1"
 
 _ALLOWED_TEMPORAL = {"same_next_observation", "changes_next_observation"}
-_BOUNDED_ID = re.compile(r"[A-Za-z0-9._:-]{1,128}\\Z")
-_HEX64 = re.compile(r"[0-9a-f]{64}\\Z")
+_BOUNDED_ID = re.compile(r"[A-Za-z0-9._:-]{1,128}\Z")
+_HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 
 DEFAULT_POLICY = {
     "version": POLICY_VERSION,
