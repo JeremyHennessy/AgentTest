@@ -44,6 +44,16 @@ jobs:
           from pathlib import Path
           report = json.loads(Path("artifacts/open-object-world-study.json").read_text())
           print(json.dumps(report["summary"], sort_keys=True))
+          for row in report["rows"]:
+              print(json.dumps({
+                  "seed": row["seed"],
+                  "unique_observation_count": row["unique_observation_count"],
+                  "unique_position_count": row["unique_position_count"],
+                  "unique_inventory_state_count": row["unique_inventory_state_count"],
+                  "observed_effect_counts": row["observed_effect_counts"],
+                  "entities_with_multiple_observed_states": row["entities_with_multiple_observed_states"],
+                  "final_observation": row["final_observation"],
+              }, sort_keys=True))
           PY
       - uses: actions/upload-artifact@v4
         with:
