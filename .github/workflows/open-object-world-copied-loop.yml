@@ -1,0 +1,48 @@
+name: open-object-world-copied-loop
+
+on:
+  pull_request:
+    paths:
+      - "experiments/open_object_world_copied_loop.py"
+      - "scripts/open_object_world_copied_loop_study.py"
+      - "tests/test_open_object_world_copied_loop.py"
+      - ".github/workflows/open-object-world-copied-loop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run copied-loop tests
+        env:
+          PYTHONPATH: src:experiments:scripts
+        run: python -m unittest tests.test_open_object_world_copied_loop -v
+      - name: Run mature copied-loop study
+        env:
+          PYTHONPATH: src:experiments:scripts
+        run: |
+          mkdir -p artifacts
+          python scripts/open_object_world_copied_loop_study.py > artifacts/open-object-world-copied-loop.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/open-object-world-copied-loop.json").read_text())
+          print(json.dumps(report["summary"], sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: open-object-world-copied-loop-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/open-object-world-copied-loop.json
+          if-no-files-found: error
+          retention-days: 30
