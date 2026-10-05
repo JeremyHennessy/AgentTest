@@ -95,6 +95,19 @@ def run(state_path: Path, live_state_sha: str) -> dict:
     baseline_threads = _thread_ids(baseline)
     baseline_action = deepcopy(baseline.get("action_lab"))
     baseline_planning = deepcopy(baseline.get("planning_lab"))
+    if not baseline.get("environment_snapshots"):
+        raise AssertionError("pinned live-state copy has no repository observation")
+    stable_observation = deepcopy(baseline["environment_snapshots"][-1])
+    phase42_thread_id = (
+        baseline_diag["opportunities"][-1]["thread_id"]
+        if baseline_diag.get("opportunities")
+        else None
+    )
+    phase42_question_id = (
+        baseline_diag["opportunities"][-1]["question_id"]
+        if baseline_diag.get("opportunities")
+        else None
+    )
     baseline_agenda_decision_count = len(
         baseline.get("agenda", {}).get("decisions", [])
     )
@@ -121,6 +134,7 @@ def run(state_path: Path, live_state_sha: str) -> dict:
     reloaded = AgentCore(StateStore(state_path))
     cycle_result = reloaded.cycle(
         stimulus="continue ordinary operation",
+        observation=deepcopy(stable_observation),
         _now_override="2026-10-05T12:00:00+00:00",
     )
     after_cycle = reloaded.store.load()
@@ -174,6 +188,57 @@ def run(state_path: Path, live_state_sha: str) -> dict:
             "observe/inquire integration manufactured Phase42 resumption credit"
         )
 
+    phase42_trajectory = []
+    trajectory_core = AgentCore(StateStore(state_path))
+    for offset in range(1, 5):
+        result = trajectory_core.cycle(
+            stimulus="continue ordinary operation",
+            observation=deepcopy(stable_observation),
+            _now_override=f"2026-10-05T12:0{offset}:00+00:00",
+        )
+        current = trajectory_core.store.load()
+        active = {
+            str(item.get("id")): item
+            for item in current.get("agenda", {}).get("threads", [])
+            if isinstance(item, dict) and item.get("id")
+        }
+        archived = _archived_threads(current)
+        location = (
+            "active"
+            if phase42_thread_id in active
+            else "archived"
+            if phase42_thread_id in archived
+            else "missing"
+        )
+        if location == "missing":
+            raise AssertionError("Phase42 thread identity disappeared during copied heartbeats")
+        diagnostic = evaluate_resumption_opportunities(current)
+        if diagnostic["handoff_or_selection_mismatch_count"] != 0:
+            raise AssertionError("copied heartbeat introduced Phase42 selection mismatch")
+        thread = active.get(phase42_thread_id) or archived.get(phase42_thread_id) or {}
+        phase42_trajectory.append(
+            {
+                "cycle": int(current["cycles"]),
+                "location": location,
+                "thread_id": phase42_thread_id,
+                "question_id": phase42_question_id,
+                "thread_status": thread.get("status"),
+                "thread_priority_score": thread.get("priority_score"),
+                "selected_thread_id": result.get("agenda_decision", {}).get(
+                    "selected_thread_id"
+                ),
+                "resumed_thread_id": result.get("agenda_decision", {}).get(
+                    "resumed_thread_id"
+                ),
+                "resumed_opportunity_count": diagnostic[
+                    "resumed_opportunity_count"
+                ],
+                "handoff_or_selection_mismatch_count": diagnostic[
+                    "handoff_or_selection_mismatch_count"
+                ],
+            }
+        )
+
     source_hash = source_manifest_hash(source_manifest())
     return {
         "study": "native-observe-inquire-copied-live-state-v1",
@@ -193,6 +258,7 @@ def run(state_path: Path, live_state_sha: str) -> dict:
             "planning_lab_state_unchanged": True,
         },
         "ordinary_cycle": {
+            "used_stable_repository_observation": True,
             "native_inquiry_reached_agenda": True,
             "active_experiment_path": True,
             "action_lab_result": None,
@@ -205,6 +271,9 @@ def run(state_path: Path, live_state_sha: str) -> dict:
             "foreground_changed": bool(decision.get("foreground_changed")),
             "resumed_thread_id": decision.get("resumed_thread_id"),
         },
+        "phase42_thread_id": phase42_thread_id,
+        "phase42_question_id": phase42_question_id,
+        "phase42_followup_trajectory": phase42_trajectory,
         "phase42_before": {
             "opportunity_count": baseline_diag["opportunity_count"],
             "resumed_opportunity_count": baseline_diag[
