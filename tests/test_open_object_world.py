@@ -45,8 +45,8 @@ class OpenObjectWorldTests(unittest.TestCase):
         state, receipts = run(
             state,
             [
-                {"action": "west"},
                 {"action": "north"},
+                {"action": "west"},
                 {"action": "north"},
             ],
         )
@@ -59,9 +59,9 @@ class OpenObjectWorldTests(unittest.TestCase):
         state, receipts = run(
             state,
             [
-                {"action": "west"},
-                {"action": "interact", "target": "M001"},
                 {"action": "north"},
+                {"action": "interact", "target": "M001"},
+                {"action": "west"},
                 {"action": "north"},
             ],
         )
@@ -76,8 +76,8 @@ class OpenObjectWorldTests(unittest.TestCase):
             state,
             [
                 {"action": "take", "target": "O001"},
-                {"action": "west"},
                 {"action": "north"},
+                {"action": "west"},
                 {"action": "drop", "target": "O001"},
                 {"action": "north"},
             ],
@@ -115,8 +115,8 @@ class OpenObjectWorldTests(unittest.TestCase):
             state,
             [
                 {"action": "take", "target": "O001"},
-                {"action": "west"},
                 {"action": "north"},
+                {"action": "west"},
                 {"action": "drop", "target": "O001"},
             ],
         )
