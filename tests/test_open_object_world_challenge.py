@@ -61,9 +61,7 @@ class OpenObjectWorldChallengeTests(unittest.TestCase):
         world, _ = step(world, 2, "east")
         world, _ = step(world, 3, "take", "O001")
         world, _ = step(world, 4, "north")
-        world, _ = step(world, 5, "east")
-        world, _ = step(world, 6, "drop", "O001")
-        world, _ = step(world, 7, "west")
+        world, _ = step(world, 5, "drop", "O001")
         observation = observe_world(world)
         visible = {item["id"] for item in observation["visible_entities"]}
         self.assertEqual(world["position"], [-1, -1])
@@ -80,10 +78,8 @@ class OpenObjectWorldChallengeTests(unittest.TestCase):
         world, _ = step(world, 4, "east")
         world, _ = step(world, 5, "east")
         world, _ = step(world, 6, "north")
-        world, _ = step(world, 7, "east")
-        world, _ = step(world, 8, "drop", "O002")
-        world, _ = step(world, 9, "drop", "O003")
-        world, _ = step(world, 10, "west")
+        world, _ = step(world, 7, "drop", "O002")
+        world, _ = step(world, 8, "drop", "O003")
         observation = observe_world(world)
         visible = {item["id"] for item in observation["visible_entities"]}
         self.assertEqual(world["position"], [-1, -1])
