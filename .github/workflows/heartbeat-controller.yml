@@ -109,6 +109,29 @@ jobs:
             exit 1
           fi
 
+          echo "Waiting for autonomous growth run $run_id to become queryable"
+          visible=0
+          for attempt in $(seq 1 10); do
+            if gh run view "$run_id" --repo "$GITHUB_REPOSITORY" >/dev/null 2>/tmp/growth-run-view.err; then
+              visible=1
+              break
+            fi
+
+            if grep -q "HTTP 404" /tmp/growth-run-view.err; then
+              echo "Growth run $run_id is not queryable yet; retrying in 2 seconds."
+              sleep 2
+              continue
+            fi
+
+            cat /tmp/growth-run-view.err
+            exit 1
+          done
+
+          if [ "$visible" != "1" ]; then
+            echo "Growth run $run_id did not become queryable after 10 attempts."
+            exit 1
+          fi
+
           echo "Watching autonomous growth run $run_id"
           gh run watch "$run_id"             --repo "$GITHUB_REPOSITORY"             --exit-status
 
