@@ -1,0 +1,127 @@
+name: post-episode-identity-deploy-check
+
+on:
+  push:
+    branches: [diagnostic/post-episode-identity-deploy]
+    paths: [.github/workflows/post-episode-identity-deploy-check.yml]
+
+permissions:
+  contents: read
+
+env:
+  MERGED_MAIN_SHA: d1a4046b0941788ddf642cf64a279380f08ed1a6
+  FIRST_POST_MERGE_STATE_SHA: 2c9dfabd2c54b6267d5eab437c8116a1b63ac56b
+  PRE_MERGE_STATE_SHA: 53270cf5e535b630aae225abbf16904314d02e67
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FIRST_POST_MERGE_STATE_SHA }}
+          path: post
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            state/organism.json
+            state/phase42_resumption_opportunities.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PRE_MERGE_STATE_SHA }}
+          path: pre
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            state/organism.json
+            state/phase42_resumption_opportunities.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Inspect migration and state continuity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          def load(root):
+              state=json.loads((Path(root)/"state/organism.json").read_text())
+              phase=json.loads((Path(root)/"state/phase42_resumption_opportunities.json").read_text())
+              ids=[str(e.get("id")) for e in state.get("episodes",[])]
+              return state,phase,ids
+
+          pre, pre_phase, pre_ids=load("pre")
+          post, post_phase, post_ids=load("post")
+
+          checks = {
+              "counter_present": type(post.get("next_episode_index")) is int,
+              "counter_matches_next_id": post.get("next_episode_index") == len(post_ids)+1,
+              "last_id_matches_count": (
+                  bool(post_ids)
+                  and post_ids[-1] == f"E{len(post_ids):06d}"
+              ),
+              "episode_ids_unique": len(post_ids) == len(set(post_ids)),
+              "pre_history_is_prefix": post.get("episodes",[])[:len(pre.get("episodes",[]))] == pre.get("episodes",[]),
+              "cycle_advanced": post.get("cycles") == pre.get("cycles")+1,
+              "generation_matches_cycle": post.get("generation") == post.get("cycles"),
+              "phase42_mismatch_zero": post_phase.get("handoff_or_selection_mismatch_count") == 0,
+              "phase42_resumed_zero": post_phase.get("resumed_opportunity_count") == 0,
+          }
+          report = {
+              "merged_main_sha": "d1a4046b0941788ddf642cf64a279380f08ed1a6",
+              "pre_state_sha": "53270cf5e535b630aae225abbf16904314d02e67",
+              "post_state_sha": "2c9dfabd2c54b6267d5eab437c8116a1b63ac56b",
+              "pre": {
+                  "cycle": pre.get("cycles"),
+                  "episode_count": len(pre_ids),
+                  "last_episode_id": pre_ids[-1] if pre_ids else None,
+                  "next_episode_index": pre.get("next_episode_index"),
+                  "phase42": {
+                      "opportunities": pre_phase.get("opportunity_count"),
+                      "lower": pre_phase.get("lower_priority_opportunity_count"),
+                      "resumed": pre_phase.get("resumed_opportunity_count"),
+                      "mismatch": pre_phase.get("handoff_or_selection_mismatch_count"),
+                  },
+              },
+              "post": {
+                  "cycle": post.get("cycles"),
+                  "episode_count": len(post_ids),
+                  "last_episode_id": post_ids[-1] if post_ids else None,
+                  "next_episode_index": post.get("next_episode_index"),
+                  "phase42": {
+                      "opportunities": post_phase.get("opportunity_count"),
+                      "lower": post_phase.get("lower_priority_opportunity_count"),
+                      "resumed": post_phase.get("resumed_opportunity_count"),
+                      "mismatch": post_phase.get("handoff_or_selection_mismatch_count"),
+                  },
+              },
+              "checks": checks,
+              "all_checks_pass": all(checks.values()),
+              "post_state_sha256": hashlib.sha256((Path("post")/"state/organism.json").read_bytes()).hexdigest(),
+          }
+          Path("artifacts/post-deploy-state.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+          print(json.dumps(report,sort_keys=True))
+          if not report["all_checks_pass"]:
+              raise SystemExit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: post-episode-identity-deploy-check
+          path: artifacts/post-deploy-state.json
+          retention-days: 14
+          if-no-files-found: error
