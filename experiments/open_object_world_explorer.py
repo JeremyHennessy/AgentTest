@@ -93,7 +93,9 @@ def run_unguided(seed: int, steps: int = 200) -> dict[str, Any]:
     positions = set()
     inventory_states = set()
     effect_counts: Counter[str] = Counter()
+    first_effect_cycle: dict[str, int] = {}
     visible_state_history: dict[str, list[str]] = {}
+    first_visible_state_change_cycle: dict[str, int] = {}
 
     for cycle in range(1, steps + 1):
         observation = observe_world(world)
@@ -104,15 +106,19 @@ def run_unguided(seed: int, steps: int = 200) -> dict[str, Any]:
         for item in observation["visible_entities"]:
             state = item.get("observable_state")
             if state is not None:
-                visible_state_history.setdefault(str(item["id"]), []).append(
-                    str(state)
-                )
+                entity_id = str(item["id"])
+                prior = visible_state_history.setdefault(entity_id, [])
+                if prior and str(state) not in set(prior):
+                    first_visible_state_change_cycle.setdefault(entity_id, cycle)
+                prior.append(str(state))
 
         command = choose_command(observation, attempts)
         attempts[(signature, command_key(command))] += 1
         world, receipt = transition(world, command, cycle=cycle)
         for effect in receipt.get("observed_effects", []):
-            effect_counts[str(effect)] += 1
+            effect = str(effect)
+            effect_counts[effect] += 1
+            first_effect_cycle.setdefault(effect, cycle)
 
     final_observation = observe_world(world)
     observation_signatures.add(observation_signature(final_observation))
@@ -137,6 +143,10 @@ def run_unguided(seed: int, steps: int = 200) -> dict[str, Any]:
         "unique_position_count": len(positions),
         "unique_inventory_state_count": len(inventory_states),
         "observed_effect_counts": dict(sorted(effect_counts.items())),
+        "first_effect_cycle": dict(sorted(first_effect_cycle.items())),
         "entities_with_multiple_observed_states": state_changes,
+        "first_visible_state_change_cycle": dict(
+            sorted(first_visible_state_change_cycle.items())
+        ),
         "final_observation": final_observation,
     }
