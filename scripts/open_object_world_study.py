@@ -11,15 +11,11 @@ from open_object_world_explorer import run_unguided
 
 
 def main() -> None:
-    rows = [run_unguided(seed, steps=240) for seed in range(1, 5)]
-    report = {
-        "study": "open-object-world-unguided-discovery-v1",
-        "world": "open-object-world-v0",
-        "policy": "least-tried public observation-command pair",
-        "guided_solution": False,
-        "reward_signal": False,
-        "rows": rows,
-        "summary": {
+    short_rows = [run_unguided(seed, steps=240) for seed in range(1, 5)]
+    long_rows = [run_unguided(seed, steps=1000) for seed in range(1, 5)]
+
+    def summarize(rows):
+        return {
             "all_layouts_explored_multiple_positions": all(
                 row["unique_position_count"] > 4 for row in rows
             ),
@@ -45,7 +41,18 @@ def main() -> None:
                     "target_position_changed", 0
                 ) > 0
             ),
-        },
+        }
+
+    report = {
+        "study": "open-object-world-unguided-discovery-v1",
+        "world": "open-object-world-v0",
+        "policy": "least-tried public observation-command pair",
+        "guided_solution": False,
+        "reward_signal": False,
+        "rows": short_rows,
+        "summary": summarize(short_rows),
+        "extended_rows": long_rows,
+        "extended_summary": summarize(long_rows),
     }
     print(json.dumps(report, indent=2, sort_keys=True))
 
