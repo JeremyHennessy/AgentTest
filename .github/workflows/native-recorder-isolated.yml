@@ -10,24 +10,63 @@ on:
 permissions:
   contents: read
 jobs:
-  source-snapshot:
+  recorder-study:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
-      - name: Package reviewed code only, never organism state or Git credentials
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact locally reviewed source bytes
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          expected = {
+              'experiments/native_stream_recorder.py': 'bbc5a02a01b3d409843b6230f42704d34fca09b7acf582b6ed70f7ef15ce3caa',
+              'tests/test_native_stream_recorder.py': '8aae06fab2fd9a02efe56c05c6fe4442f52ce7ced419f5a3d2c0077b9a79f2be',
+              'scripts/native_stream_recorder_study.py': '345cb2f2cf96538fb167b0d0829faa5f37687b4dc476a17cbc0024ca3276ddde',
+          }
+          for path, wanted in expected.items():
+              actual = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+              if actual != wanted:
+                  raise SystemExit(f'Exact-byte mismatch: {path}')
+          PY
+      - name: Record source provenance without state or credentials
+        shell: bash
         run: |
           mkdir -p artifacts
           git rev-parse HEAD > artifacts/source-sha.txt
-          git archive --format=tar.gz HEAD src experiments scripts tests .github/workflows > artifacts/research-source.tar.gz
-          git ls-tree -r HEAD -- src experiments scripts tests .github/workflows > artifacts/source-blobs.txt
+          git ls-tree -r HEAD > artifacts/source-blobs.txt
+          python - <<'PY'
+          import subprocess
+          entries = subprocess.check_output(['git','ls-tree','--name-only','-z','HEAD']).decode().split('\0')
+          entries = [p for p in entries if p and p != 'state']
+          with open('artifacts/research-source.tar.gz','wb') as output:
+              subprocess.run(['git','archive','--format=tar.gz','HEAD','--',*entries],stdout=output,check=True)
+          PY
+      - name: Run recorder integrity and recovery tests
+        shell: bash
+        env:
+          PYTHONPATH: src:experiments
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -m unittest tests.test_native_stream_recorder -v 2>&1 | tee artifacts/recorder-tests.log
+      - name: Run frozen 64-checkpoint cold-process restart study
+        shell: bash
+        env:
+          PYTHONPATH: src:experiments
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python scripts/native_stream_recorder_study.py --output artifacts/recorder-study.json 2>&1 | tee artifacts/recorder-study.log
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: native-recorder-source-${{ github.sha }}
+          name: native-recorder-study-${{ github.sha }}
           path: artifacts/
-          retention-days: 7
+          retention-days: 30
           if-no-files-found: error
