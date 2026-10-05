@@ -169,10 +169,15 @@ class NativeObserveInquireIntegrationTests(unittest.TestCase):
             inquiry["experiment"]["specification"]["actionability"],
             "actionable",
         )
+        source_hash = hashlib.sha256(
+            manifest()["source_id"].encode("utf-8")
+        ).hexdigest()
         self.assertTrue(
             inquiry["candidate"]["id"].startswith(
                 "NIC:integration:"
-                + source_manifest_hash(manifest())[:12]
+                + source_hash[:10]
+                + ":"
+                + source_manifest_hash(manifest())[:10]
                 + ":"
             )
         )
@@ -223,6 +228,44 @@ class NativeObserveInquireIntegrationTests(unittest.TestCase):
                 policy=observe_and_inquire_policy(),
                 source_manifest=manifest(),
                 publication=publication(end_cycle=5, chain_seed="two"),
+            )
+        self.assertEqual(store.path.read_bytes(), before)
+
+    def test_relation_flip_or_manifest_revision_cannot_stack_same_source_feature(self):
+        store = self.make_store()
+        stage_publication_inquiry(
+            AgentCore(store),
+            policy=observe_and_inquire_policy(),
+            source_manifest=manifest(),
+            publication=publication(),
+        )
+        before = store.path.read_bytes()
+
+        flipped = publication(end_cycle=5, chain_seed="flip")
+        flipped["selected_temporal_candidate"]["relation"] = (
+            "changes_next_observation"
+        )
+        with self.assertRaisesRegex(RuntimeError, "source feature"):
+            stage_publication_inquiry(
+                AgentCore(store),
+                policy=observe_and_inquire_policy(),
+                source_manifest=manifest(),
+                publication=flipped,
+            )
+        self.assertEqual(store.path.read_bytes(), before)
+
+        revised_manifest = manifest()
+        revised_manifest["observation_schema"] = "public-fixture-v2"
+        revised = publication(end_cycle=5, chain_seed="manifest")
+        revised["source_manifest_hash"] = source_manifest_hash(
+            revised_manifest
+        )
+        with self.assertRaisesRegex(RuntimeError, "source feature"):
+            stage_publication_inquiry(
+                AgentCore(store),
+                policy=observe_and_inquire_policy(),
+                source_manifest=revised_manifest,
+                publication=revised,
             )
         self.assertEqual(store.path.read_bytes(), before)
 
