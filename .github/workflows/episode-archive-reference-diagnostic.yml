@@ -40,7 +40,7 @@ jobs:
               ".github/workflows/episode-archive-reference-diagnostic.yml",
           }
           changed=set(subprocess.check_output(
-              ["git","diff","--name-only","d1a4046b0941788ddf642cf64a279380f08ed1a6...HEAD"],
+              ["git","diff","--name-only","d1a4046b0941788ddf642cf64a279380f08ed1a6","HEAD"],
               text=True,
           ).splitlines())
           if changed != allowed:
