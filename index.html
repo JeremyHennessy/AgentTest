@@ -70,7 +70,7 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <div class="inquiry-panel">
 <div class="t">What could change Ora’s mind</div>
 <div class="v" id="inquiryChangeCondition">—</div>
-<div class="why">A suspended inquiry only returns to the foreground when new evidence or a newly executable path changes its priority.</div>
+<div class="why">Current same-evidence accumulation cannot close the live priority gap by itself; a resumption now requires a genuine upstream state change such as a different question, actionability/frontier change, or new external observation.</div>
 </div>
 </div>
 <div class="inquiry-panel" style="margin-top:9px">
@@ -79,7 +79,15 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 </div>
 </article>
 
-<article class="card s8"></article>
+<article class="card s12" id="researchFrontierCard">
+<div class="head"><div><h2>Research frontier</h2><div class="sub">Verified work around Ora that is still isolated from her live cognition and action authority.</div></div><span class="pill violet">isolated · not live</span></div>
+<div class="now-grid">
+<div class="now-item"><div class="t">Richer 5×5 world</div><div class="v">Persistent anonymous objects and open-ended mechanics are discoverable without a scripted solution.</div></div>
+<div class="now-item"><div class="t">Question-directed action</div><div class="v">Frozen epistemic policy beat unguided exploration on mature copied-state tests: 83.3% vs 40.0% inquiry falsification.</div></div>
+<div class="now-item"><div class="t">Remaining boundary</div><div class="v">Copied Core can record the post-action native evidence, but it does not yet resolve the waiting native experiment from that later evidence.</div></div>
+</div>
+<div class="micro" style="margin-top:10px">These are research results only. The live world, live agenda, Phase 42 state and Ora’s current action authority shown elsewhere on this page are unchanged.</div>
+</article>
 
 <article class="card s8">
 <div class="head"><div><h2>Where Ora is exploring</h2><div class="sub">The Bounded Action Lab as a small world: teal is Ora’s lived path and dashed blue is the remaining plan.</div></div><span class="pill blue" id="worldBadge">loading</span></div>
@@ -414,7 +422,7 @@ function renderInquiryFocus(o){
  el("inquiryEvidenceTrail").innerHTML=fgRefs.length?fgRefs.slice(-10).map(ref=>'<div class="evidence-ref"><b>'+esc(ref)+'</b><div>'+esc(evidenceDescription(o,ref).replace(String(ref)+" · ",""))+'</div></div>').join(""):'<div class="micro">No directly linked evidence refs are persisted for this foreground inquiry yet.</div>';
  el("inquiryOtherThreads").innerHTML=suspended.length?suspended.map(x=>'<div class="thread-line"><div class="v">'+esc(x.question_text||x.question_id||x.id)+'</div><div class="why">Priority '+esc(Number(x.priority_score||0).toFixed(3))+' · '+esc(x.suspension_reason||"lower priority than the foreground inquiry")+'</div></div>').join(""):'<div class="micro">No suspended inquiries are currently persisted.</div>';
  const conditions=suspended.map(x=>x.resume_condition).filter(Boolean);
- el("inquiryChangeCondition").textContent=conditions[0]||"New evidence or a newly executable experiment would need to raise another thread above the current foreground priority.";
+ el("inquiryChangeCondition").textContent="The live reachability diagnostic found same-evidence accumulation structurally insufficient. A genuine upstream change must alter the competition before a suspended thread can overtake the foreground.";
  const recent=decisions.slice(-4).reverse();
  el("inquiryAttentionChanges").innerHTML=recent.length?recent.map(d=>{
   const changed=d.foreground_changed===true;
@@ -491,7 +499,7 @@ function renderNow(o){
  if(currentPhase>=42){
   const fg=agendaThreads.find(x=>x.id===agenda.foreground_thread_id)||{},suspended=agendaThreads.filter(x=>x.status==="suspended");
   el("milestoneTitle").textContent=p42passed?"Persistent inquiry agenda passed its natural gate.":"Ora is maintaining more than one line of inquiry.";
-  el("milestoneCopy").textContent=p42passed?"Persisted evidence shows competing threads, genuine suspension and resumption, evidence-driven reprioritization, and preserved bounded authority.":(agendaThreads.length?agendaThreads.length+" inquiry threads are persisted; "+(fg.question_id||"one thread")+" is foreground and "+suspended.length+" are suspended. Phase 42 remains open until a genuine suspended thread resumes because new evidence changes its priority without starving the others.":"The Phase 42 agenda is active and waiting for its first natural multi-thread decision.");
+  el("milestoneCopy").textContent=p42passed?"Persisted evidence shows competing threads, genuine suspension and resumption, evidence-driven reprioritization, and preserved bounded authority.":(agendaThreads.length?agendaThreads.length+" inquiry threads are persisted; "+(fg.question_id||"one thread")+" is foreground and "+suspended.length+" are suspended. Phase 42 remains open. A read-only reachability check showed that more of the current evidence alone cannot make a suspended thread overtake the foreground; a genuine upstream state change is required.":"The Phase 42 agenda is active and waiting for its first natural multi-thread decision.");
  }else if(currentPhase>=41&&p41passed){
   el("milestoneTitle").textContent="Past measured outcomes changed what Ora chose to pursue.";
   el("milestoneCopy").textContent="Ora preserved its Phase 39 objective as a counterfactual, used persisted Phase 40 realization evidence to select a different bounded goal, and then completed that outcome-driven objective.";
