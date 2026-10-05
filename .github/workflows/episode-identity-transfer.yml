@@ -1,0 +1,76 @@
+name: episode-identity-source-transfer
+on:
+  push:
+    branches: [tooling/episode-identity-transfer-20261005]
+    paths: [.github/workflows/episode-identity-transfer.yml]
+permissions:
+  contents: read
+jobs:
+  transfer-reviewed-blobs:
+    if: github.ref == 'refs/heads/tooling/episode-identity-transfer-20261005'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: eb906904d4a30d7427075987f928e0b97699cfe3
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Publish two exact content-addressed blobs only; never update a ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import difflib, hashlib, json, os, urllib.request
+          from pathlib import Path
+          def blob(data):
+              return hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+          specs = {
+              'src/agenttest/core.py': (
+                  '2145acbd1b727be45bb2e2edec87105d09f08bdb',
+                  '0cb728ae17f05c0bae0dd20f6e6cf67756789e3a',
+                  [
+                      ('from .evidence import known_evidence_ids\n', 'from .evidence import known_evidence_ids\nfrom .episode_identity import allocate_episode_id\n'),
+                      ('        episode_id = f"E{len(state[\'episodes\']) + 1:06d}"', '        episode_id = allocate_episode_id(state)'),
+                  ]),
+              'src/agenttest/state.py': (
+                  '14f76b7b42afe9029d3f074b1e5435a485791573',
+                  'bfbe20e9e7dd82fc539838048f1013e405936504',
+                  [
+                      ('from .action_lab import initial_action_lab_state\n', 'from .action_lab import initial_action_lab_state\nfrom .episode_identity import ensure_episode_sequence\n'),
+                      ('        "episodes": [],\n', '        "episodes": [],\n        "next_episode_index": 1,\n'),
+                      ('    prior_schema_version = int(state.get("schema_version", 0) or 0)\n', '    ensure_episode_sequence(state)\n    prior_schema_version = int(state.get("schema_version", 0) or 0)\n'),
+                  ]),
+          }
+          prepared = {}
+          for path,(old_sha,new_sha,edits) in specs.items():
+              data = Path(path).read_bytes()
+              if blob(data) != old_sha: raise SystemExit('baseline mismatch: '+path)
+              original = data.decode(); changed = original
+              for old,new in edits:
+                  if changed.count(old) != 1: raise SystemExit('ambiguous replacement: '+path)
+                  changed = changed.replace(old,new)
+              compile(changed,path,'exec')
+              if blob(changed.encode()) != new_sha: raise SystemExit('candidate byte mismatch: '+path)
+              prepared[path] = (changed,new_sha)
+              print(''.join(difflib.unified_diff(original.splitlines(True),changed.splitlines(True),fromfile='a/'+path,tofile='b/'+path)))
+          result = {}
+          for path,(content,wanted) in prepared.items():
+              request = urllib.request.Request('https://api.github.com/repos/JeremyHennessy/AgentTest/git/blobs', data=json.dumps({'content':content,'encoding':'utf-8'}).encode(), headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'}, method='POST')
+              with urllib.request.urlopen(request,timeout=30) as response:
+                  returned = json.load(response)
+              if returned['sha'] != wanted: raise SystemExit('server blob mismatch')
+              result[path] = wanted
+          Path('artifacts').mkdir()
+          Path('artifacts/source-transfer.json').write_text(json.dumps({'base':'eb906904d4a30d7427075987f928e0b97699cfe3','blobs':result,'refs_updated':False},indent=2)+'\n')
+          print(json.dumps(result,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: episode-identity-source-transfer
+          path: artifacts/source-transfer.json
+          retention-days: 7
+          if-no-files-found: error
