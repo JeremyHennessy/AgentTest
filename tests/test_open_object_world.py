@@ -109,6 +109,20 @@ class OpenObjectWorldTests(unittest.TestCase):
         self.assertEqual(receipts[7]["barrier_observed_state"], "open")
         self.assertEqual(state["position"], [2, 1])
 
+    def test_generic_push_persists_object_position_without_goal_signal(self):
+        state = world.initial_world(seed=1)
+        state, receipts = run(
+            state,
+            [
+                {"action": "push", "target": "O001", "direction": "south"},
+                {"action": "inspect", "target": "O001"},
+            ],
+        )
+        self.assertTrue(receipts[0]["success"])
+        self.assertEqual(state["position"], [-1, 0])
+        self.assertEqual(state["entities"]["O001"]["position"], [-2, 0])
+        self.assertEqual(receipts[1]["inspection"]["position"], [-2, 0])
+
     def test_object_and_mechanism_state_persist_across_unrelated_actions(self):
         state = world.initial_world(seed=1)
         state, _ = run(
