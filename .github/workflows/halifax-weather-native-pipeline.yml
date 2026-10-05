@@ -1,0 +1,62 @@
+name: halifax-weather-native-pipeline
+
+on:
+  pull_request:
+    paths:
+      - "scripts/halifax_weather_shadow.py"
+      - "experiments/halifax_weather_native_pipeline.py"
+      - "tests/test_halifax_weather_native_pipeline.py"
+      - ".github/workflows/halifax-weather-native-pipeline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - name: Fetch pinned Halifax Stanfield observations
+        run: |
+          mkdir -p artifacts
+          curl --fail --silent --show-error --get             'https://api.weather.gc.ca/collections/climate-hourly/items'             --data-urlencode 'f=csv'             --data-urlencode "filter=properties.CLIMATE_IDENTIFIER='8202251'"             --data-urlencode 'limit=72'             --data-urlencode 'sortby=-UTC_DATE'             -o /tmp/weather.csv
+          python scripts/halifax_weather_shadow.py             --input /tmp/weather.csv             --output artifacts/weather.json             --climate-identifier 8202251             --station-name "HALIFAX STANFIELD INT'L A"
+      - name: Exercise public evidence and inquiry APIs on temporary state
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          python - <<'PY'
+          import json
+          import tempfile
+          from pathlib import Path
+          from agenttest.core import AgentCore
+          from agenttest.state import StateStore, initial_state
+          from halifax_weather_native_pipeline import stage_isolated_inquiry
+
+          report = json.loads(Path("artifacts/weather.json").read_text())
+          observations = report["observations"][-24:-12]
+          with tempfile.TemporaryDirectory() as directory:
+              store = StateStore(Path(directory) / "organism.json")
+              state = initial_state()
+              state["cycles"] = 50
+              state["generation"] = 50
+              state["agenda"]["started_cycle"] = 1
+              store.save(state)
+              result = stage_isolated_inquiry(AgentCore(store), observations)
+              Path("artifacts/native-pipeline-result.json").write_text(
+                  json.dumps(result, indent=2, sort_keys=True, default=str) + "\n"
+              )
+              assert store.load()["cycles"] == 50
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: halifax-weather-native-pipeline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/weather.json
+            artifacts/native-pipeline-result.json
+          if-no-files-found: error
+          retention-days: 30
