@@ -1,0 +1,173 @@
+name: autonomous-heartbeat-controller
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/heartbeat-controller.yml"
+  workflow_dispatch:
+    inputs:
+      controller_token:
+        description: "Controller generation token"
+        required: true
+      delay_seconds:
+        description: "Optional delay before dispatching the next growth heartbeat"
+        required: false
+        default: "0"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  # Keep the existing concurrency lane so an older queued controller and the
+  # new generation cannot run state-dispatch logic at the same time.
+  group: agenttest-heartbeat-controller-v2
+  cancel-in-progress: false
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Validate controller generation
+        id: validate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CONTROLLER_TOKEN: ${{ github.event.inputs.controller_token || '' }}
+        shell: bash
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$CONTROLLER_TOKEN" != "controller-v3" ]; then
+            echo "Refusing stale or unversioned controller dispatch."
+            exit 1
+          fi
+
+      - name: Wait for requested interval
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DELAY_SECONDS: ${{ github.event.inputs.delay_seconds || '0' }}
+        shell: bash
+        run: |
+          if [ "$EVENT_NAME" = "push" ]; then
+            DELAY_SECONDS=0
+          fi
+          case "$DELAY_SECONDS" in
+            ''|*[!0-9]*)
+              echo "Invalid delay_seconds: $DELAY_SECONDS"
+              exit 1
+              ;;
+          esac
+          if [ "$DELAY_SECONDS" -gt 0 ]; then
+            sleep "$DELAY_SECONDS"
+          fi
+
+      - name: Wait for reconciliation lane
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for attempt in $(seq 1 60); do
+            busy="$(
+              gh run list                 --repo "$GITHUB_REPOSITORY"                 --workflow reconcile.yml                 --limit 20                 --json status                 --jq '[.[] | select(.status != "completed")] | length'
+            )"
+            if [ "$busy" = "0" ]; then
+              exit 0
+            fi
+            echo "Reconciliation lane busy; retrying in 10 seconds."
+            sleep 10
+          done
+          echo "Reconciliation lane did not clear within 10 minutes."
+          exit 1
+
+      - name: Dispatch and verify autonomous growth
+        id: growth
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          before="$(
+            gh run list               --repo "$GITHUB_REPOSITORY"               --workflow growth.yml               --event workflow_dispatch               --limit 1               --json databaseId               --jq '.[0].databaseId // 0'
+          )"
+
+          gh workflow run growth.yml             --repo "$GITHUB_REPOSITORY"             --ref main
+
+          run_id=""
+          for attempt in $(seq 1 30); do
+            candidate="$(
+              gh run list                 --repo "$GITHUB_REPOSITORY"                 --workflow growth.yml                 --event workflow_dispatch                 --limit 1                 --json databaseId                 --jq '.[0].databaseId // 0'
+            )"
+            if [ "$candidate" != "0" ] && [ "$candidate" != "$before" ]; then
+              run_id="$candidate"
+              break
+            fi
+            sleep 2
+          done
+
+          if [ -z "$run_id" ]; then
+            echo "No new autonomous-growth-cycle run appeared after dispatch."
+            exit 1
+          fi
+
+          echo "Waiting for autonomous growth run $run_id to become queryable"
+          visible=0
+          for attempt in $(seq 1 10); do
+            if gh run view "$run_id" --repo "$GITHUB_REPOSITORY" >/dev/null 2>/tmp/growth-run-view.err; then
+              visible=1
+              break
+            fi
+
+            if grep -q "HTTP 404" /tmp/growth-run-view.err; then
+              echo "Growth run $run_id is not queryable yet; retrying in 2 seconds."
+              sleep 2
+              continue
+            fi
+
+            cat /tmp/growth-run-view.err
+            exit 1
+          done
+
+          if [ "$visible" != "1" ]; then
+            echo "Growth run $run_id did not become queryable after 10 attempts."
+            exit 1
+          fi
+
+          echo "Watching autonomous growth run $run_id"
+          gh run watch "$run_id"             --repo "$GITHUB_REPOSITORY"             --exit-status
+
+      - name: Queue successor controller
+        if: ${{ always() && steps.validate.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GROWTH_OUTCOME: ${{ steps.growth.outcome }}
+        shell: bash
+        run: |
+          if [ "$GROWTH_OUTCOME" != "success" ]; then
+            echo "Growth did not complete successfully; backing off for 60 seconds."
+            sleep 60
+          fi
+
+          queued=0
+          for attempt in $(seq 1 5); do
+            if gh workflow run heartbeat-controller.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              --ref main \
+              -f controller_token=controller-v3 \
+              -f delay_seconds=0
+            then
+              echo "Successor controller queued on attempt $attempt."
+              queued=1
+              break
+            fi
+
+            if [ "$attempt" -lt 5 ]; then
+              backoff=$((attempt * 3))
+              echo "Successor dispatch attempt $attempt failed; retrying in ${backoff}s."
+              sleep "$backoff"
+            fi
+          done
+
+          if [ "$queued" != "1" ]; then
+            echo "Failed to queue successor controller after 5 attempts."
+            exit 1
+          fi
