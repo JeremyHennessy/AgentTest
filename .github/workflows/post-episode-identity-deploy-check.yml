@@ -42,9 +42,7 @@ jobs:
           path: pre
           fetch-depth: 1
           filter: blob:none
-          sparse-checkout: |
-            state/organism.json
-            state/phase42_resumption_opportunities.json
+          sparse-checkout: state/organism.json
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -57,14 +55,14 @@ jobs:
           import hashlib, json
           from pathlib import Path
 
-          def load(root):
+          def load_state(root):
               state=json.loads((Path(root)/"state/organism.json").read_text())
-              phase=json.loads((Path(root)/"state/phase42_resumption_opportunities.json").read_text())
               ids=[str(e.get("id")) for e in state.get("episodes",[])]
-              return state,phase,ids
+              return state,ids
 
-          pre, pre_phase, pre_ids=load("pre")
-          post, post_phase, post_ids=load("post")
+          pre, pre_ids=load_state("pre")
+          post, post_ids=load_state("post")
+          post_phase=json.loads((Path("post")/"state/phase42_resumption_opportunities.json").read_text())
 
           checks = {
               "counter_present": type(post.get("next_episode_index")) is int,
@@ -89,12 +87,7 @@ jobs:
                   "episode_count": len(pre_ids),
                   "last_episode_id": pre_ids[-1] if pre_ids else None,
                   "next_episode_index": pre.get("next_episode_index"),
-                  "phase42": {
-                      "opportunities": pre_phase.get("opportunity_count"),
-                      "lower": pre_phase.get("lower_priority_opportunity_count"),
-                      "resumed": pre_phase.get("resumed_opportunity_count"),
-                      "mismatch": pre_phase.get("handoff_or_selection_mismatch_count"),
-                  },
+                  "phase42": null,
               },
               "post": {
                   "cycle": post.get("cycles"),
