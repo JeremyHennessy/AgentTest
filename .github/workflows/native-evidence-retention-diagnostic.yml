@@ -1,0 +1,94 @@
+name: native-evidence-retention-diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostic/native-evidence-retention-hazards
+    paths:
+      - tests/test_native_evidence_retention_hazards.py
+      - scripts/native_evidence_retention_hazard_report.py
+      - docs/native-evidence-retention-hazards.md
+      - .github/workflows/native-evidence-retention-diagnostic.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-evidence-retention-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PRODUCTION_BASE: eb906904d4a30d7427075987f928e0b97699cfe3
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify exact head and diagnostic-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python - <<'PY'
+          import os
+          import subprocess
+
+          allowed = {
+              "tests/test_native_evidence_retention_hazards.py",
+              "scripts/native_evidence_retention_hazard_report.py",
+              "docs/native-evidence-retention-hazards.md",
+              ".github/workflows/native-evidence-retention-diagnostic.yml",
+          }
+          changed = set(
+              subprocess.check_output(
+                  [
+                      "git",
+                      "diff",
+                      "--name-only",
+                      f"{os.environ['PRODUCTION_BASE']}...HEAD",
+                  ],
+                  text=True,
+              ).splitlines()
+          )
+          if changed != allowed:
+              raise SystemExit(
+                  "unexpected retention diagnostic scope: "
+                  + ", ".join(sorted(changed ^ allowed))
+              )
+          PY
+
+      - name: Run focused retention-hazard tests
+        shell: bash
+        env:
+          PYTHONPATH: src
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest tests.test_native_evidence_retention_hazards -v
+
+      - name: Emit diagnostic report
+        shell: bash
+        env:
+          PYTHONPATH: src
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          mkdir -p artifacts
+          python scripts/native_evidence_retention_hazard_report.py             --output artifacts/retention-hazards.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-evidence-retention-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: error
