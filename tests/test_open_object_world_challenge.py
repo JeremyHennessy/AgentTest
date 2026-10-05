@@ -64,6 +64,10 @@ class OpenObjectWorldChallengeTests(unittest.TestCase):
         world, _ = step(world, 5, "drop", "O001")
         world, _ = step(world, 6, "west")
         observation = observe_world(world)
+        visible = {item["id"] for item in observation["visible_entities"]}
+        self.assertEqual(world["position"], [-1, -1])
+        self.assertIn("B001", visible, observation)
+        self.assertIn("M001", visible, observation)
         self.assertEqual(public_state(observation, "B001"), "open")
         self.assertEqual(public_state(observation, "M001"), "active")
 
@@ -80,17 +84,22 @@ class OpenObjectWorldChallengeTests(unittest.TestCase):
         world, _ = step(world, 9, "drop", "O003")
         world, _ = step(world, 10, "west")
         observation = observe_world(world)
+        visible = {item["id"] for item in observation["visible_entities"]}
+        self.assertEqual(world["position"], [-1, -1])
+        self.assertIn("B001", visible, observation)
+        self.assertIn("M001", visible, observation)
         self.assertEqual(public_state(observation, "M001"), "active")
         self.assertEqual(public_state(observation, "B001"), "open")
 
     def test_required_portable_object_activates_socket_by_drop(self):
         world = initial_world(1)
         world, _ = step(world, 1, "west")
-        world, _ = step(world, 2, "west")
-        world, _ = step(world, 3, "take", "O003")
-        world, _ = step(world, 4, "north")
+        world, _ = step(world, 2, "take", "O003")
+        world, _ = step(world, 3, "north")
+        world, _ = step(world, 4, "west")
         world, _ = step(world, 5, "drop", "O003")
         observation = observe_world(world)
+        self.assertEqual(world["position"], [-1, 2])
         self.assertEqual(public_state(observation, "M002"), "active")
         world, _ = step(world, 6, "east")
         observation = observe_world(world)
