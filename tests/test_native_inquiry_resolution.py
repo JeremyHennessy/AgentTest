@@ -535,6 +535,49 @@ class NativeInquiryResolutionTests(unittest.TestCase):
         )
         self.assertEqual(result["experiment"]["status"], "completed")
 
+    def test_fresh_outcome_resolves_after_one_ordinary_cycle(self):
+        core = self.make_core()
+        experiment_id = self.stage_temporal(core)
+        staged = core.store.load()
+        experiment = next(
+            item for item in staged["experiments"]
+            if item["id"] == experiment_id
+        )
+        self.assertEqual(
+            experiment["readiness"],
+            "awaiting_native_evidence",
+        )
+
+        core.cycle(
+            stimulus="continue ordinary inquiry",
+            _now_override="2026-10-05T00:01:00+00:00",
+        )
+        after_cycle = core.store.load()
+        experiment = next(
+            item for item in after_cycle["experiments"]
+            if item["id"] == experiment_id
+        )
+        self.assertEqual(
+            experiment["readiness"],
+            "awaiting_native_evidence",
+        )
+
+        outcome = self.record_outcome(
+            core,
+            confirmations=1,
+            refutations=0,
+            refs=["obs-2", "obs-3"],
+        )
+        result = core.resolve_native_inquiry(
+            experiment_id,
+            outcome["evidence_ref"],
+            enabled=True,
+            persist=True,
+            _now_override="2026-10-05T00:02:00+00:00",
+        )
+        self.assertEqual(result["experiment"]["status"], "completed")
+        self.assertEqual(result["experiment"]["readiness"], "resolved")
+
     def test_completed_experiment_cannot_be_resolved_twice(self):
         core = self.make_core()
         experiment_id = self.stage_temporal(core)

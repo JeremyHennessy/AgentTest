@@ -696,6 +696,16 @@ def _review_experiment_readiness(state: dict[str, Any]) -> dict[str, Any]:
             continue
 
         experiment_id = str(experiment.get("id", ""))
+        native_inquiry = experiment.get("native_inquiry")
+        if isinstance(native_inquiry, dict):
+            experiment["readiness"] = "awaiting_native_evidence"
+            experiment["readiness_reason"] = (
+                "A native inquiry owns a dedicated fresh native-evidence "
+                "resolution contract."
+            )
+            preserved_pending.append(experiment_id)
+            continue
+
         if _valid_prediction_contract(experiment):
             experiment["readiness"] = "evidence_ready"
             experiment["readiness_reason"] = (
