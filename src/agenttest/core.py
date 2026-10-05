@@ -900,17 +900,24 @@ class AgentCore:
         expected_relation = native.get("relation")
         if not isinstance(expected_relation, dict):
             raise ValueError("native inquiry relation is unavailable")
+        evidence_floor = native.get("resolution_evidence_floor_episode_count")
+        if type(evidence_floor) is not int or evidence_floor < 0:
+            raise ValueError("native inquiry resolution evidence floor is unavailable")
 
-        episode = next(
+        episodes = loaded.get("episodes", [])
+        episode_index = next(
             (
-                item
-                for item in loaded.get("episodes", [])
+                index
+                for index, item in enumerate(episodes)
                 if str(item.get("id")) == str(evidence_ref)
             ),
             None,
         )
+        episode = episodes[episode_index] if episode_index is not None else None
         if episode is None or episode.get("kind") != "native_inquiry_evidence":
             raise ValueError("native inquiry outcome evidence was not found")
+        if episode_index < evidence_floor:
+            raise ValueError("native inquiry outcome evidence predates the inquiry")
         try:
             payload = json.loads(str(episode.get("content") or ""))
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
@@ -919,6 +926,42 @@ class AgentCore:
         relation = evidence.get("relation")
         if relation != expected_relation:
             raise ValueError("native inquiry outcome relation does not match experiment")
+
+        grounding_observation_refs: set[str] = set()
+        episodes_by_id = {
+            str(item.get("id")): item
+            for item in episodes
+            if item.get("id")
+        }
+        for grounding_ref in native.get("evidence_refs", []):
+            grounding_episode = episodes_by_id.get(str(grounding_ref))
+            if (
+                not isinstance(grounding_episode, dict)
+                or grounding_episode.get("kind") != "native_inquiry_evidence"
+            ):
+                continue
+            try:
+                grounding_payload = json.loads(
+                    str(grounding_episode.get("content") or "")
+                )
+            except (TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise ValueError(
+                    "native inquiry grounding evidence is not valid JSON"
+                ) from exc
+            grounding_evidence = validate_native_evidence_payload(grounding_payload)
+            if grounding_evidence.get("relation") != expected_relation:
+                continue
+            grounding_observation_refs.update(
+                str(ref) for ref in grounding_evidence.get("observation_refs", [])
+            )
+
+        outcome_observation_refs = {
+            str(ref) for ref in evidence.get("observation_refs", [])
+        }
+        if not outcome_observation_refs - grounding_observation_refs:
+            raise ValueError(
+                "native inquiry outcome evidence contains no post-inquiry observation"
+            )
 
         if evidence.get("measurement_kind") != "binary_transition_outcomes":
             raise ValueError(
@@ -1071,6 +1114,9 @@ class AgentCore:
         experiment["cognition_candidate_id"] = None
         experiment["native_inquiry_candidate_id"] = validated["id"]
         experiment["native_inquiry"] = native_inquiry_metadata(validated)
+        experiment["native_inquiry"]["resolution_evidence_floor_episode_count"] = len(
+            state.get("episodes", [])
+        )
         experiment["predicted_observation"] = validated["predicted_observation"]
         experiment["readiness"] = "awaiting_native_evidence"
         specification_update = _trace_experiment_specifications(state)
