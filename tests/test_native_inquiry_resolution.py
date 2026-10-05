@@ -283,6 +283,12 @@ class NativeInquiryResolutionTests(unittest.TestCase):
             experiment["native_inquiry"]["resolution_evidence_floor_episode_count"],
             len(state["episodes"]),
         )
+        self.assertEqual(
+            experiment["native_inquiry"][
+                "resolution_evidence_floor_episode_sequence"
+            ],
+            state["next_episode_index"] - 1,
+        )
 
     def test_grounding_evidence_cannot_resolve_native_inquiry(self):
         core = self.make_core()
@@ -358,6 +364,9 @@ class NativeInquiryResolutionTests(unittest.TestCase):
             if item["id"] == experiment_id
         )
         del experiment["native_inquiry"]["resolution_evidence_floor_episode_count"]
+        del experiment["native_inquiry"][
+            "resolution_evidence_floor_episode_sequence"
+        ]
         core.store.save(state)
         outcome = self.record_outcome(core, confirmations=1, refutations=0)
         before = core.store.load()
@@ -369,6 +378,162 @@ class NativeInquiryResolutionTests(unittest.TestCase):
                 persist=True,
             )
         self.assertEqual(core.store.load(), before)
+
+    def test_sequence_floor_works_when_legacy_count_metadata_is_absent(self):
+        core = self.make_core()
+        experiment_id = self.stage_temporal(core)
+        state = core.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == experiment_id
+        )
+        del experiment["native_inquiry"]["resolution_evidence_floor_episode_count"]
+        core.store.save(state)
+        outcome = self.record_outcome(core, confirmations=1, refutations=0)
+        result = core.resolve_native_inquiry(
+            experiment_id,
+            outcome["evidence_ref"],
+            enabled=True,
+            persist=True,
+        )
+        self.assertEqual(result["experiment"]["status"], "completed")
+
+    def test_fresh_outcome_resolves_after_unrelated_prefix_removal(self):
+        core = self.make_core()
+        core.record_native_evidence(
+            temporal_evidence(feature="unrelated_signal", refs=["u0", "u1"]),
+            enabled=True,
+            persist=True,
+        )
+        grounding = core.record_native_evidence(
+            temporal_evidence(refs=["obs-0", "obs-1"]),
+            enabled=True,
+            persist=True,
+        )
+        stale = core.record_native_evidence(
+            temporal_evidence(refs=["obs-1", "obs-2"]),
+            enabled=True,
+            persist=True,
+        )
+        inquiry = core.propose_native_inquiry(
+            temporal_candidate(grounding["evidence_ref"]),
+            enabled=True,
+            persist=True,
+        )
+        state = core.store.load()
+        floor = inquiry["experiment"]["native_inquiry"][
+            "resolution_evidence_floor_episode_sequence"
+        ]
+        self.assertEqual(floor, 3)
+
+        state["episodes"] = state["episodes"][1:]
+        core.store.save(state)
+        outcome = self.record_outcome(
+            core,
+            confirmations=1,
+            refutations=0,
+            refs=["obs-2", "obs-3"],
+        )
+        self.assertEqual(outcome["evidence_ref"], "E000004")
+        result = core.resolve_native_inquiry(
+            inquiry["experiment"]["id"],
+            outcome["evidence_ref"],
+            enabled=True,
+            persist=True,
+        )
+        self.assertEqual(result["experiment"]["status"], "completed")
+        self.assertEqual(result["experiment"]["outcome"], "supported")
+
+        stale_state = core.store.load()
+        self.assertIn(
+            stale["evidence_ref"],
+            {item["id"] for item in stale_state["episodes"]},
+        )
+
+    def test_pre_inquiry_outcome_stays_stale_after_prefix_removal(self):
+        core = self.make_core()
+        core.record_native_evidence(
+            temporal_evidence(feature="unrelated_signal", refs=["u0", "u1"]),
+            enabled=True,
+            persist=True,
+        )
+        grounding = core.record_native_evidence(
+            temporal_evidence(refs=["obs-0", "obs-1"]),
+            enabled=True,
+            persist=True,
+        )
+        stale = core.record_native_evidence(
+            temporal_evidence(refs=["obs-1", "obs-2"]),
+            enabled=True,
+            persist=True,
+        )
+        inquiry = core.propose_native_inquiry(
+            temporal_candidate(grounding["evidence_ref"]),
+            enabled=True,
+            persist=True,
+        )
+        state = core.store.load()
+        state["episodes"] = state["episodes"][1:]
+        core.store.save(state)
+        before = core.store.load()
+        with self.assertRaisesRegex(ValueError, "predates the inquiry"):
+            core.resolve_native_inquiry(
+                inquiry["experiment"]["id"],
+                stale["evidence_ref"],
+                enabled=True,
+                persist=True,
+            )
+        self.assertEqual(core.store.load(), before)
+
+    def test_legacy_positional_floor_fails_closed_after_episode_archival(self):
+        core = self.make_core()
+        core.record_native_evidence(
+            temporal_evidence(feature="unrelated_signal", refs=["u0", "u1"]),
+            enabled=True,
+            persist=True,
+        )
+        experiment_id = self.stage_temporal(core)
+        state = core.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == experiment_id
+        )
+        del experiment["native_inquiry"][
+            "resolution_evidence_floor_episode_sequence"
+        ]
+        state["episodes"] = state["episodes"][1:]
+        core.store.save(state)
+        outcome = self.record_outcome(core, confirmations=1, refutations=0)
+        before = core.store.load()
+        with self.assertRaisesRegex(ValueError, "legacy native inquiry"):
+            core.resolve_native_inquiry(
+                experiment_id,
+                outcome["evidence_ref"],
+                enabled=True,
+                persist=True,
+            )
+        self.assertEqual(core.store.load(), before)
+
+    def test_legacy_positional_floor_remains_compatible_without_archival(self):
+        core = self.make_core()
+        experiment_id = self.stage_temporal(core)
+        state = core.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == experiment_id
+        )
+        del experiment["native_inquiry"][
+            "resolution_evidence_floor_episode_sequence"
+        ]
+        core.store.save(state)
+        outcome = self.record_outcome(core, confirmations=1, refutations=0)
+        result = core.resolve_native_inquiry(
+            experiment_id,
+            outcome["evidence_ref"],
+            enabled=True,
+            persist=True,
+        )
+        self.assertEqual(result["experiment"]["status"], "completed")
 
     def test_completed_experiment_cannot_be_resolved_twice(self):
         core = self.make_core()
