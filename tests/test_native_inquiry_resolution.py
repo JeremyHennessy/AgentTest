@@ -130,13 +130,14 @@ class NativeInquiryResolutionTests(unittest.TestCase):
         confirmations: int,
         refutations: int,
         feature: str = "slow_signal",
+        refs: list[str] | None = None,
     ):
         return core.record_native_evidence(
             temporal_evidence(
                 feature=feature,
                 confirmations=confirmations,
                 refutations=refutations,
-                refs=["obs-2", "obs-3"],
+                refs=refs or ["obs-2", "obs-3"],
             ),
             enabled=True,
             persist=True,
@@ -264,6 +265,105 @@ class NativeInquiryResolutionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             core.resolve_native_inquiry(
                 inquiry["experiment"]["id"],
+                outcome["evidence_ref"],
+                enabled=True,
+                persist=True,
+            )
+        self.assertEqual(core.store.load(), before)
+
+    def test_native_inquiry_records_resolution_evidence_floor(self):
+        core = self.make_core()
+        experiment_id = self.stage_temporal(core)
+        state = core.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == experiment_id
+        )
+        self.assertEqual(
+            experiment["native_inquiry"]["resolution_evidence_floor_episode_count"],
+            len(state["episodes"]),
+        )
+
+    def test_grounding_evidence_cannot_resolve_native_inquiry(self):
+        core = self.make_core()
+        experiment_id = self.stage_temporal(core)
+        state = core.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == experiment_id
+        )
+        grounding_ref = experiment["native_inquiry"]["evidence_refs"][0]
+        before = core.store.load()
+        with self.assertRaisesRegex(ValueError, "predates the inquiry"):
+            core.resolve_native_inquiry(
+                experiment_id,
+                grounding_ref,
+                enabled=True,
+                persist=True,
+            )
+        self.assertEqual(core.store.load(), before)
+
+    def test_matching_evidence_recorded_before_inquiry_cannot_resolve(self):
+        core = self.make_core()
+        grounding = core.record_native_evidence(
+            temporal_evidence(refs=["obs-0", "obs-1"]),
+            enabled=True,
+            persist=True,
+        )
+        stale = core.record_native_evidence(
+            temporal_evidence(refs=["obs-1", "obs-2"]),
+            enabled=True,
+            persist=True,
+        )
+        inquiry = core.propose_native_inquiry(
+            temporal_candidate(grounding["evidence_ref"]),
+            enabled=True,
+            persist=True,
+        )
+        before = core.store.load()
+        with self.assertRaisesRegex(ValueError, "predates the inquiry"):
+            core.resolve_native_inquiry(
+                inquiry["experiment"]["id"],
+                stale["evidence_ref"],
+                enabled=True,
+                persist=True,
+            )
+        self.assertEqual(core.store.load(), before)
+
+    def test_later_duplicate_grounding_observations_cannot_resolve(self):
+        core = self.make_core()
+        experiment_id = self.stage_temporal(core)
+        duplicate = self.record_outcome(
+            core,
+            confirmations=1,
+            refutations=0,
+            refs=["obs-1", "obs-2"],
+        )
+        before = core.store.load()
+        with self.assertRaisesRegex(ValueError, "no post-inquiry observation"):
+            core.resolve_native_inquiry(
+                experiment_id,
+                duplicate["evidence_ref"],
+                enabled=True,
+                persist=True,
+            )
+        self.assertEqual(core.store.load(), before)
+
+    def test_missing_resolution_evidence_floor_fails_closed(self):
+        core = self.make_core()
+        experiment_id = self.stage_temporal(core)
+        state = core.store.load()
+        experiment = next(
+            item for item in state["experiments"]
+            if item["id"] == experiment_id
+        )
+        del experiment["native_inquiry"]["resolution_evidence_floor_episode_count"]
+        core.store.save(state)
+        outcome = self.record_outcome(core, confirmations=1, refutations=0)
+        before = core.store.load()
+        with self.assertRaisesRegex(ValueError, "evidence floor is unavailable"):
+            core.resolve_native_inquiry(
+                experiment_id,
                 outcome["evidence_ref"],
                 enabled=True,
                 persist=True,
