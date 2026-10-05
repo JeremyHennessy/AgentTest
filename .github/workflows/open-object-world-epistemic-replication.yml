@@ -1,0 +1,47 @@
+name: open-object-world-epistemic-replication
+
+on:
+  pull_request:
+    paths:
+      - "scripts/open_object_world_epistemic_replication.py"
+      - "tests/test_open_object_world_epistemic_replication.py"
+      - ".github/workflows/open-object-world-epistemic-replication.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run replication protocol tests
+        env:
+          PYTHONPATH: src:experiments:scripts
+        run: python -m unittest tests.test_open_object_world_epistemic_replication -v
+      - name: Run dense frozen-policy replication
+        env:
+          PYTHONPATH: src:experiments:scripts
+        run: |
+          mkdir -p artifacts
+          python scripts/open_object_world_epistemic_replication.py > artifacts/open-object-world-epistemic-replication.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/open-object-world-epistemic-replication.json").read_text())
+          print(json.dumps(report["summary"], sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: open-object-world-epistemic-replication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/open-object-world-epistemic-replication.json
+          if-no-files-found: error
+          retention-days: 30
