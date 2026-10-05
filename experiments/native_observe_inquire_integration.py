@@ -282,14 +282,19 @@ class _MemoryStore:
         self.state = deepcopy(state)
 
 
-def _candidate_id(manifest_hash: str, publication: dict[str, Any]) -> str:
+def _candidate_id(
+    source_id: str,
+    manifest_hash: str,
+    publication: dict[str, Any],
+) -> str:
     candidate = publication["selected_temporal_candidate"]
+    source_hash = hashlib.sha256(source_id.encode("utf-8")).hexdigest()
     publication_hash = _canonical_hash(publication)
     feature_hash = hashlib.sha256(candidate["feature"].encode("utf-8")).hexdigest()
     relation = "same" if candidate["relation"] == "same_next_observation" else "change"
     return (
-        f"NIC:integration:{manifest_hash[:12]}:{publication_hash[:12]}:"
-        f"{feature_hash[:12]}:{relation}"
+        f"NIC:integration:{source_hash[:10]}:{manifest_hash[:10]}:"
+        f"{publication_hash[:10]}:{feature_hash[:10]}:{relation}"
     )
 
 
@@ -319,7 +324,9 @@ def stage_publication_inquiry(
         checked_policy,
     )
     manifest_hash = _canonical_hash(checked_manifest)
-    candidate_id = _candidate_id(manifest_hash, checked_publication)
+    source_id = checked_manifest["source_id"]
+    source_hash = hashlib.sha256(source_id.encode("utf-8")).hexdigest()
+    candidate_id = _candidate_id(source_id, manifest_hash, checked_publication)
     loaded = core.store.load()
 
     existing = next(
@@ -341,19 +348,20 @@ def stage_publication_inquiry(
         }
 
     relation = _relation(checked_publication["selected_temporal_candidate"])
-    source_prefix = f"NIC:integration:{manifest_hash[:12]}:"
+    source_prefix = f"NIC:integration:{source_hash[:10]}:"
     for experiment in loaded.get("experiments", []):
         if experiment.get("status") != "proposed":
             continue
         existing_id = str(experiment.get("native_inquiry_candidate_id") or "")
         native = experiment.get("native_inquiry")
+        existing_relation = native.get("relation") if isinstance(native, dict) else None
         if (
             existing_id.startswith(source_prefix)
-            and isinstance(native, dict)
-            and native.get("relation") == relation
+            and isinstance(existing_relation, dict)
+            and existing_relation.get("feature") == relation["feature"]
         ):
             raise RuntimeError(
-                "active inquiry already owns this cumulative source relation"
+                "active inquiry already owns this cumulative source feature"
             )
 
     memory = _MemoryStore(loaded)
@@ -377,7 +385,6 @@ def stage_publication_inquiry(
     )
 
     stable = candidate["relation"] == "same_next_observation"
-    source_id = checked_manifest["source_id"]
     inquiry = {
         "version": NATIVE_INQUIRY_VERSION,
         "id": candidate_id,
@@ -424,6 +431,7 @@ def stage_publication_inquiry(
     return {
         "status": "staged",
         "candidate_id": candidate_id,
+        "source_identity_hash": source_hash,
         "source_manifest_hash": manifest_hash,
         "publication_hash": _canonical_hash(checked_publication),
         "publication_chain_hash": checked_publication["chain_hash"],
