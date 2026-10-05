@@ -1,0 +1,53 @@
+name: open-object-world-native-bridge
+
+on:
+  pull_request:
+    paths:
+      - "experiments/open_object_world*.py"
+      - "experiments/normalized_inquiry_objectives.py"
+      - "scripts/open_object_world_native_bridge_study.py"
+      - "tests/test_open_object_world_native_bridge.py"
+      - ".github/workflows/open-object-world-native-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run bridge tests
+        env:
+          PYTHONPATH: src:experiments
+        run: python -m unittest tests.test_open_object_world_native_bridge -v
+      - name: Run deterministic copied-Core bridge study
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/open_object_world_native_bridge_study.py > artifacts/open-object-world-native-bridge.json
+          python scripts/open_object_world_native_bridge_study.py > "$RUNNER_TEMP/second.json"
+          cmp artifacts/open-object-world-native-bridge.json "$RUNNER_TEMP/second.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/open-object-world-native-bridge.json").read_text())
+          print(json.dumps(report["summary"], sort_keys=True))
+          for row in report["rows"]:
+              print(json.dumps(row, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: open-object-world-native-bridge-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/open-object-world-native-bridge.json
+          if-no-files-found: error
+          retention-days: 30
