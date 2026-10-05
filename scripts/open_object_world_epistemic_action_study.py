@@ -189,21 +189,65 @@ def main() -> None:
                 }
             )
 
-    top_evaluable = [
-        row["top_inquiry"]
-        for row in rows
-        if row["top_inquiry"]["epistemic_outcome"]["evaluable"]
+    top_cases = [row["top_inquiry"] for row in rows]
+    top_epistemic_evaluable = [
+        row for row in top_cases
+        if row["epistemic_outcome"]["evaluable"]
     ]
+    top_unguided_evaluable = [
+        row for row in top_cases
+        if row["unguided_outcome"]["evaluable"]
+    ]
+    top_reduce_uncertainty = [
+        row for row in top_cases
+        if row["epistemic_selection"]["mode"] == "reduce_action_uncertainty"
+    ]
+    top_seek_disconfirming = [
+        row for row in top_cases
+        if row["epistemic_selection"]["mode"] == "seek_disconfirming_observation"
+    ]
+    top_seek_epistemic_evaluable = [
+        row for row in top_seek_disconfirming
+        if row["epistemic_outcome"]["evaluable"]
+    ]
+    top_seek_unguided_evaluable = [
+        row for row in top_seek_disconfirming
+        if row["unguided_outcome"]["evaluable"]
+    ]
+
     state_cases = [
         row["best_currently_visible_entity_state_inquiry"]
         for row in rows
         if row["best_currently_visible_entity_state_inquiry"] is not None
     ]
-    state_evaluable = [
-        row
-        for row in state_cases
+    state_epistemic_evaluable = [
+        row for row in state_cases
         if row["epistemic_outcome"]["evaluable"]
     ]
+    state_unguided_evaluable = [
+        row for row in state_cases
+        if row["unguided_outcome"]["evaluable"]
+    ]
+    state_seek_disconfirming = [
+        row for row in state_cases
+        if row["epistemic_selection"]["mode"] == "seek_disconfirming_observation"
+    ]
+    state_seek_epistemic_evaluable = [
+        row for row in state_seek_disconfirming
+        if row["epistemic_outcome"]["evaluable"]
+    ]
+    state_seek_unguided_evaluable = [
+        row for row in state_seek_disconfirming
+        if row["unguided_outcome"]["evaluable"]
+    ]
+
+    def rate(cases, side):
+        if not cases:
+            return None
+        return round(
+            sum(bool(row[side]["falsified"]) for row in cases) / len(cases),
+            6,
+        )
 
     report = {
         "study": "open-object-world-epistemic-action-v1",
@@ -215,63 +259,72 @@ def main() -> None:
         "summary": {
             "case_count": len(rows),
             "top_inquiry_features": sorted(
-                {
-                    row["top_inquiry"]["feature"]
-                    for row in rows
-                }
+                {row["top_inquiry"]["feature"] for row in rows}
             ),
-            "top_epistemic_falsification_rate": (
-                round(
-                    sum(
-                        bool(row["epistemic_outcome"]["falsified"])
-                        for row in top_evaluable
-                    )
-                    / len(top_evaluable),
-                    6,
-                )
-                if top_evaluable
-                else None
+            "top_mode_counts": {
+                "reduce_action_uncertainty": len(top_reduce_uncertainty),
+                "seek_disconfirming_observation": len(top_seek_disconfirming),
+            },
+            "top_epistemic_evaluable_count": len(top_epistemic_evaluable),
+            "top_unguided_evaluable_count": len(top_unguided_evaluable),
+            "top_epistemic_falsification_rate": rate(
+                top_epistemic_evaluable,
+                "epistemic_outcome",
             ),
-            "top_unguided_falsification_rate": (
-                round(
-                    sum(
-                        bool(row["unguided_outcome"]["falsified"])
-                        for row in top_evaluable
-                    )
-                    / len(top_evaluable),
-                    6,
-                )
-                if top_evaluable
-                else None
+            "top_unguided_falsification_rate": rate(
+                top_unguided_evaluable,
+                "unguided_outcome",
+            ),
+            "top_seek_disconfirming_case_count": len(top_seek_disconfirming),
+            "top_seek_epistemic_evaluable_count": len(
+                top_seek_epistemic_evaluable
+            ),
+            "top_seek_unguided_evaluable_count": len(
+                top_seek_unguided_evaluable
+            ),
+            "top_seek_epistemic_falsification_rate": rate(
+                top_seek_epistemic_evaluable,
+                "epistemic_outcome",
+            ),
+            "top_seek_unguided_falsification_rate": rate(
+                top_seek_unguided_evaluable,
+                "unguided_outcome",
             ),
             "top_different_from_unguided_count": sum(
                 bool(row["top_inquiry"]["different_from_unguided"])
                 for row in rows
             ),
             "visible_entity_state_case_count": len(state_cases),
-            "entity_state_epistemic_falsification_rate": (
-                round(
-                    sum(
-                        bool(row["epistemic_outcome"]["falsified"])
-                        for row in state_evaluable
-                    )
-                    / len(state_evaluable),
-                    6,
-                )
-                if state_evaluable
-                else None
+            "entity_state_epistemic_evaluable_count": len(
+                state_epistemic_evaluable
             ),
-            "entity_state_unguided_falsification_rate": (
-                round(
-                    sum(
-                        bool(row["unguided_outcome"]["falsified"])
-                        for row in state_evaluable
-                    )
-                    / len(state_evaluable),
-                    6,
-                )
-                if state_evaluable
-                else None
+            "entity_state_unguided_evaluable_count": len(
+                state_unguided_evaluable
+            ),
+            "entity_state_epistemic_falsification_rate": rate(
+                state_epistemic_evaluable,
+                "epistemic_outcome",
+            ),
+            "entity_state_unguided_falsification_rate": rate(
+                state_unguided_evaluable,
+                "unguided_outcome",
+            ),
+            "entity_state_seek_disconfirming_case_count": len(
+                state_seek_disconfirming
+            ),
+            "entity_state_seek_epistemic_evaluable_count": len(
+                state_seek_epistemic_evaluable
+            ),
+            "entity_state_seek_unguided_evaluable_count": len(
+                state_seek_unguided_evaluable
+            ),
+            "entity_state_seek_epistemic_falsification_rate": rate(
+                state_seek_epistemic_evaluable,
+                "epistemic_outcome",
+            ),
+            "entity_state_seek_unguided_falsification_rate": rate(
+                state_seek_unguided_evaluable,
+                "unguided_outcome",
             ),
         },
     }
