@@ -1,0 +1,56 @@
+name: open-object-world-action-association
+
+on:
+  pull_request:
+    paths:
+      - "experiments/open_object_world*.py"
+      - "experiments/action_association_semantics.py"
+      - "experiments/normalized_inquiry_objectives.py"
+      - "scripts/open_object_world_action_association_study.py"
+      - "tests/test_open_object_world_action_association.py"
+      - ".github/workflows/open-object-world-action-association.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run public association tests
+        env:
+          PYTHONPATH: src:experiments
+        run: python -m unittest tests.test_open_object_world_action_association -v
+      - name: Run prospective association study
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          mkdir -p artifacts
+          python scripts/open_object_world_action_association_study.py > artifacts/open-object-world-action-association.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/open-object-world-action-association.json").read_text())
+          print(json.dumps(report["summary"], sort_keys=True))
+          for row in report["rows"]:
+              print(json.dumps({
+                  "seed": row["seed"],
+                  "top_12": row["top_12"],
+                  "entity_state_associations": row["entity_state_associations"],
+              }, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: open-object-world-action-association-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/open-object-world-action-association.json
+          if-no-files-found: error
+          retention-days: 30
