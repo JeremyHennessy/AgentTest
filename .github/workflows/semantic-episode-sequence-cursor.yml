@@ -60,10 +60,21 @@ jobs:
               "docs/semantic-episode-sequence-cursor.md",
               ".github/workflows/semantic-episode-sequence-cursor.yml",
           }
-          changed=set(subprocess.check_output(
-              ["git","-C","candidate","diff","--name-only","d1a4046b0941788ddf642cf64a279380f08ed1a6","HEAD"],
-              text=True,
-          ).splitlines())
+          def tree(folder):
+              rows=subprocess.check_output(
+                  ["git","-C",folder,"ls-tree","-r","HEAD"],
+                  text=True,
+              ).splitlines()
+              return {
+                  row.split("\\t",1)[1]: row.split()[2]
+                  for row in rows
+              }
+          before, after = tree("baseline"), tree("candidate")
+          changed={
+              path
+              for path in set(before) | set(after)
+              if before.get(path) != after.get(path)
+          }
           if changed != allowed:
               raise SystemExit("unexpected candidate scope: " + repr(changed ^ allowed))
           PY
