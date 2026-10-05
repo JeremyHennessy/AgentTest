@@ -51,10 +51,19 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--climate-identifier", required=True)
+    parser.add_argument("--station-name", required=True)
     args = parser.parse_args()
 
     with Path(args.input).open(newline="") as handle:
         rows = list(csv.DictReader(handle))
+    rows = [
+        row for row in rows
+        if str(row.get("CLIMATE_IDENTIFIER") or "") == args.climate_identifier
+        and str(row.get("STATION_NAME") or "") == args.station_name
+    ]
+    if not rows:
+        raise ValueError("no observations matched the pinned station provenance")
     observations = [normalize(row) for row in rows]
     observations.sort(key=lambda item: item["utc_date"])
     ids = [item["observation_id"] for item in observations]
