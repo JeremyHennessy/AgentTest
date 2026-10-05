@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: native-observe-inquire-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   PRODUCTION_BASE: eb906904d4a30d7427075987f928e0b97699cfe3
   LIVE_STATE_SHA: 5654837b64bf3d362050fae2990c27115075e856
