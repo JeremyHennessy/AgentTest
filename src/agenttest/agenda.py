@@ -8,6 +8,7 @@ from .learning import (
     empirical_family_saturation,
 )
 from .semantic import question_has_active_experiment_path
+from .public_observation import SOURCE as PUBLIC_OBSERVATION_SOURCE, registry_eligible
 
 AGENDA_VERSION = "persistent-multithread-agenda-v2"
 AGENDA_MAX_THREADS = 4
@@ -336,6 +337,11 @@ def _eligible_questions(
             continue
         question_id = str(question["id"])
         source = str(question.get("source") or "")
+        # A retained thread or source label cannot preserve expired eligibility.
+        if source == PUBLIC_OBSERVATION_SOURCE:
+            if registry_eligible(state, question):
+                eligible.append(question)
+            continue
         if (
             question_id == legacy_question_id
             or question_id in existing_question_ids

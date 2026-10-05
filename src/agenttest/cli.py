@@ -68,6 +68,10 @@ def main() -> None:
         ),
     )
     cycle.add_argument("--root", default=".", help="Repository root for self-observation.")
+    cycle.add_argument(
+        "--copy-public-observations", default=None,
+        help="Research only: ingest one reviewed public observation bundle on an explicit copied store.",
+    )
 
     interact = sub.add_parser(
         "interact",
@@ -122,6 +126,8 @@ def main() -> None:
     core = AgentCore(store)
 
     if args.command == "cycle":
+        if args.copy_public_observations is not None and Path(args.state).resolve() == Path("state/organism.json").resolve():
+            parser.error("--copy-public-observations requires an explicit copied --state")
         observation = repository_snapshot(args.root) if args.self_observe else None
         _print(
             core.cycle(
@@ -131,6 +137,7 @@ def main() -> None:
                 strict_experiment_admission=args.grounded_experiments_only,
                 action_lab=args.action_lab,
                 planning_lab=args.planning_lab,
+                copy_public_observations=args.copy_public_observations,
             )
         )
     elif args.command == "interact":

@@ -28,6 +28,15 @@ from .native_inquiry import (
 )
 from .perception import COMPARABLE_FIELDS, changed_fields
 from .planning_lab import step_planning_lab
+from .public_observation import (
+    SOURCE as PUBLIC_OBSERVATION_SOURCE,
+    admit as admit_public_observation,
+    allocate_selected as allocate_public_observation,
+    bind_evidence as bind_public_evidence,
+    ingest as ingest_public_observation,
+    load_bundle as load_public_bundle,
+    registry_eligible as public_registry_eligible,
+)
 from .semantic import (
     actionable_open_questions,
     consolidate_inquiry_families,
@@ -1196,10 +1205,18 @@ class AgentCore:
         _phase42_counterfactual: bool = False,
         _withhold_current_prediction_evidence: bool = False,
         _now_override: str | None = None,
+        copy_public_observations: str | Path | None = None,
     ) -> dict[str, Any]:
         if action_lab and planning_lab:
             raise ValueError("action_lab and planning_lab are mutually exclusive")
         state = self.store.load()
+        public_trace = None
+        if copy_public_observations is not None:
+            if self.store.path.resolve() == Path("state/organism.json").resolve():
+                raise ValueError("public observation inlet requires an explicit copied store")
+            public_trace = ingest_public_observation(
+                state, load_public_bundle(copy_public_observations),
+            )
         state["cycles"] += 1
         state["generation"] = state["cycles"]
         cycle = state["cycles"]
@@ -1317,6 +1334,17 @@ class AgentCore:
                 ],
             )
 
+        if public_trace is not None:
+            for pair in public_trace["pairs"]:
+                self._remember(
+                    state, cycle, now, "native_inquiry_evidence",
+                    json.dumps(pair["evidence"], sort_keys=True),
+                    ["native_evidence", pair["relation"], pair["evidence"]["relation"]["feature"]],
+                )
+                bind_public_evidence(
+                    state, public_trace["source"], pair["pair_id"],
+                    pair["relation"], state["episodes"][-1]["id"],
+                )
         semantic_update = consolidate_semantic_memory(state)
         world_update = consolidate_world(state)
         empirical_learning_update = consolidate_empirical_learning(state)
@@ -1352,6 +1380,16 @@ class AgentCore:
             strict_question_attention=strict_question_attention,
         )
         legacy_question = self._upsert_question(state, legacy_question_text)
+        if public_trace is not None:
+            contracts = admit_public_observation(
+                state, public_trace["source"], self._upsert_question,
+            )
+            public_trace["contracts"] = contracts
+            public_trace["eligible_families"] = [
+                q["public_observation_family"] for q in state["questions"]
+                if q.get("source") == PUBLIC_OBSERVATION_SOURCE
+                and public_registry_eligible(state, q)
+            ]
         if intention.get("kind") == "explore_empirical_frontier":
             legacy_question.setdefault("source", "empirical_frontier_transfer")
             legacy_question["source_learning_family"] = intention.get("target")
@@ -1447,6 +1485,7 @@ class AgentCore:
                         _phase42_counterfactual=True,
                         _withhold_current_prediction_evidence=True,
                         _now_override=now,
+                        copy_public_observations=copy_public_observations,
                     )
                 counterfactual_decision = counterfactual_result.get(
                     "agenda_decision"
@@ -1549,15 +1588,29 @@ class AgentCore:
         question["last_selected_cycle"] = cycle
         inquiry_update = consolidate_inquiry_families(state)
 
-        experiment = self._select_or_propose_experiment(
-            state,
-            question,
-            intention,
-            thought,
-            require_grounded=(
-                strict_experiment_admission and observation is not None
-            ),
-        )
+        if question.get("source") == PUBLIC_OBSERVATION_SOURCE:
+            # Never allow a generic intention's target to substitute an
+            # unrelated experiment for the actually selected native question.
+            experiment = allocate_public_observation(state, question, agenda_decision, now)
+        else:
+            experiment = self._select_or_propose_experiment(
+                state,
+                question,
+                intention,
+                thought,
+                require_grounded=(
+                    strict_experiment_admission and observation is not None
+                ),
+            )
+        if public_trace is not None:
+            public_trace["selected_question_id"] = question["id"]
+            public_trace["native_selected"] = question.get("source") == PUBLIC_OBSERVATION_SOURCE
+            public_trace["allocation_id"] = experiment["id"] if public_trace["native_selected"] and experiment else None
+            public_trace["selection_status"] = (
+                "selected" if public_trace["native_selected"] else
+                "ordinary_defer" if public_trace["eligible_families"] else
+                "exhausted" if public_trace["contracts"] else "zero_pairs_stop"
+            )
 
         self_model_calibration = _calibrate_self_model(state)
         state["self_model"]["last_updated_cycle"] = cycle
@@ -1607,7 +1660,7 @@ class AgentCore:
             "metrics": state["metrics"],
         }
         self.store.append_journal(event)
-        return {
+        result = {
             "cycle": cycle,
             "surprise": surprise,
             "prediction_result": prediction_result,
@@ -1638,6 +1691,9 @@ class AgentCore:
             "prediction_experiment": prediction_experiment,
             "metrics": state["metrics"],
         }
+        if public_trace is not None:
+            result["public_observation_trace"] = public_trace
+        return result
 
     def record_outcome(
         self,
@@ -2097,6 +2153,10 @@ class AgentCore:
         *,
         require_grounded: bool = False,
     ) -> dict[str, Any] | None:
+        if question.get("source") == PUBLIC_OBSERVATION_SOURCE:
+            # Native allocation belongs exclusively to the actual post-agenda
+            # hook. A generic intention or thought cannot authorize it here.
+            return None
         if intention["kind"] == "specify_experiment" and intention.get("target"):
             match = next(
                 (
