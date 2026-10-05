@@ -1,0 +1,99 @@
+name: native-observe-inquire-integration
+
+on:
+  push:
+    branches:
+      - experiment/native-observe-inquire-integration
+    paths:
+      - experiments/native_observe_inquire_integration.py
+      - tests/test_native_observe_inquire_integration.py
+      - scripts/native_observe_inquire_integration_study.py
+      - docs/native-observe-inquire-integration-boundary.md
+      - .github/workflows/native-observe-inquire-integration.yml
+
+permissions:
+  contents: read
+
+env:
+  PRODUCTION_BASE: eb906904d4a30d7427075987f928e0b97699cfe3
+  LIVE_STATE_SHA: 5654837b64bf3d362050fae2990c27115075e856
+
+jobs:
+  copied-live-state:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify exact head and bounded branch scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git cat-file -e "$PRODUCTION_BASE^{commit}"
+          python - <<'PY'
+          import os
+          import subprocess
+
+          allowed = {
+              "experiments/native_observe_inquire_integration.py",
+              "tests/test_native_observe_inquire_integration.py",
+              "scripts/native_observe_inquire_integration_study.py",
+              "docs/native-observe-inquire-integration-boundary.md",
+              ".github/workflows/native-observe-inquire-integration.yml",
+          }
+          base = os.environ["PRODUCTION_BASE"]
+          changed = set(
+              subprocess.check_output(
+                  ["git", "diff", "--name-only", f"{base}...HEAD"],
+                  text=True,
+              ).splitlines()
+          )
+          if changed != allowed:
+              raise SystemExit(
+                  "unexpected integration branch scope: "
+                  + ", ".join(sorted(changed ^ allowed))
+              )
+          PY
+
+      - name: Run focused integration tests
+        shell: bash
+        env:
+          PYTHONPATH: src:experiments
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python -m unittest tests.test_native_observe_inquire_integration -v
+
+      - name: Materialize immutable live-state copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1             https://github.com/JeremyHennessy/AgentTest.git             "$LIVE_STATE_SHA"
+          git show "$LIVE_STATE_SHA:state/organism.json"             > "$RUNNER_TEMP/organism.json"
+          mkdir -p artifacts
+          sha256sum "$RUNNER_TEMP/organism.json"             > artifacts/live-state-source.sha256
+          printf '%s\n' "$LIVE_STATE_SHA"             > artifacts/live-state-source.txt
+
+      - name: Run copied ordinary-cycle handoff study
+        shell: bash
+        env:
+          PYTHONPATH: src:experiments:scripts
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python scripts/native_observe_inquire_integration_study.py             --state "$RUNNER_TEMP/organism.json"             --live-state-sha "$LIVE_STATE_SHA"             --output artifacts/integration-study.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-observe-inquire-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: error
