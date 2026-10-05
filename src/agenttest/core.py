@@ -1485,6 +1485,7 @@ class AgentCore:
                         _phase42_counterfactual=True,
                         _withhold_current_prediction_evidence=True,
                         _now_override=now,
+                        copy_public_observations=copy_public_observations,
                     )
                 counterfactual_decision = counterfactual_result.get(
                     "agenda_decision"

@@ -184,6 +184,81 @@ def features(payload):
     return result
 
 
+def validate_source(source, source_id):
+    """One raw schema/adjacency boundary for accepted and prospective prefixes."""
+    _fields(source, "descriptor acquisition_manifest raw_records pair_evidence")
+    if digest(source["descriptor"]) != source_id:
+        raise ValueError("public source descriptor")
+    raw_records = source["raw_records"]
+    if not isinstance(raw_records, list) or not raw_records:
+        raise ValueError("public source needs a nonempty record prefix")
+    bindings = source["pair_evidence"]
+    if not isinstance(bindings, dict):
+        raise ValueError("public pair bindings")
+    for pair_id, relations in bindings.items():
+        _hash(pair_id)
+        if not isinstance(relations, dict) or not set(relations) <= set(RELATIONS):
+            raise ValueError("public pair relation bindings")
+        for ref in relations.values():
+            _id(ref)
+    records = []
+    seen = set()
+    for index, raw in enumerate(raw_records, 1):
+        _, _, record = validate_bundle({"descriptor": source["descriptor"],
+                                       "acquisition_manifest": source["acquisition_manifest"],
+                                       "raw_record": raw})
+        if record["sequence"] != index:
+            raise ValueError("public noncontiguous sequence")
+        observation_id = record["payload"]["observation_id"]
+        if observation_id in seen:
+            raise ValueError("public repeated observation identity")
+        if records:
+            previous = records[-1]
+            if record["previous_record_sha256"] != previous["record_sha256"] or _time(record["observed_at"]) < _time(previous["observed_at"]):
+                raise ValueError("public broken chain/order")
+            if record["payload"]["cycle"] <= previous["payload"]["cycle"]:
+                raise ValueError("public world cycle must strictly increase")
+        seen.add(observation_id)
+        records.append(record)
+    return records
+
+
+def _validated_registry(registry):
+    _fields(registry, "version sources families versions")
+    if registry["version"] != POLICY:
+        raise ValueError("public registry policy")
+    for name in ("sources", "families", "versions"):
+        if not isinstance(registry[name], dict):
+            raise ValueError("public registry mapping")
+    if len(registry["sources"]) > 2:
+        raise ValueError("public source bound")
+    identities = set()
+    for source_id, source in registry["sources"].items():
+        _hash(source_id)
+        validate_source(source, source_id)
+        identity = (source["descriptor"]["source_id"], source["descriptor"]["world_instance_id"])
+        if identity in identities:
+            raise ValueError("public reviewed source descriptor conflict")
+        identities.add(identity)
+    for version_id, contract in registry["versions"].items():
+        if not isinstance(contract, dict) or not all(isinstance(contract.get(name), str) for name in ("policy", "version_id", "source_id", "family_id")):
+            raise ValueError("public retained contract identifiers")
+        if contract["policy"] != POLICY or contract["version_id"] != version_id or contract["source_id"] not in registry["sources"]:
+            raise ValueError("public retained contract version")
+        if not isinstance(contract.get("pair_ids"), list) or version_id != "POV:"+digest([contract.get("family_id"),contract["pair_ids"]])[:48]:
+            raise ValueError("public noncanonical retained version")
+    for family_id, entry in registry["families"].items():
+        _id(family_id)
+        _fields(entry, "question_id version_id source_id")
+        _id(entry["question_id"])
+        if not all(isinstance(entry[name], str) for name in ("version_id", "source_id")):
+            raise ValueError("public retained family identifiers")
+        contract = registry["versions"].get(entry["version_id"])
+        if not contract or contract.get("family_id") != family_id or contract.get("source_id") != entry["source_id"]:
+            raise ValueError("public retained family contract")
+    return registry
+
+
 def _pairs(source):
     result = {}
     records = [decode(raw) for raw in source["raw_records"]]
@@ -206,8 +281,7 @@ def ingest(state, bundle):
     descriptor, manifest, record = validate_bundle(bundle)
     source_id = digest(descriptor)
     registry = state.get(KEY, {"version": POLICY, "sources": {}, "families": {}, "versions": {}})
-    if registry.get("version") != POLICY:
-        raise ValueError("public registry policy")
+    _validated_registry(registry)
     sources = registry["sources"]
     for known_id, known in sources.items():
         known_descriptor = known["descriptor"]
@@ -225,17 +299,10 @@ def ingest(state, bundle):
         return {"status": "idempotent_replay", "source": source_id, "pairs": []}
     if sequence != len(records)+1:
         raise ValueError("public noncontiguous sequence")
-    if records:
-        previous = decode(records[-1])
-        if record["previous_record_sha256"] != previous["record_sha256"] or _time(record["observed_at"]) < _time(previous["observed_at"]):
-            raise ValueError("public broken chain/order")
-        if record["payload"]["cycle"] <= previous["payload"]["cycle"]:
-            raise ValueError("public world cycle must strictly increase")
-        if record["payload"]["cycle"] > previous["payload"]["cycle"] and record["payload"]["observation_id"] in {decode(raw)["payload"]["observation_id"] for raw in records}:
-            raise ValueError("public repeated observation identity")
     if not existing and len(sources) >= 2:
         raise ValueError("public source bound")
     records.append(bundle["raw_record"])
+    validate_source(source, source_id)
     source_pairs = _pairs(source)
     new_pairs = []
     for pair_id, pair in source_pairs.items():
@@ -261,17 +328,8 @@ def bind_evidence(state, source_id, pair_id, relation, evidence_ref):
 
 def compile_candidates(state, source_id):
     """Pure compiler: raw lookup, internal pairs and exact episode contents must agree."""
-    source = state[KEY]["sources"][source_id]
-    if digest(source["descriptor"]) != source_id:
-        raise ValueError("public compiler descriptor")
-    for index, raw in enumerate(source["raw_records"], 1):
-        _, _, record = validate_bundle({"descriptor": source["descriptor"], "acquisition_manifest": source["acquisition_manifest"], "raw_record": raw})
-        if record["sequence"] != index or (index > 1 and record["previous_record_sha256"] != decode(source["raw_records"][index-2])["record_sha256"]):
-            raise ValueError("public compiler chain")
-        if index > 1:
-            previous = decode(source["raw_records"][index-2])
-            if record["payload"]["cycle"] <= previous["payload"]["cycle"] or _time(record["observed_at"]) < _time(previous["observed_at"]):
-                raise ValueError("public compiler cycle/time order")
+    source = _validated_registry(state[KEY])["sources"][source_id]
+    validate_source(source, source_id)
     grouped = {}
     pairs = _pairs(source)
     episodes = {episode.get("id"): episode for episode in state.get("episodes", [])}
@@ -345,16 +403,16 @@ def admit(state, source_id, upsert_question):
 
 
 def validated_contract(state, question):
-    if question.get("source") != SOURCE or question.get("status") != "open":
-        return None
-    registry = state.get(KEY, {})
-    family = question.get("public_observation_family")
-    entry = registry.get("families", {}).get(family)
-    if not entry or entry.get("question_id") != question.get("id"):
-        return None
     try:
+        if not isinstance(question, dict) or question.get("source") != SOURCE or question.get("status") != "open":
+            return None
+        registry = _validated_registry(state.get(KEY, {}))
+        family = question.get("public_observation_family")
+        entry = registry["families"].get(family)
+        if not entry or entry["question_id"] != question.get("id"):
+            return None
         contract = next((c for c in compile_candidates(state,entry["source_id"]) if c["family_id"] == family),None)
-        if not contract or contract["status"] != "prospective" or registry["versions"].get(entry["version_id"]) != contract or question.get("source_evidence_refs") != contract["candidate"]["evidence_refs"] or question.get("text") != contract["candidate"]["question"]:
+        if not contract or contract["status"] != "prospective" or entry["version_id"] != contract["version_id"] or registry["versions"].get(entry["version_id"]) != contract or question.get("source_evidence_refs") != contract["candidate"]["evidence_refs"] or question.get("text") != contract["candidate"]["question"]:
             return None
         return contract
     except (KeyError, ValueError, TypeError, StopIteration):
@@ -370,15 +428,14 @@ def prospective_outcome(state, contract, raw_before, raw_after):
     source = state[KEY]["sources"][contract["source_id"]]
     if contract not in compile_candidates(state, contract["source_id"]):
         raise ValueError("public outcome contract is not internally compiled")
-    records=[]
-    for raw in (raw_before,raw_after):
-        _,_,record=validate_bundle({"descriptor":source["descriptor"],"acquisition_manifest":source["acquisition_manifest"],"raw_record":raw})
-        records.append(record)
-    before,after=records
+    if raw_before != source["raw_records"][-1]:
+        raise ValueError("public outcome floor is not the retained raw record")
+    prospective = deepcopy(source)
+    prospective["raw_records"].append(raw_after)
+    records = validate_source(prospective, contract["source_id"])
+    before,after=records[-2:]
     if before["sequence"] != contract["outcome_floor_sequence"] or before["record_sha256"] != contract["outcome_floor_record_hash"] or after["sequence"] != before["sequence"]+1 or after["previous_record_sha256"] != before["record_sha256"]:
         raise ValueError("public outcome is not subsequent adjacent evidence")
-    if after["payload"]["cycle"] <= before["payload"]["cycle"]:
-        return None
     feature=tuple(contract["feature_tuple"]); left,right=features(before["payload"]),features(after["payload"])
     if feature not in left or feature not in right:
         return None

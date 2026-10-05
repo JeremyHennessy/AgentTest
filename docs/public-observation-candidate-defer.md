@@ -4,6 +4,35 @@ Research only; do not merge, activate a live inlet or grant challenge actions.
 Result: public observations produced native candidates and validated eligibility,
 then normal attention deferred. This is not native selection or new-world entry.
 
+## Boundary correction and historical provenance limitation
+
+Independent review reproduced the original valid-stream outcomes and identified
+four bridge defects: prospective checks omitted duplicate observation IDs and
+backward acquisition time; retained compilation omitted ID uniqueness; eligibility
+accepted unsupported policy/noncanonical version aliases and raised incidental
+exceptions for malformed registry shapes; full-cycle counterfactual replay omitted
+the optional public input. New regression tests reproduced failures before repair.
+
+One shared nonempty source/schema/adjacency validator now checks ingestion,
+compilation, prospective prefixes and retained-registry validation. Current policy,
+canonical stored version keys and exact compiled entry version identity are required.
+Malformed retained registries decline eligibility without mutation; ingestion
+rejects rather than repairing/resealing evidence. The counterfactual forwards the
+same public input, preserving the ordinary withheld-prediction diagnostic.
+No scoring, admission timing, fixture bytes or attention policy changes are made.
+
+The historical execution-freeze file remains unchanged as evidence. Its listed
+working-file hashes do not establish the old packaged Git bytes: two files match
+after CRLF-to-LF normalization and three do not. The exact old pre-commit working
+bytes for those three files are not preserved, so their normalization history is
+unverified. Git core.autocrlf is true locally, but this alone does not explain the
+discrepancy. The published old Git blobs are independently verified; the old
+working-byte proof is withdrawn. Corrected validation uses a preserved canonical
+Git archive extracted into a separate runtime directory, frozen before authoritative
+tests with each file's Git blob and byte SHA256 identities. Results and new freeze
+are supplied separately; the historical results below remain limited historical
+observations, not proof of the corrected candidate.
+
 ## Protocol frozen before results
 
 Hypothesis: a reviewed public record stream can be interpreted internally into

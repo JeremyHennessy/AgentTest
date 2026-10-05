@@ -35,13 +35,14 @@ def changed(original, mutate):
     return result
 
 
-def variant_stream(mutate):
+def variant_stream(mutate, descriptor_mutate=lambda descriptor: None):
     """One named fixture mutation; reconstruct integrity without choosing a question."""
     import hashlib
     templates=[bundle(f'synthetic-{i}.json') for i in range(1,4)]
     records=[public.decode(t['raw_record']) for t in templates]
     mutate(records)
     descriptor=deepcopy(templates[0]['descriptor'])
+    descriptor_mutate(descriptor)
     descriptor['genesis_payload_sha256']=public.digest(records[0]['payload'])
     prior=None; raw=[]
     for r in records:
@@ -220,6 +221,82 @@ class PublicObservationTests(unittest.TestCase):
         with patch('agenttest.core.load_public_bundle',side_effect=AssertionError('off read')):
             result=AgentCore(self.store).cycle('autonomous heartbeat',self.observation,strict_experiment_admission=True,planning_lab=True,_now_override=CLOCK)
         self.assertNotIn(public.KEY,self.store.load()); self.assertNotIn('public_observation_trace',result)
+
+    def test_outcome_rejects_repeated_identity_and_backward_time_without_mutation(self):
+        for name, mutate in [
+            ('duplicate_previous', lambda rows: rows[2]['payload'].update(observation_id=rows[1]['payload']['observation_id'])),
+            ('duplicate_earlier', lambda rows: rows[2]['payload'].update(observation_id=rows[0]['payload']['observation_id'])),
+            ('backward_time', lambda rows: rows[2].update(observed_at='2026-10-05T21:16:50Z')),
+            ('repeated_cycle', lambda rows: rows[2]['payload'].update(cycle=rows[1]['payload']['cycle'])),
+        ]:
+            with self.subTest(name=name):
+                self.setUp()
+                stream=variant_stream(mutate,lambda descriptor: descriptor.update(acquisition_start='2026-10-05T21:16:50Z'))
+                self.cycle(stream[0]); self.cycle(stream[1]); state=self.store.load()
+                source_id=public.digest(stream[0]['descriptor'])
+                contract=public.compile_candidates(state,source_id)[0]; before=deepcopy(state)
+                with self.assertRaises(ValueError):
+                    public.prospective_outcome(state,contract,stream[1]['raw_record'],stream[2]['raw_record'])
+                self.assertEqual(before,state)
+                self.rejected_without_save(stream[2])
+
+    def test_compiler_rejects_resealed_retained_duplicate_identity_with_new_bindings(self):
+        _,state=self.accepted_two(); source_id=next(iter(state[public.KEY]['sources']))
+        source=state[public.KEY]['sources'][source_id]
+        old_pairs=public._pairs(source); old_bindings=deepcopy(source['pair_evidence'])
+        stream=variant_stream(lambda rows: rows[1]['payload'].update(observation_id=rows[0]['payload']['observation_id']))
+        source['acquisition_manifest']=stream[0]['acquisition_manifest']
+        source['raw_records']=[row['raw_record'] for row in stream[:2]]
+        new_pairs=public._pairs(source)
+        source['pair_evidence']={new_id:old_bindings[next(old_id for old_id,old in old_pairs.items() if old['feature']==pair['feature'])] for new_id,pair in new_pairs.items()}
+        before=deepcopy(state)
+        with self.assertRaises(ValueError): public.compile_candidates(state,source_id)
+        for q in state['questions']:
+            if q.get('source')==public.SOURCE: self.assertFalse(public.registry_eligible(state,q))
+        self.assertEqual(before,state)
+
+    def test_retained_policy_version_and_malformed_registry_fail_closed_without_mutation(self):
+        _,original=self.accepted_two(); q=next(q for q in original['questions'] if q.get('source')==public.SOURCE)
+        family=q['public_observation_family']; source_id=original[public.KEY]['families'][family]['source_id']
+        def alias_version(registry):
+            entry=registry['families'][family]; registry['versions']['noncanonical']=registry['versions'][entry['version_id']]
+            entry['version_id']='noncanonical'
+        mutations=[lambda r:r.update(version='unsupported-policy'),alias_version,
+                   lambda r:r['sources'][source_id].update(raw_records=[]),
+                   lambda r:r.update(families=[]),lambda r:r['families'].update({family:[]}),
+                   lambda r:r.update(sources=[]),lambda r:r.update(versions=[]),
+                   lambda r:r['sources'][source_id].update(pair_evidence=[])]
+        for mutate in mutations:
+            with self.subTest(mutation=mutate):
+                state=deepcopy(original); mutate(state[public.KEY]); before=deepcopy(state)
+                self.assertFalse(public.registry_eligible(state,q)); self.assertEqual(before,state)
+                with self.assertRaises(ValueError): public.ingest(state,bundle('synthetic-1.json'))
+                self.assertEqual(before,state)
+
+    def test_counterfactual_replay_preserves_frozen_public_input_and_cycle_flags(self):
+        import agenttest.core as core_module
+        self.cycle(bundle('synthetic-1.json'))
+        original_cycle=AgentCore.cycle; original_agenda=core_module.update_agenda
+        calls=[]; ingestions=[]
+        def cycle_spy(core,*args,**kwargs):
+            calls.append(deepcopy(kwargs)); return original_cycle(core,*args,**kwargs)
+        def agenda_spy(*args,**kwargs):
+            decision=original_agenda(*args,**kwargs)
+            decision['priority_change_supported_by_new_evidence']=True
+            return decision
+        original_ingest=public.ingest
+        def ingest_spy(state,value):
+            trace=original_ingest(state,value); ingestions.append((deepcopy(value),deepcopy(trace)))
+            return trace
+        with patch.object(AgentCore,'cycle',cycle_spy), patch.object(core_module,'update_agenda',agenda_spy), patch.object(core_module,'ingest_public_observation',ingest_spy):
+            result=self.cycle(bundle('synthetic-2.json'))
+        self.assertEqual(len(calls),2); self.assertTrue(calls[1]['_phase42_counterfactual'])
+        self.assertEqual(calls[0]['copy_public_observations'],calls[1].get('copy_public_observations'))
+        self.assertEqual(len(ingestions),2); self.assertEqual(ingestions[0],ingestions[1])
+        for flag in ('strict_experiment_admission','planning_lab','_now_override'):
+            self.assertEqual(calls[0][flag],calls[1][flag])
+        self.assertTrue(calls[1]['_withhold_current_prediction_evidence'])
+        self.assertIsNotNone(result['prediction_result'])
 
 
 if __name__=='__main__': unittest.main()
