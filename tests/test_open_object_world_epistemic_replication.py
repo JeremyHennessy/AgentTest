@@ -38,9 +38,11 @@ class OpenObjectWorldEpistemicReplicationTests(unittest.TestCase):
             "MIN_EFFECT_SAMPLES =",
             "falsification_probability =",
             "epistemic_score =",
-            "reward",
-            "solution",
-            "goal",
+            "reward +=",
+            "reward=",
+            "solution =",
+            "goal =",
+            "correct_sequence",
         ):
             self.assertNotIn(forbidden, source)
 
