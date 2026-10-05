@@ -66,7 +66,7 @@ Required observations:
 
 1. the staged native question appears in the ordinary agenda candidate summaries;
 2. it has an active experiment path;
-3. all preexisting agenda thread IDs remain present;
+3. all preexisting agenda thread IDs remain present either in the active four-thread agenda or its bounded archive; a fifth eligible inquiry may legitimately move the lowest-priority active thread to `archived_threads` with `archive_reason=outside_current_bounded_agenda`, preserving identity for later re-entry;
 4. Action Lab and Planning Lab results remain `None`;
 5. the Phase 42 opportunity diagnostic has no handoff/selection mismatch;
 6. when the pinned baseline has zero resumed opportunities, the integration cycle must not manufacture a resumed opportunity.
