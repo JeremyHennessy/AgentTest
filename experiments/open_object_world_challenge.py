@@ -51,7 +51,7 @@ _BASE = {
         },
         "M001": {
             "_kind": "pressure",
-            "position": [-1, -2],
+            "position": [-1, -1],
             "appearance": "shallow marked floor plate",
         },
         "M002": {
