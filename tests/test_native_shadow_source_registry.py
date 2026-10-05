@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import deepcopy
+from copy import deepcopy
 import unittest
 
 from experiments.native_shadow_source_registry import (
