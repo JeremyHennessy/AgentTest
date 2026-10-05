@@ -1,0 +1,96 @@
+name: open-object-world-challenge
+
+on:
+  push:
+    branches:
+      - experiment/open-object-world-challenge-v1
+    paths:
+      - experiments/open_object_world_challenge.py
+      - experiments/open_object_world_challenge_explorer.py
+      - tests/test_open_object_world_challenge.py
+      - scripts/open_object_world_challenge_study.py
+      - docs/open-object-world-challenge-v1.md
+      - .github/workflows/open-object-world-challenge.yml
+
+permissions:
+  contents: read
+
+jobs:
+  challenge-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify research-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python - <<'PY'
+          import subprocess
+          allowed = {
+              "experiments/open_object_world_challenge.py",
+              "experiments/open_object_world_challenge_explorer.py",
+              "tests/test_open_object_world_challenge.py",
+              "scripts/open_object_world_challenge_study.py",
+              "docs/open-object-world-challenge-v1.md",
+              ".github/workflows/open-object-world-challenge.yml",
+          }
+          changed = set(
+              subprocess.check_output(
+                  [
+                      "git",
+                      "diff",
+                      "--name-only",
+                      "bd78db8342d267822795f59a395fe5958beeed84...HEAD",
+                  ],
+                  text=True,
+              ).splitlines()
+          )
+          if changed != allowed:
+              raise SystemExit(
+                  "unexpected challenge scope: "
+                  + ", ".join(sorted(changed ^ allowed))
+              )
+          PY
+
+      - name: Run focused world tests
+        shell: bash
+        env:
+          PYTHONPATH: experiments
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python -m unittest tests.test_open_object_world_challenge -v
+
+      - name: Run frozen unguided four-layout study
+        shell: bash
+        env:
+          PYTHONPATH: experiments
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          mkdir -p artifacts
+          python scripts/open_object_world_challenge_study.py             --steps 1600             --output artifacts/challenge-study.json             2>&1 | tee artifacts/challenge-study.log
+
+      - name: Package reviewed research source
+        if: always()
+        shell: bash
+        run: |
+          git rev-parse HEAD > artifacts/candidate-sha.txt
+          git archive --format=tar.gz HEAD             experiments/open_object_world_challenge.py             experiments/open_object_world_challenge_explorer.py             tests/test_open_object_world_challenge.py             scripts/open_object_world_challenge_study.py             docs/open-object-world-challenge-v1.md             .github/workflows/open-object-world-challenge.yml             > artifacts/reviewed-source.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: open-object-world-challenge-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: error
