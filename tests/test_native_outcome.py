@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from agenttest.core import AgentCore
+from agenttest.native_inquiry import NATIVE_INQUIRY_VERSION
 from agenttest.state import StateStore, initial_state
 
 
@@ -47,7 +48,7 @@ class NativeOutcomeTests(unittest.TestCase):
         )
         inquiry = core.propose_native_inquiry(
             {
-                "version": "native-inquiry-v1",
+                "version": NATIVE_INQUIRY_VERSION,
                 "id": "NIC:test:state",
                 "objective": "information_gain",
                 "objective_score": 0.5,
