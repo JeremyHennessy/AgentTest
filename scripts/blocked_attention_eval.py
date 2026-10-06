@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from agenttest.diagnostic_attention import evaluate_blocked_attention
+from agenttest.persistence_recovery import RecoveryStore, digest
 
 
 def _now() -> str:
@@ -23,14 +24,28 @@ def _write_json_atomic(path: Path, value: object) -> None:
     temp.replace(path)
 
 
-def main() -> None:
+def run(argv=None, *, recovery_checkpoint=None) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--state", default="state/organism.json")
     parser.add_argument("--output", required=True)
-    args = parser.parse_args()
+    parser.add_argument("--copy-recovery-root")
+    args = parser.parse_args(argv)
 
     state_path = Path(args.state)
-    state = json.loads(state_path.read_text(encoding="utf-8"))
+    recovery = None
+    if args.copy_recovery_root is not None:
+        recovery = RecoveryStore(
+            args.copy_recovery_root,
+            copied_only=True,
+            checkpoint=recovery_checkpoint,
+        )
+        if state_path.resolve() != recovery.state:
+            raise SystemExit("copy recovery root does not own the requested state path")
+        recovery.recover()  # Always settle exact retained intent before cache logic.
+        state_raw, _ = recovery.read()
+        state = json.loads(state_raw)
+    else:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
     result = evaluate_blocked_attention(state)
     if result.get("source_state_mutated"):
         raise SystemExit("blocked-attention diagnostic mutated source state")
@@ -84,30 +99,49 @@ def main() -> None:
         }
         diagnostics.append(existing)
         state["updated_at"] = _now()
-        _write_json_atomic(state_path, state)
+        event = {
+            "event": "system_diagnostic",
+            "time": _now(),
+            "cycle": int(state.get("cycles", 0)),
+            "diagnostic_id": existing["id"],
+            "kind": existing["kind"],
+            "outcome": existing["outcome"],
+            "source_state_mutated": False,
+        }
 
-        journal_path = state_path.parent / "journal.jsonl"
-        journal_path.parent.mkdir(parents=True, exist_ok=True)
-        with journal_path.open("a", encoding="utf-8") as handle:
-            handle.write(
-                json.dumps(
-                    {
-                        "event": "system_diagnostic",
-                        "time": _now(),
-                        "cycle": int(state.get("cycles", 0)),
-                        "diagnostic_id": existing["id"],
-                        "kind": existing["kind"],
-                        "outcome": existing["outcome"],
-                        "source_state_mutated": False,
-                    },
-                    sort_keys=True,
-                )
-                + "\n"
+        if recovery is None:
+            _write_json_atomic(state_path, state)
+            journal_path = state_path.parent / "journal.jsonl"
+            journal_path.parent.mkdir(parents=True, exist_ok=True)
+            with journal_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(event, sort_keys=True) + "\n")
+        else:
+            before_state, before_journal = recovery.read()
+            next_state = (
+                json.dumps(state, indent=2, sort_keys=True) + "\n"
+            ).encode("utf-8")
+            event_bytes = (
+                json.dumps(event, sort_keys=True) + "\n"
+            ).encode("utf-8")
+            identity = (
+                existing["kind"] + "|" + existing["id"] + "|" + context_hash
+            ).encode("utf-8")
+            operation_id = "diagnostic-" + hashlib.sha256(identity).hexdigest()
+            recovery.commit(
+                operation_id,
+                digest(before_state),
+                digest(before_journal),
+                next_state,
+                event_bytes,
             )
 
     rendered = {"created": created, "diagnostic": existing}
     _write_json_atomic(Path(args.output), rendered)
     print(json.dumps(rendered, indent=2, sort_keys=True))
+
+
+def main() -> None:
+    run()
 
 
 if __name__ == "__main__":
