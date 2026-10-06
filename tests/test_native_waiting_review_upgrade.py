@@ -1,7 +1,6 @@
 """Developer upgrade controls using real accepted-base producer/reviewer output."""
 import json
-import subprocess
-import sys
+import hashlib
 import tempfile
 import unittest
 from copy import deepcopy
@@ -9,25 +8,22 @@ from pathlib import Path
 from agenttest.self_proposal import propose_self_change
 from agenttest.proposal_review import review_change_proposal
 from agenttest.state import StateStore
-from tests import test_native_waiting_governance as fixtures
 
 
 class NativeReviewUpgradeTests(unittest.TestCase):
     def old_state(self, ready=False):
-        state, experiment=fixtures.NativeWaitingGovernanceTests().pending_state()
-        if ready: experiment['readiness']='evidence_ready'
-        base=Path(__file__).resolve().parents[2]/'repair'/'src'
-        code='''import sys,json
-sys.path.insert(0,sys.argv[1])
-from agenttest.self_proposal import propose_self_change
-from agenttest.proposal_review import review_change_proposal
-s=json.load(sys.stdin)
-p,created=propose_self_change(s)
-r,reviewed=review_change_proposal(s,p)
-assert created and reviewed and r['verdict']=='supported_problem' and r['patch_authority']=='candidate_allowed'
-print(json.dumps(s))
-'''
-        return json.loads(subprocess.check_output([sys.executable,'-c',code,str(base)],input=json.dumps(state),text=True))
+        folder=Path(__file__).resolve().parent/'fixtures'/'native_waiting_review_upgrade'
+        name='legacy_ready.json' if ready else 'legacy_waiting.json'
+        provenance=json.loads((folder/'PROVENANCE.json').read_text())
+        raw=(folder/name).read_bytes()
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),provenance['files'][name]['sha256'])
+        self.assertEqual(len(raw),provenance['files'][name]['bytes'])
+        state=json.loads(raw)
+        review=state['proposal_reviews'][0]
+        self.assertEqual(review['review_version'],'proposal-review-v4')
+        self.assertEqual(review['verdict'],'supported_problem')
+        self.assertEqual(review['patch_authority'],'candidate_allowed')
+        return state
 
     def test_upgrade_supersedes_false_authority_preserves_old_receipt_and_reload(self):
         state=self.old_state();old=deepcopy(state['proposal_reviews'][0]);proposal=state['change_proposals'][0]
