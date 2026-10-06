@@ -9,6 +9,7 @@ import tempfile
 import unittest
 
 from scripts.interaction_request_claim import ClaimError, claim_sidecar, message_digest
+from agenttest.perception import COMPARABLE_FIELDS, baseline_content_fingerprint
 
 
 class InteractionRequestClaimTests(unittest.TestCase):
@@ -94,6 +95,30 @@ class InteractionRequestClaimTests(unittest.TestCase):
         with self.assertRaisesRegex(ClaimError, "invalid last-interaction"):
             claim_sidecar(self.path, "issue-comment:1", "x", "issue_comment")
         self.assertEqual(self.path.read_bytes(), before)
+
+    def test_claim_content_does_not_change_repository_baseline_signal(self):
+        src = self.root / "src"
+        src.mkdir()
+        (src / "module.py").write_text("value = 1\n", encoding="utf-8")
+        tracked = ["src/module.py", "state/last_interaction.json"]
+        state_dir = self.root / "state"
+        state_dir.mkdir()
+        sidecar = state_dir / "last_interaction.json"
+        sidecar.write_text(
+            json.dumps(self.original, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        before = baseline_content_fingerprint(self.root, tracked)
+        before_count = len(tracked)
+
+        claim_sidecar(
+            sidecar, "issue-comment:999", "sensor-neutral", "issue_comment"
+        )
+        after = baseline_content_fingerprint(self.root, tracked)
+
+        self.assertEqual(before, after)
+        self.assertEqual(before_count, len(tracked))
+        self.assertNotIn("head", COMPARABLE_FIELDS)
 
 
 if __name__ == "__main__":
