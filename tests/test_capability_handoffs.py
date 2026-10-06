@@ -287,6 +287,10 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
                 "id": f"OD_{decision_id}", "cycle": cycle - 1,
                 "changed_choice": True,
             })
+            lab["goals"].append({
+                "id": f"PG_{decision_id}", "status": "completed",
+                "selection": {"objective_decision_id": f"OD_{decision_id}"},
+            })
             lab["position"] = list(state)
             realized = planning_lab._execute_objective_realization(
                 lab,

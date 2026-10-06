@@ -1764,21 +1764,34 @@ def _latest_pending_objective_realization(lab: dict[str, Any]) -> dict[str, Any]
     active_id = lab.get("active_objective_realization_id")
     if not active_id:
         return None
-    return next(
-        (
-            item
-            for item in lab.get("objective_realization_decisions", [])
-            if item.get("id") == active_id and item.get("status") == "precommitted"
-        ),
-        None,
-    )
+    matches = [item for item in lab.get("objective_realization_decisions", [])
+               if item.get("id") == active_id]
+    if len(matches) != 1 or matches[0].get("status") != "precommitted":
+        return None
+    return matches[0]
+
+
+def _objective_goal_provenance(lab: dict[str, Any], goal_id: Any,
+                               objective_id: Any) -> dict[str, Any]:
+    goals = [goal for goal in lab.get("goals", []) if goal.get("id") == goal_id]
+    if not isinstance(goal_id, str) or not goal_id:
+        return {"status": "invalid", "match_count": 0, "scope": "goal"}
+    if len(goals) != 1:
+        return {"status": "ambiguous" if goals else "unavailable",
+                "match_count": len(goals), "scope": "goal"}
+    if goals[0].get("selection", {}).get("objective_decision_id") != objective_id:
+        return {"status": "inconsistent", "match_count": 1, "scope": "goal_objective_citation"}
+    return dict(resolve_objective_decision(lab, objective_id), scope="objective_decision")
+
 
 
 def _record_objective_provenance_block(
     lab: dict[str, Any], *, cycle: int, stage: str, goal_id: Any,
     objective_id: Any, provenance: dict[str, Any], precommit_id: Any = None,
 ) -> dict[str, Any]:
-    if provenance["status"] == "ambiguous" and isinstance(objective_id, str) and objective_id:
+    if (provenance["status"] == "ambiguous"
+            and provenance.get("scope", "objective_decision") == "objective_decision"
+            and isinstance(objective_id, str) and objective_id):
         lab["objective_decision_ambiguous_ids"] = sorted(
             set(lab.get("objective_decision_ambiguous_ids", [])) | {objective_id}
         )
@@ -1787,6 +1800,7 @@ def _record_objective_provenance_block(
         "objective_decision_id": objective_id,
         "objective_realization_decision_id": precommit_id,
         "provenance_status": provenance["status"],
+        "provenance_scope": provenance.get("scope", "objective_decision"),
         "retained_match_count": provenance["match_count"],
         "reason": "Required objective provenance is unresolved; no Phase40 action authorized.",
     }
@@ -1832,7 +1846,7 @@ def _select_objective_realization(
     goal = candidates[-1]
     selection = goal.get("selection", {})
     objective_id = selection.get("objective_decision_id")
-    provenance = resolve_objective_decision(lab, objective_id)
+    provenance = _objective_goal_provenance(lab, goal.get("id"), objective_id)
     if provenance["status"] != "unique":
         _record_objective_provenance_block(
             lab, cycle=cycle, stage="selection", goal_id=goal.get("id"),
@@ -1936,7 +1950,14 @@ def _execute_objective_realization(
 ) -> dict[str, Any]:
     """Execute a previously persisted Phase 40 precommit and measure realized gain."""
 
-    provenance = resolve_objective_decision(lab, decision.get("objective_decision_id"))
+    provenance = _objective_goal_provenance(
+        lab, decision.get("goal_id"), decision.get("objective_decision_id"))
+    if lab.get("active_objective_realization_id") == decision.get("id"):
+        matches = [item for item in lab.get("objective_realization_decisions", [])
+                   if item.get("id") == decision.get("id")]
+        if len(matches) != 1 or matches[0] is not decision:
+            provenance = {"status": "ambiguous" if len(matches) > 1 else "unavailable",
+                          "match_count": len(matches), "scope": "active_precommit"}
     if provenance["status"] != "unique":
         receipt = _record_objective_provenance_block(
             lab, cycle=cycle, stage="precommit_execution", goal_id=decision.get("goal_id"),
@@ -2488,13 +2509,26 @@ def _step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
 
     _consolidate_episodic_route_memories(state, lab, cycle)
 
+    blocked_pending = False
+    active_realization_id = lab.get("active_objective_realization_id")
     pending_realization = _latest_pending_objective_realization(lab)
+    if active_realization_id and pending_realization is None:
+        matches = [item for item in lab.get("objective_realization_decisions", [])
+                   if item.get("id") == active_realization_id]
+        _record_objective_provenance_block(
+            lab, cycle=cycle, stage="precommit_execution", goal_id=None,
+            objective_id=None, precommit_id=active_realization_id,
+            provenance={"status": "ambiguous" if len(matches) > 1 else "unavailable",
+                        "match_count": len(matches), "scope": "active_precommit"})
+        lab["active_objective_realization_id"] = None
+        blocked_pending = True
     if pending_realization is not None:
         pending_result = _execute_objective_realization(lab, pending_realization, cycle)
         if pending_result.get("execution_kind") != "objective_realization_provenance_blocked":
             return pending_result
+        blocked_pending = True
 
-    if _active_goal(lab) is None:
+    if not blocked_pending and _active_goal(lab) is None:
         selected_realization = _select_objective_realization(lab, cycle)
         if selected_realization is not None:
             return {
