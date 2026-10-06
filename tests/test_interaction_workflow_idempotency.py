@@ -20,6 +20,7 @@ class InteractionWorkflowIdempotencyTests(unittest.TestCase):
         self.assertIn("row.get(\"request_id\") == request_id", workflow)
         self.assertIn("--request-id \"$INTERACTION_REQUEST_ID\"", workflow)
         self.assertIn("env.REUSE_INTERACTION != 'true'", workflow)
+        self.assertIn("filter: blob:none", workflow)
         self.assertIn("Claim interaction request remotely", workflow)
         self.assertIn("scripts/interaction_request_claim.py", workflow)
         self.assertIn('git commit -m "Claim human interaction request"', workflow)
