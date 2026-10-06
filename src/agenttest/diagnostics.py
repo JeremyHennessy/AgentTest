@@ -7,6 +7,7 @@ from typing import Any
 from .diagnostic_inquiry import DIAGNOSTIC_VERSION as INQUIRY_VERSION, evaluate_inquiry_families
 from .diagnostic_replay import DIAGNOSTIC_VERSION as REPLAY_VERSION, compare_replays
 from .diagnostic_self_model import DIAGNOSTIC_VERSION as SELF_MODEL_VERSION, evaluate_self_model_grounding
+from .evidence import known_evidence_ids
 from .state import utc_now
 
 
@@ -53,6 +54,7 @@ def _existing(
     kind: str,
     diagnostic_version: str,
     baseline_fingerprint: str | None,
+    input_fingerprint: str,
 ) -> dict[str, Any] | None:
     for diagnostic in reversed(state.get("proposal_diagnostics", [])):
         if (
@@ -61,9 +63,68 @@ def _existing(
             and diagnostic.get("diagnostic_version") == diagnostic_version
             and diagnostic.get("status") == "completed"
             and diagnostic.get("baseline_fingerprint") == baseline_fingerprint
+            and diagnostic.get("input_fingerprint") == input_fingerprint
         ):
             return diagnostic
     return None
+
+
+def diagnostic_input_fingerprint(state: dict[str, Any], kind: str) -> str:
+    """Hash evaluator inputs only; metadata and unrelated evidence are excluded."""
+    if kind == "inquiry_family":
+        cycles = int(state.get("cycles", 0))
+        metric_present = cycles > 0 and "open_endedness" in state.get("metrics", {})
+        inputs = {
+            "questions": [{"id": str(row["id"]), "text": str(row.get("text", ""))}
+                          for row in state.get("questions", [])
+                          if isinstance(row, dict) and row.get("id")
+                          and str(row.get("text", "")).strip()],
+            "cycles": cycles,
+            "reported_open_endedness": float(state["metrics"]["open_endedness"])
+                if metric_present else None,
+        }
+    elif kind == "self_model_grounding":
+        model = state.get("self_model", {})
+        capabilities = [str(value) for value in model.get("capabilities", []) if str(value).strip()]
+        registry = model.get("capability_claims", {})
+        if not isinstance(registry, dict): registry = {}
+        known = known_evidence_ids(state)
+        claims = []
+        for capability in capabilities:
+            claim = registry.get(capability)
+            if not isinstance(claim, dict):
+                claims.append({"capability": capability, "claim": None})
+                continue
+            refs = claim.get("evidence_refs", [])
+            valid_refs = isinstance(refs, list) and all(isinstance(ref, str) for ref in refs)
+            claims.append({
+                "capability": capability, "status": claim.get("status"),
+                "refs": sorted(set(refs)) if valid_refs else refs,
+                "refs_valid": valid_refs,
+                "known_refs": sorted(set(refs) & known) if valid_refs else [],
+                "unverified_reason_present": bool(str(claim.get("reason", "")).strip())
+                    if claim.get("status") == "unverified" else None,
+            })
+        inputs = {"claims": claims}
+    elif kind == "deterministic_replay":
+        inputs = {}  # compare_replays uses its fixed isolated fixture, no live state.
+    else:
+        raise ValueError(f"Unsupported proposal diagnostic kind: {kind}")
+    return hashlib.sha256(json.dumps(
+        {"input_schema": "proposal-diagnostic-inputs-v1", "kind": kind, "inputs": inputs},
+        sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")).hexdigest()
+
+
+def diagnostic_matches_current_inputs(state: dict[str, Any], diagnostic: dict[str, Any]) -> bool:
+    kind = diagnostic.get("kind")
+    versions = {"inquiry_family": INQUIRY_VERSION, "self_model_grounding": SELF_MODEL_VERSION,
+                "deterministic_replay": REPLAY_VERSION}
+    if kind not in versions:
+        return True
+    return (diagnostic.get("diagnostic_version") == versions[kind]
+            and diagnostic.get("baseline_fingerprint") == _current_baseline_fingerprint(state)
+            and diagnostic.get("input_fingerprint") == diagnostic_input_fingerprint(state, kind))
 
 
 def run_proposal_diagnostic(
@@ -98,12 +159,14 @@ def run_proposal_diagnostic(
         return None, False
 
     baseline_fingerprint = _current_baseline_fingerprint(state)
+    input_fingerprint = diagnostic_input_fingerprint(state, kind)
     existing = _existing(
         state,
         str(proposal["id"]),
         kind,
         diagnostic_version,
         baseline_fingerprint,
+        input_fingerprint,
     )
     if existing is not None:
         return existing, False
@@ -115,6 +178,7 @@ def run_proposal_diagnostic(
         "required_next_evidence": review.get("required_next_evidence"),
         "diagnostic_version": diagnostic_version,
         "baseline_fingerprint": baseline_fingerprint,
+        "input_fingerprint": input_fingerprint,
     }
     context_hash = hashlib.sha256(
         json.dumps(
@@ -138,6 +202,7 @@ def run_proposal_diagnostic(
         "kind": kind,
         "diagnostic_version": diagnostic_version,
         "baseline_fingerprint": baseline_fingerprint,
+        "input_fingerprint": input_fingerprint,
         "status": "completed",
         "outcome": result["outcome"],
         "created_at": utc_now(),
