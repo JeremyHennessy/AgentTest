@@ -92,7 +92,7 @@ class PagesInteractionTests(unittest.TestCase):
         self.assertIn("planningPhaseNumber", page)
         self.assertIn("Latest milestone", page)
         self.assertIn("Research frontier", page)
-        self.assertIn("isolated · not live", page)
+        self.assertIn("Isolated · not live", page)
         self.assertIn("same-evidence accumulation structurally insufficient", page)
         self.assertIn("83.3% vs 40.0%", page)
         self.assertIn("30/30 mature copied cases completed", page)

@@ -1,0 +1,38 @@
+# Prepared integration only. This file is not an executable GitHub workflow.
+# CI recovery owner should integrate under jobs: in verify.yml after coordination.
+observer-ui:
+  name: Observer browser checks
+  runs-on: ubuntu-latest
+  timeout-minutes: 10
+  permissions:
+    contents: read
+  env:
+    OBSERVER_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  defaults:
+    run:
+      working-directory: tests/observer-browser
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    - name: Check exact requested head
+      run: test "$(git rev-parse HEAD)" = "$OBSERVER_EXPECTED_HEAD_SHA"
+    - name: Install locked test dependencies
+      run: npm ci --ignore-scripts --no-audit --no-fund
+    - name: Install Chromium for ordinary browser testing
+      run: npx --no-install playwright install --with-deps chromium
+    - name: Run Observer unit and synthetic browser checks
+      run: npm test
+    - name: Upload screenshots, manifests, report and failure traces
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: observer-ui-${{ github.event.pull_request.head.sha || github.sha }}
+        path: tests/observer-browser/.artifacts/
+        include-hidden-files: true
+        if-no-files-found: warn
+        retention-days: 14

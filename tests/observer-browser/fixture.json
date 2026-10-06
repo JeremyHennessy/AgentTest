@@ -1,0 +1,173 @@
+{
+  "organism": {
+    "generation": 4599,
+    "schema_version": 25,
+    "updated_at": "2026-10-05T12:00:00Z",
+    "questions": [
+      {
+        "id": "Q1",
+        "text": "Will east still move me from the boundary?",
+        "created_cycle": 4590
+      }
+    ],
+    "agenda": {
+      "started_cycle": 4000,
+      "foreground_thread_id": "AT1",
+      "threads": [
+        {
+          "id": "AT1",
+          "question_id": "Q1",
+          "question_text": "Will east still move me from the boundary?",
+          "status": "foreground",
+          "priority_score": 0.67,
+          "reason": "New outcome evidence is available."
+        },
+        {
+          "id": "AT2",
+          "question_id": "Q2",
+          "question_text": "Can the older route prediction transfer?",
+          "status": "suspended",
+          "priority_score": 0.42,
+          "resume_condition": "A new upstream observation changes actionability."
+        }
+      ],
+      "decisions": [],
+      "genuine_resumption_count": 0,
+      "next_decision_index": 850
+    },
+    "planning_lab": {
+      "version": "persistent-planning-lab-v10",
+      "bootstrapped_cycle": 1,
+      "position": [
+        0,
+        0
+      ],
+      "bounds": 2,
+      "status": "executing_plan",
+      "active_goal_id": "G1",
+      "active_plan_id": "P1",
+      "visit_counts": {
+        "0,0": 12,
+        "-1,0": 4,
+        "-1,-1": 2,
+        "0,-1": 1
+      },
+      "goals": [
+        {
+          "id": "G1",
+          "target": [
+            1,
+            1
+          ],
+          "status": "active"
+        }
+      ],
+      "plans": [
+        {
+          "id": "P1",
+          "goal_id": "G1",
+          "actions": [
+            "east",
+            "north"
+          ],
+          "predicted_states": [
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          "next_step_index": 0
+        }
+      ],
+      "executions": [
+        {
+          "id": "EX1",
+          "cycle": 4597,
+          "action": "east",
+          "before": [
+            -1,
+            0
+          ],
+          "after": [
+            0,
+            0
+          ],
+          "predicted_after": [
+            0,
+            0
+          ],
+          "delta": [
+            1,
+            0
+          ],
+          "matched_prediction": true
+        }
+      ],
+      "objective_realizations": [
+        {
+          "id": "R1",
+          "cycle": 4598,
+          "action": "east",
+          "before": [
+            2,
+            0
+          ],
+          "predicted_after": [
+            3,
+            0
+          ],
+          "after": [
+            2,
+            0
+          ],
+          "blocked": true,
+          "interpretation": "hypothesis_refuted",
+          "realized_information_gain": 1
+        }
+      ],
+      "self_experiments": []
+    },
+    "intentions": [],
+    "episodes": [],
+    "experiments": [],
+    "predictions": [],
+    "drives": {
+      "curiosity": 0.6,
+      "preservation": 0.8
+    },
+    "metrics": {
+      "agency": 0.55,
+      "learning": 0.7
+    },
+    "action_lab": {
+      "history": [],
+      "learned_effects": {
+        "east": {
+          "modal_delta": [
+            1,
+            0
+          ],
+          "unblocked_samples": 12,
+          "blocked_samples": 1,
+          "confidence": 0.9
+        }
+      }
+    }
+  },
+  "diagnostic": {
+    "diagnostic_version": "phase42-resumption-opportunities-v2",
+    "retained_decision_count": 128,
+    "telemetry_decision_count": 127,
+    "pre_telemetry_decision_count": 1,
+    "opportunity_count": 127,
+    "lower_priority_opportunity_count": 127,
+    "handoff_or_selection_mismatch_count": 0
+  },
+  "interaction": {
+    "response_text": "Synthetic fixture response; no live Ora state."
+  }
+}
