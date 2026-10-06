@@ -20,6 +20,10 @@ class InteractionWorkflowIdempotencyTests(unittest.TestCase):
         self.assertIn("row.get(\"request_id\") == request_id", workflow)
         self.assertIn("--request-id \"$INTERACTION_REQUEST_ID\"", workflow)
         self.assertIn("env.REUSE_INTERACTION != 'true'", workflow)
+        self.assertIn("Claim interaction request remotely", workflow)
+        self.assertIn("scripts/interaction_request_claim.py", workflow)
+        self.assertIn('git commit -m "Claim human interaction request"', workflow)
+        self.assertIn("git push origin autonomous/growth", workflow)
 
     def test_workflow_reuses_history_and_deduplicates_reply(self):
         workflow = (ROOT / ".github/workflows/interact.yml").read_text(encoding="utf-8")

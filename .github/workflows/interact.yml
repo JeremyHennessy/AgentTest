@@ -170,6 +170,26 @@ jobs:
               handle.write(f"INTERACTION_RESPONSE_SOURCE={response_source}\n")
           PY
 
+      - name: Claim interaction request remotely
+        if: env.SKIP_INTERACTION != 'true' && env.REUSE_INTERACTION != 'true'
+        shell: bash
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+            python scripts/interaction_request_claim.py \
+              --sidecar state/last_interaction.json \
+              --request-id "$INTERACTION_REQUEST_ID" \
+              --message-file /tmp/agenttest-message.txt \
+              --event-name "$GITHUB_EVENT_NAME"
+          if [ -e state/last_interaction.json ]; then
+            git add state/last_interaction.json
+          fi
+          if git diff --cached --quiet; then
+            echo "Interaction request claim already exists or no prior sidecar is available."
+          else
+            git commit -m "Claim human interaction request"
+            git push origin autonomous/growth
+          fi
+
       - name: Run evidence-linked interaction
         if: env.SKIP_INTERACTION != 'true' && env.REUSE_INTERACTION != 'true'
         shell: bash
