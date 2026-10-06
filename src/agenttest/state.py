@@ -302,11 +302,13 @@ class StateStore:
         state["updated_at"] = utc_now()
         tmp_path = self.path.with_suffix(self.path.suffix + ".tmp")
         with tmp_path.open("w", encoding="utf-8") as handle:
-            json.dump(state, handle, indent=2, sort_keys=True)
-            handle.write("\n")
+            json.dump(state, handle, separators=(",", ":"), sort_keys=True)
+            handle.write("
+")
         tmp_path.replace(self.path)
 
     def append_journal(self, event: dict[str, Any]) -> None:
         self.journal_path.parent.mkdir(parents=True, exist_ok=True)
         with self.journal_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(event, sort_keys=True) + "\n")
+            handle.write(json.dumps(event, separators=(",", ":"), sort_keys=True) + "
+")
