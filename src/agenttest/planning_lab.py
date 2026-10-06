@@ -13,6 +13,11 @@ from .action_lab import (
     apply_bounded_action,
     validate_action_lab_history,
 )
+from .objective_identity import (
+    allocate_objective_decision_id,
+    ensure_objective_identity,
+    resolve_objective_decision,
+)
 
 PLANNING_LAB_VERSION = "persistent-planning-lab-v9"
 CURIOSITY_POLICY_VERSION = "evidence-valued-curiosity-v1"
@@ -69,6 +74,8 @@ def initial_planning_lab_state() -> dict[str, Any]:
         "last_self_experiment_cycle": None,
         "objective_selection_started_cycle": None,
         "objective_decisions": [],
+        "next_objective_decision_index": 1,
+        "objective_decision_ambiguous_ids": [],
         "last_objective_selection_cycle": None,
         "objective_realization_started_cycle": None,
         "objective_realization_decisions": [],
@@ -95,6 +102,7 @@ def ensure_planning_lab_state(state: dict[str, Any]) -> dict[str, Any]:
     lab["version"] = PLANNING_LAB_VERSION
     if lab.get("world_version") in {None, BASE_WORLD_VERSION}:
         lab["world_version"] = STATEFUL_WORLD_VERSION
+    ensure_objective_identity(lab)
     return lab
 
 
@@ -1766,6 +1774,28 @@ def _latest_pending_objective_realization(lab: dict[str, Any]) -> dict[str, Any]
     )
 
 
+def _record_objective_provenance_block(
+    lab: dict[str, Any], *, cycle: int, stage: str, goal_id: Any,
+    objective_id: Any, provenance: dict[str, Any], precommit_id: Any = None,
+) -> dict[str, Any]:
+    if provenance["status"] == "ambiguous" and isinstance(objective_id, str) and objective_id:
+        lab["objective_decision_ambiguous_ids"] = sorted(
+            set(lab.get("objective_decision_ambiguous_ids", [])) | {objective_id}
+        )
+    receipt = {
+        "cycle": cycle, "stage": stage, "goal_id": goal_id,
+        "objective_decision_id": objective_id,
+        "objective_realization_decision_id": precommit_id,
+        "provenance_status": provenance["status"],
+        "retained_match_count": provenance["match_count"],
+        "reason": "Required objective provenance is unresolved; no Phase40 action authorized.",
+    }
+    receipts = lab.setdefault("objective_provenance_blocks", [])
+    receipts.append(receipt)
+    del receipts[:-OBJECTIVE_REALIZATION_MAX_RECORDS]
+    return receipt
+
+
 def _select_objective_realization(
     lab: dict[str, Any],
     cycle: int,
@@ -1785,11 +1815,6 @@ def _select_objective_realization(
         for item in lab.get("objective_realizations", [])
         if item.get("goal_id")
     }
-    decisions_by_id = {
-        str(item.get("id") or ""): item
-        for item in lab.get("objective_decisions", [])
-        if item.get("id")
-    }
     candidates = [
         goal
         for goal in lab.get("goals", [])
@@ -1806,9 +1831,15 @@ def _select_objective_realization(
 
     goal = candidates[-1]
     selection = goal.get("selection", {})
-    objective_decision = decisions_by_id.get(
-        str(selection.get("objective_decision_id") or "")
-    )
+    objective_id = selection.get("objective_decision_id")
+    provenance = resolve_objective_decision(lab, objective_id)
+    if provenance["status"] != "unique":
+        _record_objective_provenance_block(
+            lab, cycle=cycle, stage="selection", goal_id=goal.get("id"),
+            objective_id=objective_id, provenance=provenance,
+        )
+        return None
+    objective_decision = provenance["record"]
     if not objective_decision or not (
         objective_decision.get("changed_choice") is True
         or objective_decision.get("outcome_changed_choice") is True
@@ -1904,6 +1935,22 @@ def _execute_objective_realization(
     cycle: int,
 ) -> dict[str, Any]:
     """Execute a previously persisted Phase 40 precommit and measure realized gain."""
+
+    provenance = resolve_objective_decision(lab, decision.get("objective_decision_id"))
+    if provenance["status"] != "unique":
+        receipt = _record_objective_provenance_block(
+            lab, cycle=cycle, stage="precommit_execution", goal_id=decision.get("goal_id"),
+            objective_id=decision.get("objective_decision_id"), provenance=provenance,
+            precommit_id=decision.get("id"),
+        )
+        if lab.get("active_objective_realization_id") == decision.get("id"):
+            lab["active_objective_realization_id"] = None
+        return {
+            "execution_kind": "objective_realization_provenance_blocked",
+            "lab_version": PLANNING_LAB_VERSION,
+            "status": "objective_realization_provenance_blocked", "action": None,
+            "objective_provenance_block": receipt,
+        }
 
     before = [int(value) for value in lab.get("position", [0, 0])]
     if before != list(decision.get("state", [])):
@@ -2230,7 +2277,7 @@ def _choose_goal(lab: dict[str, Any], cycle: int) -> dict[str, Any] | None:
             }
         )
         objective_decision = {
-            "id": f"OD{len(lab.get('objective_decisions', [])) + 1:06d}",
+            "id": allocate_objective_decision_id(lab),
             "cycle": cycle,
             "policy_version": (
                 OUTCOME_AWARE_OBJECTIVE_POLICY_VERSION
@@ -2415,6 +2462,18 @@ def _create_plan(
 
 
 def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
+    """Report blocked provenance alongside the one actual operation, if any."""
+    lab = ensure_planning_lab_state(state)
+    prior_receipts = {id(row) for row in lab.get("objective_provenance_blocks", [])}
+    result = _step_planning_lab(state)
+    new_receipts = [row for row in lab.get("objective_provenance_blocks", [])
+                    if id(row) not in prior_receipts]
+    if new_receipts:
+        result["objective_provenance_blocks"] = [dict(row) for row in new_receipts]
+    return result
+
+
+def _step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
     """Execute exactly one persisted model-planned internal action."""
 
     lab = ensure_planning_lab_state(state)
@@ -2431,7 +2490,9 @@ def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
 
     pending_realization = _latest_pending_objective_realization(lab)
     if pending_realization is not None:
-        return _execute_objective_realization(lab, pending_realization, cycle)
+        pending_result = _execute_objective_realization(lab, pending_realization, cycle)
+        if pending_result.get("execution_kind") != "objective_realization_provenance_blocked":
+            return pending_result
 
     if _active_goal(lab) is None:
         selected_realization = _select_objective_realization(lab, cycle)

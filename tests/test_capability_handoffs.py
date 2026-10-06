@@ -281,6 +281,12 @@ class CapabilityHandoffSanityTests(unittest.TestCase):
             phase40_cases,
             start=2,
         ):
+            # Positive handoff fixture supplies the uniquely cited upstream OD.
+            # Missing provenance is covered separately as a negative regression.
+            lab["objective_decisions"].append({
+                "id": f"OD_{decision_id}", "cycle": cycle - 1,
+                "changed_choice": True,
+            })
             lab["position"] = list(state)
             realized = planning_lab._execute_objective_realization(
                 lab,
