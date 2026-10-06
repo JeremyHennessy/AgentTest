@@ -503,15 +503,12 @@ class AgentCoreTests(unittest.TestCase):
         )
         proposal.update({"id": "M000001", "source": "test", "created_cycle": 1})
         state["change_proposals"].append(proposal)
-        state["proposal_diagnostics"].append(
-            {
-                "id": "D000001",
-                "proposal_id": "M000001",
-                "kind": "deterministic_replay",
-                "status": "completed",
-                "outcome": "divergent",
-            }
-        )
+        # Positive replay authority uses a current receipt, not an unverifiable legacy fixture.
+        from unittest.mock import patch
+        from agenttest.diagnostics import run_proposal_diagnostic
+        review_change_proposal(state, proposal)
+        with patch("agenttest.diagnostics.compare_replays", return_value={"outcome": "divergent"}):
+            run_proposal_diagnostic(state, proposal)
 
         review, _ = review_change_proposal(state, proposal)
 
@@ -717,19 +714,13 @@ class AgentCoreTests(unittest.TestCase):
         state["change_proposals"].append(proposal)
         first_review, _ = review_change_proposal(state, proposal)
 
-        state["proposal_diagnostics"].append(
-            {
-                "id": "D000001",
-                "proposal_id": proposal["id"],
-                "review_id": first_review["id"],
-                "target_dimension": "reproducibility",
-                "kind": "deterministic_replay",
-                "diagnostic_version": "deterministic-replay-v1",
-                "status": "completed",
-                "outcome": "divergent",
-                "source_state_mutated": False,
-            }
-        )
+        # Positive replay authority uses a current receipt, not an unverifiable legacy fixture.
+        from unittest.mock import patch
+        from agenttest.diagnostics import run_proposal_diagnostic
+        review_change_proposal(state, proposal)
+        with patch("agenttest.diagnostics.compare_replays", return_value={"outcome": "divergent"}):
+            run_proposal_diagnostic(state, proposal)
+
         second_review, created = review_change_proposal(state, proposal)
 
         self.assertTrue(created)

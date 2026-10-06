@@ -45,12 +45,15 @@ def _completed_diagnostic_ids(
     state: dict[str, Any],
     proposal_id: str,
 ) -> list[str]:
+    from .diagnostics import diagnostic_matches_current_inputs
+
     return sorted(
         str(diagnostic["id"])
         for diagnostic in state.get("proposal_diagnostics", [])
         if diagnostic.get("proposal_id") == proposal_id
         and diagnostic.get("status") == "completed"
         and diagnostic.get("id")
+        and diagnostic_matches_current_inputs(state, diagnostic)
     )
 
 
@@ -127,7 +130,7 @@ def _existing_review(
         if review.get("review_version") != REVIEW_VERSION:
             continue
         if review.get("considered_diagnostic_ids", []) != current_diagnostics:
-            continue
+            return None
         if _cached_review_requires_lifecycle_recheck(state, proposal_id, review):
             continue
         if _cached_review_requires_baseline_recheck(state, proposal_id):
@@ -150,11 +153,14 @@ def _latest_completed_diagnostic(
     proposal_id: str,
     kind: str,
 ) -> dict[str, Any] | None:
+    from .diagnostics import diagnostic_matches_current_inputs
+
     for diagnostic in reversed(state.get("proposal_diagnostics", [])):
         if (
             diagnostic.get("proposal_id") == proposal_id
             and diagnostic.get("kind") == kind
             and diagnostic.get("status") == "completed"
+            and diagnostic_matches_current_inputs(state, diagnostic)
         ):
             return diagnostic
     return None
