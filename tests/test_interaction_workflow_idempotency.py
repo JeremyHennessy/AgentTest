@@ -32,6 +32,8 @@ class InteractionWorkflowIdempotencyTests(unittest.TestCase):
         self.assertIn("agenttest-request:$INTERACTION_REQUEST_ID", workflow)
         self.assertIn("grep -Fq -- \"$MARKER\"", workflow)
         self.assertIn('gh issue view "$ISSUE_NUMBER" --json state --jq .state', workflow)
+        self.assertGreaterEqual(workflow.count("          import os"), 2)
+        self.assertIn('source = Path(os.environ["INTERACTION_RESPONSE_SOURCE"])', workflow)
 
     def test_workflow_does_not_use_message_text_as_request_identity(self):
         workflow = (ROOT / ".github/workflows/interact.yml").read_text(encoding="utf-8")
