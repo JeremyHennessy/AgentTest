@@ -91,6 +91,11 @@ def main() -> None:
         help="Sense the repository as part of the interaction cycle.",
     )
     interact.add_argument("--root", default=".", help="Repository root for self-observation.")
+    interact.add_argument(
+        "--request-id",
+        default=None,
+        help="Stable transport request identity; duplicate IDs fail before another cycle.",
+    )
 
     sub.add_parser("status", help="Print the current state.")
 
@@ -152,6 +157,7 @@ def main() -> None:
                 store=store,
                 cognition=args.cognition,
                 observation=observation,
+                request_id=args.request_id,
             )
         )
     elif args.command == "status":
