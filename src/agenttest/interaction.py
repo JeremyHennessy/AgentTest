@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .core import AgentCore, _calibrate_self_model
@@ -130,6 +131,7 @@ def interact(
     cognition: bool = False,
     cognition_provider=None,
     observation: dict[str, Any] | None = None,
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     clean = message.strip()
     if not clean:
@@ -137,6 +139,18 @@ def interact(
 
     store = store or StateStore()
     prior_state = store.load()
+    if request_id is not None:
+        if not isinstance(request_id, str) or not re.fullmatch(
+            r"[A-Za-z0-9:_-]{1,200}", request_id
+        ):
+            raise ValueError("interaction request_id must be a stable transport identifier")
+        matching = [
+            item
+            for item in prior_state.get("interactions", [])
+            if item.get("request_id") == request_id
+        ]
+        if matching:
+            raise ValueError(f"interaction request already recorded: {request_id}")
     prior_memory = retrieve_semantic_memory(prior_state, clean, limit=6)
     prior_world_claims = current_world_claims(prior_state, limit=8)
 
@@ -188,6 +202,8 @@ def interact(
             if claim.get("id")
         ],
     }
+    if request_id is not None:
+        record["request_id"] = request_id
     state.setdefault("interactions", []).append(record)
     _calibrate_self_model(state)
     self_model = _self_model_view(state)
@@ -199,17 +215,18 @@ def interact(
     )
     record["response_text"] = response_text
     store.save(state)
-    store.append_journal(
-        {
-            "event": "human_interaction",
-            "time": utc_now(),
-            "cycle": cycle_result["cycle"],
-            "interaction_id": interaction_id,
-            "input_episode_id": record["input_episode_id"],
-            "question_id": record["question_id"],
-            "experiment_id": record["experiment_id"],
-        }
-    )
+    interaction_event = {
+        "event": "human_interaction",
+        "time": utc_now(),
+        "cycle": cycle_result["cycle"],
+        "interaction_id": interaction_id,
+        "input_episode_id": record["input_episode_id"],
+        "question_id": record["question_id"],
+        "experiment_id": record["experiment_id"],
+    }
+    if request_id is not None:
+        interaction_event["request_id"] = request_id
+    store.append_journal(interaction_event)
 
     return {
         "interaction": record,

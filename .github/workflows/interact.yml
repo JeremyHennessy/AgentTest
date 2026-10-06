@@ -64,6 +64,10 @@ jobs:
           DISPATCH_MESSAGE: ${{ inputs.message }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           ISSUE_BODY: ${{ github.event.issue.body }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          ISSUE_ID: ${{ github.event.issue.id }}
+          RUN_ID: ${{ github.run_id }}
+          PUSH_SHA: ${{ github.sha }}
         shell: bash
         run: |
           python - <<'PY'
@@ -73,16 +77,21 @@ jobs:
 
           event = os.environ.get("EVENT_NAME", "")
           skip = False
+          reuse = False
 
           if event == "workflow_dispatch":
               message = os.environ.get("DISPATCH_MESSAGE", "").strip()
+              request_id = "workflow:" + os.environ["RUN_ID"]
           elif event == "issue_comment":
               body = os.environ.get("COMMENT_BODY", "")
               message = body[len("/agent "):].strip() if body.startswith("/agent ") else ""
+              request_id = "issue-comment:" + os.environ["COMMENT_ID"]
           elif event == "issues":
               body = os.environ.get("ISSUE_BODY", "")
               message = body[len("/agent "):].strip() if body.startswith("/agent ") else ""
+              request_id = "issue:" + os.environ["ISSUE_ID"]
           else:
+              request_id = "push:" + os.environ["PUSH_SHA"]
               state_path = Path("state/organism.json")
               has_interaction = False
               if state_path.exists():
@@ -103,33 +112,110 @@ jobs:
           if not skip and not message:
               raise SystemExit("No authorized interaction message was supplied.")
 
+          response_source = "state/last_interaction.json"
+          if not skip:
+              state_path = Path("state/organism.json")
+              last_path = Path("state/last_interaction.json")
+              state = None
+              if state_path.exists():
+                  state = json.loads(state_path.read_text(encoding="utf-8"))
+                  matches = [
+                      row for row in state.get("interactions", [])
+                      if row.get("request_id") == request_id
+                  ]
+                  if len(matches) > 1:
+                      raise SystemExit("Ambiguous persisted interaction request identity.")
+                  if matches:
+                      reuse = True
+                      record = matches[0]
+                      if record.get("input") != message:
+                          raise SystemExit(
+                              "Persisted interaction request identity conflicts with message."
+                          )
+                      question = next(
+                          (row for row in state.get("questions", [])
+                           if row.get("id") == record.get("question_id")),
+                          None,
+                      )
+                      experiment = next(
+                          (row for row in state.get("experiments", [])
+                           if row.get("id") == record.get("experiment_id")),
+                          None,
+                      )
+                      reconstructed = {
+                          "interaction": record,
+                          "response_text": record.get("response_text"),
+                          "current": {
+                              "question": question,
+                              "experiment": experiment,
+                          },
+                      }
+                      response_source = "/tmp/agenttest-reused-interaction.json"
+                      Path(response_source).write_text(
+                          json.dumps(reconstructed, indent=2, sort_keys=True) + "\n",
+                          encoding="utf-8",
+                      )
+
+              if last_path.exists():
+                  last = json.loads(last_path.read_text(encoding="utf-8"))
+                  last_id = (last.get("interaction") or {}).get("request_id")
+                  if last_id == request_id and not reuse:
+                      raise SystemExit(
+                          "Latest interaction sidecar claims request identity absent from organism state."
+                      )
+                  if last_id == request_id:
+                      response_source = str(last_path)
+
           Path("/tmp/agenttest-message.txt").write_text(message, encoding="utf-8")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
               handle.write(f"SKIP_INTERACTION={'true' if skip else 'false'}\n")
+              handle.write(f"REUSE_INTERACTION={'true' if reuse else 'false'}\n")
+              handle.write(f"INTERACTION_REQUEST_ID={request_id}\n")
+              handle.write(f"INTERACTION_RESPONSE_SOURCE={response_source}\n")
           PY
 
+      - name: Claim interaction request remotely
+        if: env.SKIP_INTERACTION != 'true' && env.REUSE_INTERACTION != 'true'
+        shell: bash
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+            python scripts/interaction_request_claim.py \
+              --sidecar state/last_interaction.json \
+              --request-id "$INTERACTION_REQUEST_ID" \
+              --message-file /tmp/agenttest-message.txt \
+              --event-name "$GITHUB_EVENT_NAME"
+          if [ -e state/last_interaction.json ]; then
+            git add state/last_interaction.json
+          fi
+          if git diff --cached --quiet; then
+            echo "Interaction request claim already exists or no prior sidecar is available."
+          else
+            git commit -m "Claim human interaction request"
+            git push origin autonomous/growth
+          fi
+
       - name: Run evidence-linked interaction
-        if: env.SKIP_INTERACTION != 'true'
+        if: env.SKIP_INTERACTION != 'true' && env.REUSE_INTERACTION != 'true'
         shell: bash
         run: |
           mkdir -p state
           MESSAGE="$(cat /tmp/agenttest-message.txt)"
           OUTPUT=/tmp/agenttest-last-interaction.json
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
-            python -m agenttest interact --self-observe "$MESSAGE" \
+            python -m agenttest interact --self-observe --request-id "$INTERACTION_REQUEST_ID" "$MESSAGE" \
             > "$OUTPUT"
           cat "$OUTPUT"
           cp "$OUTPUT" state/last_interaction.json
 
       - name: Verify invariant and preservation suites
-        if: env.SKIP_INTERACTION != 'true'
+        if: env.SKIP_INTERACTION != 'true' && env.REUSE_INTERACTION != 'true'
         shell: bash
         run: |
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src             python -m unittest discover -s tests -v
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src             python scripts/preservation_eval.py --strict --output /tmp/interaction-preservation.json
 
       - name: Persist interaction
-        if: env.SKIP_INTERACTION != 'true'
+        if: env.SKIP_INTERACTION != 'true' && env.REUSE_INTERACTION != 'true'
         shell: bash
         run: |
           git add state/
@@ -146,9 +232,11 @@ jobs:
         run: |
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
 
-          data = json.loads(Path("state/last_interaction.json").read_text(encoding="utf-8"))
+          source = Path(os.environ["INTERACTION_RESPONSE_SOURCE"])
+          data = json.loads(source.read_text(encoding="utf-8"))
           record = data["interaction"]
           current = data["current"]
           question = (current.get("question") or {}).get("text", "none")
@@ -158,7 +246,8 @@ jobs:
               f"{data['response_text']}\n\n"
               f"**Current question:** {question}\n\n"
               f"**Proposed test:** {experiment}\n\n"
-              "_This is an evidence-linked state rendering, not a claim of consciousness._\n"
+              "_This is an evidence-linked state rendering, not a claim of consciousness._\n\n"
+              f"<!-- agenttest-request:{record.get('request_id', '')} -->\n"
           )
           Path("/tmp/agenttest-reply.md").write_text(body, encoding="utf-8")
           PY
@@ -169,7 +258,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: bash
-        run: gh issue comment "$ISSUE_NUMBER" --body-file /tmp/agenttest-reply.md
+        run: |
+          MARKER="<!-- agenttest-request:$INTERACTION_REQUEST_ID -->"
+          if gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" --jq '.[].body' | grep -Fq -- "$MARKER"; then
+            echo "Reply already exists for $INTERACTION_REQUEST_ID."
+          else
+            gh issue comment "$ISSUE_NUMBER" --body-file /tmp/agenttest-reply.md
+          fi
 
       - name: Close one-shot interaction issue
         if: env.SKIP_INTERACTION != 'true' && github.event_name == 'issues'
@@ -177,4 +272,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: bash
-        run: gh issue close "$ISSUE_NUMBER" --reason completed
+        run: |
+          STATE="$(gh issue view "$ISSUE_NUMBER" --json state --jq .state)"
+          if [ "$STATE" = "OPEN" ]; then
+            gh issue close "$ISSUE_NUMBER" --reason completed
+          else
+            echo "Interaction issue is already closed."
+          fi
