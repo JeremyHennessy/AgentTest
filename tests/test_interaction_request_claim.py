@@ -82,12 +82,24 @@ class InteractionRequestClaimTests(unittest.TestCase):
         self.assertFalse(missing.exists())
 
     def test_already_completed_request_does_not_add_pending_claim(self):
+        self.original["interaction"]["input"] = "original input"
+        self.path.write_text(
+            json.dumps(self.original, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
         result = claim_sidecar(
-            self.path, "issue-comment:old", "ignored", "issue_comment"
+            self.path, "issue-comment:old", "original input", "issue_comment"
         )
         self.assertFalse(result["claimed"])
         self.assertEqual(result["reason"], "already_completed")
         self.assertNotIn("pending_request", json.loads(self.path.read_bytes()))
+
+        before = self.path.read_bytes()
+        with self.assertRaisesRegex(ClaimError, "conflicts with message"):
+            claim_sidecar(
+                self.path, "issue-comment:old", "different input", "issue_comment"
+            )
+        self.assertEqual(self.path.read_bytes(), before)
 
     def test_invalid_existing_sidecar_fails_without_repair(self):
         self.path.write_bytes(b"{not-json")

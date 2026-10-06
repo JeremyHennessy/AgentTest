@@ -47,8 +47,11 @@ def claim_sidecar(path: Path, request_id: str, message: str, event_name: str) ->
     if not isinstance(data, dict):
         raise ClaimError("last-interaction sidecar must be an object")
 
-    completed_id = (data.get("interaction") or {}).get("request_id")
+    completed = data.get("interaction") or {}
+    completed_id = completed.get("request_id")
     if completed_id == request_id:
+        if completed.get("input") != message:
+            raise ClaimError("completed interaction request identity conflicts with message")
         return {"claimed": False, "reason": "already_completed", "claim": claim}
 
     existing = data.get("pending_request")
