@@ -12,6 +12,7 @@ from .diagnostics import run_proposal_diagnostic
 from .proposal_review import review_change_proposal
 from .self_proposal import propose_self_change
 from .state import StateStore, utc_now
+from .persistence_recovery import (RecoveryStore, digest, serialize_journal_event, serialize_state_store)
 
 
 def _store(path: str) -> StateStore:
@@ -28,6 +29,11 @@ def main() -> None:
         "--state",
         default="state/organism.json",
         help="Path to persistent organism state.",
+    )
+    parser.add_argument(
+        "--copy-recovery-root",
+        default=None,
+        help="Review only: exact-event recovery on an explicitly created copied store.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -124,6 +130,16 @@ def main() -> None:
     outcome.add_argument("--evidence-strength", type=float, default=0.5)
 
     args = parser.parse_args()
+    recovery = None
+    if args.copy_recovery_root is not None:
+        allowed = {"propose-change", "review-change", "diagnose-change"}
+        if args.command not in allowed:
+            parser.error("--copy-recovery-root is only reviewed for change-control writers")
+        recovery = RecoveryStore(args.copy_recovery_root, copied_only=True)
+        if Path(args.state).resolve() != recovery.state:
+            parser.error("--copy-recovery-root does not own the requested --state path")
+        recovery.recover()
+
     store = _store(args.state)
     core = AgentCore(store)
 
@@ -166,16 +182,34 @@ def main() -> None:
         state = store.load()
         proposal, created = propose_self_change(state)
         if created:
-            store.save(state)
-            store.append_journal(
-                {
+            if recovery is None:
+                store.save(state)
+                store.append_journal(
+                    {
+                        "event": "change_proposal",
+                        "time": utc_now(),
+                        "cycle": state.get("cycles", 0),
+                        "proposal_id": proposal["id"] if proposal else None,
+                        "target_dimension": proposal["target_dimension"] if proposal else None,
+                    }
+                )
+            else:
+                before_state, before_journal = recovery.read()
+                next_state = serialize_state_store(state, utc_now())
+                event = {
                     "event": "change_proposal",
                     "time": utc_now(),
                     "cycle": state.get("cycles", 0),
                     "proposal_id": proposal["id"] if proposal else None,
                     "target_dimension": proposal["target_dimension"] if proposal else None,
                 }
-            )
+                recovery.commit(
+                    "change-proposal-" + proposal["id"],
+                    digest(before_state),
+                    digest(before_journal),
+                    next_state,
+                    serialize_journal_event(event),
+                )
         result = {
             "created": created,
             "proposal": proposal,
@@ -188,9 +222,23 @@ def main() -> None:
         state = store.load()
         review, created = review_change_proposal(state)
         if created:
-            store.save(state)
-            store.append_journal(
-                {
+            if recovery is None:
+                store.save(state)
+                store.append_journal(
+                    {
+                        "event": "change_proposal_review",
+                        "time": utc_now(),
+                        "cycle": state.get("cycles", 0),
+                        "review_id": review["id"] if review else None,
+                        "proposal_id": review["proposal_id"] if review else None,
+                        "verdict": review["verdict"] if review else None,
+                        "patch_authority": review["patch_authority"] if review else None,
+                    }
+                )
+            else:
+                before_state, before_journal = recovery.read()
+                next_state = serialize_state_store(state, utc_now())
+                event = {
                     "event": "change_proposal_review",
                     "time": utc_now(),
                     "cycle": state.get("cycles", 0),
@@ -199,7 +247,13 @@ def main() -> None:
                     "verdict": review["verdict"] if review else None,
                     "patch_authority": review["patch_authority"] if review else None,
                 }
-            )
+                recovery.commit(
+                    "change-review-" + review["id"],
+                    digest(before_state),
+                    digest(before_journal),
+                    next_state,
+                    serialize_journal_event(event),
+                )
         result = {
             "created": created,
             "review": review,
@@ -212,9 +266,23 @@ def main() -> None:
         state = store.load()
         diagnostic, created = run_proposal_diagnostic(state)
         if created:
-            store.save(state)
-            store.append_journal(
-                {
+            if recovery is None:
+                store.save(state)
+                store.append_journal(
+                    {
+                        "event": "change_proposal_diagnostic",
+                        "time": utc_now(),
+                        "cycle": state.get("cycles", 0),
+                        "diagnostic_id": diagnostic["id"] if diagnostic else None,
+                        "proposal_id": diagnostic["proposal_id"] if diagnostic else None,
+                        "kind": diagnostic["kind"] if diagnostic else None,
+                        "outcome": diagnostic["outcome"] if diagnostic else None,
+                    }
+                )
+            else:
+                before_state, before_journal = recovery.read()
+                next_state = serialize_state_store(state, utc_now())
+                event = {
                     "event": "change_proposal_diagnostic",
                     "time": utc_now(),
                     "cycle": state.get("cycles", 0),
@@ -223,7 +291,13 @@ def main() -> None:
                     "kind": diagnostic["kind"] if diagnostic else None,
                     "outcome": diagnostic["outcome"] if diagnostic else None,
                 }
-            )
+                recovery.commit(
+                    "change-diagnostic-" + diagnostic["id"],
+                    digest(before_state),
+                    digest(before_journal),
+                    next_state,
+                    serialize_journal_event(event),
+                )
         result = {
             "created": created,
             "diagnostic": diagnostic,

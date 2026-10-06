@@ -6,11 +6,13 @@ from pathlib import Path
 
 from agenttest.intervention import record_verified_intervention
 from agenttest.state import StateStore, utc_now
+from agenttest.persistence_recovery import (RecoveryStore, digest, serialize_journal_event, serialize_state_store)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--state", default="state/organism.json")
+    parser.add_argument("--copy-recovery-root")
     parser.add_argument("--proposal-id")
     parser.add_argument("--commit-sha", required=True)
     parser.add_argument("--changed-file", action="append", dest="changed_files", required=True)
@@ -23,6 +25,13 @@ def main() -> None:
     parser.add_argument("--attribution-text", required=True)
     parser.add_argument("--output")
     args = parser.parse_args()
+
+    recovery = None
+    if args.copy_recovery_root is not None:
+        recovery = RecoveryStore(args.copy_recovery_root, copied_only=True)
+        if Path(args.state).resolve() != recovery.state:
+            parser.error("--copy-recovery-root does not own the requested --state path")
+        recovery.recover()
 
     store = StateStore(args.state)
     state = store.load()
@@ -42,9 +51,25 @@ def main() -> None:
 
     result = {"created": created, "receipt": receipt}
     if created and receipt is not None:
-        store.save(state)
-        store.append_journal(
-            {
+        if recovery is None:
+            store.save(state)
+            store.append_journal(
+                {
+                    "event": "verified_intervention_reconciled",
+                    "time": utc_now(),
+                    "cycle": state.get("cycles", 0),
+                    "accepted_change_id": receipt["id"],
+                    "proposal_id": receipt["proposal_id"],
+                    "commit_sha": receipt["commit_sha"],
+                    "verify_run_id": receipt["verification"]["run_id"],
+                    "verification_scope": receipt["verification_scope"],
+                    "improvement_claim": receipt["improvement_claim"],
+                }
+            )
+        else:
+            before_state, before_journal = recovery.read()
+            next_state = serialize_state_store(state, utc_now())
+            event = {
                 "event": "verified_intervention_reconciled",
                 "time": utc_now(),
                 "cycle": state.get("cycles", 0),
@@ -55,7 +80,13 @@ def main() -> None:
                 "verification_scope": receipt["verification_scope"],
                 "improvement_claim": receipt["improvement_claim"],
             }
-        )
+            recovery.commit(
+                "verified-intervention-" + receipt["id"],
+                digest(before_state),
+                digest(before_journal),
+                next_state,
+                serialize_journal_event(event),
+            )
 
     rendered = json.dumps(result, indent=2, sort_keys=True)
     print(rendered)

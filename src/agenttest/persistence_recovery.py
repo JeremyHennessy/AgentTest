@@ -107,6 +107,28 @@ def _sync_dir(path: Path) -> None:
         os.close(fd)
 
 
+def serialize_state_store(state: dict, now: str) -> bytes:
+    """Mirror StateStore.save bytes for a caller-frozen timestamp."""
+    if not isinstance(now, str) or not now:
+        raise RecoveryError("state timestamp must be a nonempty string")
+    from .state import migrate_state
+
+    migrated = migrate_state(state)
+    migrated["updated_at"] = now
+    return (
+        json.dumps(migrated, separators=(",", ":"), sort_keys=True) + "\n"
+    ).encode("utf-8")
+
+
+def serialize_journal_event(event: dict) -> bytes:
+    """Mirror StateStore.append_journal bytes for one exact event."""
+    if not isinstance(event, dict):
+        raise RecoveryError("journal event must be an object")
+    return (
+        json.dumps(event, separators=(",", ":"), sort_keys=True) + "\n"
+    ).encode("utf-8")
+
+
 class RecoveryStore:
     """Owns only deliberately created copies; marker is accident prevention, not authentication."""
 
