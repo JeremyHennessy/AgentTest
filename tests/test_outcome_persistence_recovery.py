@@ -67,6 +67,7 @@ class OutcomeRecoveryTests(unittest.TestCase):
         with (
             patch("agenttest.core.utc_now", return_value=CLOCK),
             patch("agenttest.state.utc_now", return_value=CLOCK),
+            patch("agenttest.world.utc_now", return_value=CLOCK),
         ):
             return core.record_outcome(
                 "X_COPY", outcome, strength, **kwargs
