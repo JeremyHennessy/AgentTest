@@ -216,7 +216,14 @@ def _bootstrap_from_action_lab(
     state: dict[str, Any],
     lab: dict[str, Any],
 ) -> bool:
-    if lab.get("status") != "uninitialized":
+    bootstrap_pending = (
+        lab.get("status") in {"uninitialized", "waiting_for_model"}
+        and lab.get("bootstrapped_cycle") is None
+        and not lab.get("active_goal_id")
+        and not lab.get("active_plan_id")
+        and not any(lab.get(key) for key in ("goals", "plans", "executions"))
+    )
+    if not bootstrap_pending:
         learned = _rebuild_model(lab)
         ready = all(
             int(learned[action].get("unblocked_samples", 0) or 0)
@@ -253,7 +260,24 @@ def _bootstrap_from_action_lab(
             }
         )
 
-    lab["transition_observations"] = observations
+    # A waiting bootstrap may ingest a validated extension of the same source
+    # ledger. Preserve copied rows/annotations and other transition provenance;
+    # never count the same source observation twice or overwrite a reused ID.
+    existing = lab.get("transition_observations", [])
+    source_by_id = {item["source_id"]: item for item in observations}
+    copied_ids: set[str] = set()
+    for item in existing:
+        if item.get("source") != "action_lab":
+            continue
+        source_id = item.get("source_id")
+        if not isinstance(source_id, str) or not source_id or source_id in copied_ids:
+            raise ValueError("cannot retry bootstrap with ambiguous copied action provenance")
+        copied_ids.add(source_id)
+        current = source_by_id.get(source_id)
+        if current is None or any(item.get(key) != value for key, value in current.items()):
+            raise ValueError(f"cannot retry bootstrap from changed or missing action provenance: {source_id}")
+    existing.extend(item for item in observations if item["source_id"] not in copied_ids)
+    lab["transition_observations"] = existing
     learned = _rebuild_model(lab)
     ready = all(
         int(learned[action].get("unblocked_samples", 0) or 0) >= MIN_MODEL_SAMPLES
