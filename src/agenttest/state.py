@@ -8,6 +8,7 @@ from typing import Any
 from .action_lab import initial_action_lab_state
 from .episode_identity import ensure_episode_sequence, infer_episode_sequence_cursor
 from .agenda import ensure_agenda_state, initial_agenda_state
+from .objective_identity import ensure_objective_identity
 from .planning_lab import initial_planning_lab_state
 
 SCHEMA_VERSION = 25
@@ -214,6 +215,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     action_lab.setdefault("last_action_cycle", None)
 
     planning_lab = state["planning_lab"]
+    ensure_objective_identity(planning_lab)
     for key, value in initial_planning_lab_state().items():
         planning_lab.setdefault(key, value)
     if (
