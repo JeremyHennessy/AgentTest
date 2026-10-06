@@ -128,6 +128,8 @@ def _existing_review(
             continue
         if review.get("considered_diagnostic_ids", []) != current_diagnostics:
             continue
+        if _cached_review_requires_native_waiting_recheck(state, proposal_id, review):
+            continue
         if _cached_review_requires_lifecycle_recheck(state, proposal_id, review):
             continue
         if _cached_review_requires_baseline_recheck(state, proposal_id):
@@ -249,6 +251,30 @@ def _cached_review_requires_lifecycle_recheck(
         diagnostic is not None
         and _same_cycle_untriaged_specification_backlog(state, diagnostic)
     )
+
+
+def _cached_review_requires_native_waiting_recheck(
+    state: dict[str, Any], proposal_id: str, review: dict[str, Any],
+) -> bool:
+    """Supersede old native-waiting closure authority without rewriting receipts."""
+    if (review.get("verdict") != "supported_problem"
+            or review.get("patch_authority") != "candidate_allowed"):
+        return False
+    proposal = next((item for item in state.get("change_proposals", [])
+                     if str(item.get("id")) == proposal_id), None)
+    if proposal is None or proposal.get("target_dimension") != "learning":
+        return False
+    waiting_ids = {
+        str(item["id"]) for item in state.get("experiments", [])
+        if item.get("id") and item.get("status") == "proposed"
+        and item.get("readiness") == "awaiting_native_evidence"
+    }
+    if not waiting_ids:
+        return False
+    classification = classify_proposal(state, proposal)
+    return (classification.get("verdict") == "no_problem_observed"
+            and classification.get("patch_authority") == "none"
+            and bool(waiting_ids.intersection(classification.get("direct_evidence_refs", []))))
 
 
 def _cached_review_requires_baseline_recheck(
