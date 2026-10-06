@@ -436,7 +436,10 @@ def update_agenda(
             state,
             question,
             legacy_question_id=legacy_question_id,
-            prior_thread=existing_by_question.get(str(question.get("id") or "")),
+            prior_thread=(
+                existing_by_question.get(str(question.get("id") or ""))
+                or archived_by_question.get(str(question.get("id") or ""))
+            ),
         )
         for question in eligible
     ]

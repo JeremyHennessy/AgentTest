@@ -125,6 +125,11 @@ class Phase42FullCycleResumptionCausalityTests(unittest.TestCase):
         # inquiry so the complete cycle can test causal attribution.
         prediction_experiment["question_id"] = resume_question["id"]
 
+        # Rejection must preserve prior durable accounting, not reset it to zero.
+        prior_record = {"decision_id": "AD_PRIOR", "cycle": 18}
+        state["agenda"]["genuine_resumption_count"] = 5
+        state["agenda"]["last_genuine_resumption"] = prior_record
+
         with tempfile.TemporaryDirectory() as actual_temp, tempfile.TemporaryDirectory() as counterfactual_temp:
             actual_store = StateStore(Path(actual_temp) / "organism.json")
             counterfactual_store = StateStore(
@@ -198,12 +203,14 @@ class Phase42FullCycleResumptionCausalityTests(unittest.TestCase):
         )
         self.assertEqual(
             actual_after["agenda"]["genuine_resumption_count"],
-            0,
+            5,
         )
         self.assertEqual(
             counterfactual_after["agenda"]["genuine_resumption_count"],
-            0,
+            5,
         )
+        self.assertEqual(actual_after["agenda"]["last_genuine_resumption"], prior_record)
+        self.assertEqual(counterfactual_after["agenda"]["last_genuine_resumption"], prior_record)
 
 
 

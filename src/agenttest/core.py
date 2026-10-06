@@ -1559,6 +1559,22 @@ class AgentCore:
             ),
         )
 
+        target_experiment = next(
+            (item for item in state["experiments"]
+             if item.get("id") == intention.get("target")), None,
+        )
+        experiment_routing = {
+            "selected_question_id": question["id"],
+            "returned_experiment_id": experiment.get("id") if experiment else None,
+            "experiment_question_id": experiment.get("question_id") if experiment else None,
+            "relationship": self._experiment_question_relationship(question, experiment, intention),
+            "intention_kind": intention["kind"],
+            "intention_target": intention.get("target"),
+            "target_relationship": (
+                self._experiment_question_relationship(question, target_experiment, intention)
+                if target_experiment is not None else "unchecked"
+            ),
+        }
         self_model_calibration = _calibrate_self_model(state)
         state["self_model"]["last_updated_cycle"] = cycle
         self._update_metrics(state)
@@ -1591,6 +1607,7 @@ class AgentCore:
             "cognition_candidate_id": thought["id"] if thought else None,
             "selected_question_id": question["id"],
             "experiment_id": experiment["id"] if experiment else None,
+            "experiment_routing": experiment_routing,
             "new_prediction_id": prediction["id"] if prediction else None,
             "prediction_experiment_id": (
                 prediction_experiment["id"] if prediction_experiment else None
@@ -1634,6 +1651,7 @@ class AgentCore:
             "thought": thought,
             "question": question,
             "experiment": experiment,
+            "experiment_routing": experiment_routing,
             "prediction": prediction,
             "prediction_experiment": prediction_experiment,
             "metrics": state["metrics"],
@@ -2088,6 +2106,36 @@ class AgentCore:
         state["questions"].append(question)
         return question
 
+    @staticmethod
+    def _experiment_question_relationship(
+        question: dict[str, Any],
+        experiment: dict[str, Any] | None,
+        intention: dict[str, Any],
+    ) -> str:
+        """Describe the route without treating an intention target as ownership."""
+        if experiment is None:
+            return "no_experiment"
+        if not question.get("id") or not experiment.get("question_id"):
+            return "unknown"
+        if question["id"] == experiment["question_id"]:
+            return "owned"
+        target = experiment.get("id")
+        followups = {
+            "specify_experiment": (
+                "What observable, evidence source, and resolution rule would make "
+                f"experiment {target} evidence-ready?"
+            ),
+            "resolve_pending_evidence": (
+                "What obtainable evidence would resolve pending experiment "
+                f"{target} with the least additional assumption?"
+            ),
+        }
+        expected = followups.get(str(intention.get("kind")))
+        if (target and intention.get("target") == target and expected
+                and _norm(str(question.get("text") or "")) == _norm(expected)):
+            return "explicit_followup"
+        return "unrelated"
+
     def _select_or_propose_experiment(
         self,
         state: dict[str, Any],
@@ -2102,6 +2150,8 @@ class AgentCore:
                 (
                     item for item in state["experiments"]
                     if item["id"] == intention["target"]
+                    and self._experiment_question_relationship(question, item, intention)
+                    in {"owned", "explicit_followup"}
                     and (
                         item.get("status") == "needs_specification"
                         or (
@@ -2124,6 +2174,8 @@ class AgentCore:
                 (
                     item for item in state["experiments"]
                     if item["id"] == intention["target"]
+                    and self._experiment_question_relationship(question, item, intention)
+                    in {"owned", "explicit_followup"}
                     and item.get("status") == "proposed"
                 ),
                 None,

@@ -8,6 +8,7 @@ from typing import Any
 from .action_lab import initial_action_lab_state
 from .episode_identity import ensure_episode_sequence, infer_episode_sequence_cursor
 from .agenda import ensure_agenda_state, initial_agenda_state
+from .objective_identity import ensure_objective_identity
 from .planning_lab import initial_planning_lab_state
 
 SCHEMA_VERSION = 25
@@ -127,7 +128,7 @@ def initial_state() -> dict[str, Any]:
         "empirical_learning": _empty_empirical_learning(),
         "action_lab": initial_action_lab_state(),
         "planning_lab": initial_planning_lab_state(),
-        "agenda": initial_agenda_state(),
+        "agenda": {**initial_agenda_state(), "started_cycle": 0},
         "cognition_events": [],
         "cognition_candidates": [],
         "questions": [],
@@ -214,6 +215,7 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
     action_lab.setdefault("last_action_cycle", None)
 
     planning_lab = state["planning_lab"]
+    ensure_objective_identity(planning_lab)
     for key, value in initial_planning_lab_state().items():
         planning_lab.setdefault(key, value)
     if (
@@ -250,11 +252,10 @@ def migrate_state(state: dict[str, Any]) -> dict[str, Any]:
         )
 
     agenda = ensure_agenda_state(state)
-    if (
-        prior_schema_version < 25
-        and agenda.get("started_cycle") is None
-        and int(state.get("cycles", 0) or 0) > 0
-    ):
+    # Recover both old schemas and current-schema states created before fresh
+    # agenda activation was initialized. Keep the saved-cycle boundary and all
+    # existing ledger/accounting fields; never backdate or reset an active agenda.
+    if agenda.get("started_cycle") is None:
         agenda["started_cycle"] = int(state.get("cycles", 0) or 0)
 
     metrics = state.setdefault("metrics", {})

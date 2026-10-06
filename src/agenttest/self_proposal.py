@@ -568,6 +568,7 @@ def _learning_evidence_debt(
         if experiment.get("status") != "proposed":
             continue
         if experiment.get("readiness") in {
+            "awaiting_native_evidence",
             "awaiting_specification_or_evidence",
             "needs_specification",
         }:
