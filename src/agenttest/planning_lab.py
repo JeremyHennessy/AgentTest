@@ -1952,9 +1952,12 @@ def _execute_objective_realization(
 
     provenance = _objective_goal_provenance(
         lab, decision.get("goal_id"), decision.get("objective_decision_id"))
+    matches = [item for item in lab.get("objective_realization_decisions", [])
+               if item.get("id") == decision.get("id")]
+    if len(matches) > 1:
+        provenance = {"status": "ambiguous", "match_count": len(matches),
+                      "scope": "active_precommit"}
     if lab.get("active_objective_realization_id") == decision.get("id"):
-        matches = [item for item in lab.get("objective_realization_decisions", [])
-                   if item.get("id") == decision.get("id")]
         if len(matches) != 1 or matches[0] is not decision:
             provenance = {"status": "ambiguous" if len(matches) > 1 else "unavailable",
                           "match_count": len(matches), "scope": "active_precommit"}
