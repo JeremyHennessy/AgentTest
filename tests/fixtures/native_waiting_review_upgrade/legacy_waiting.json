@@ -1,0 +1,3587 @@
+{
+  "accepted_changes": [],
+  "action_lab": {
+    "bounds": 2,
+    "history": [],
+    "last_action_cycle": null,
+    "learned_effects": {},
+    "position": [
+      0,
+      0
+    ],
+    "version": "bounded-action-lab-v1",
+    "visit_counts": {
+      "0,0": 1
+    }
+  },
+  "agenda": {
+    "archived_threads": [
+      {
+        "active_experiment_path": false,
+        "archive_reason": "outside_current_bounded_agenda",
+        "archived_cycle": 4,
+        "created_cycle": 3,
+        "evidence_refs": [],
+        "family_saturation": 0.0,
+        "history": [
+          {
+            "cycle": 3,
+            "evidence_refs": [],
+            "from": null,
+            "reason": "highest_evidence_linked_priority",
+            "to": "foreground"
+          }
+        ],
+        "id": "AT000004",
+        "last_foreground_cycle": 3,
+        "last_updated_cycle": 3,
+        "new_evidence_refs": [],
+        "priority_score": 1.0,
+        "question_id": "Q000004",
+        "question_text": "What observation could distinguish whether goal_directed_action and model_based_planning are meaningfully related rather than merely co-occurring?",
+        "resume_condition": null,
+        "source": null,
+        "source_learning_family": null,
+        "source_provenance_refs": [],
+        "status": "foreground",
+        "suspension_reason": null,
+        "thread_progress_evidence_refs": []
+      },
+      {
+        "active_experiment_path": false,
+        "archive_reason": "outside_current_bounded_agenda",
+        "archived_cycle": 6,
+        "created_cycle": 4,
+        "evidence_refs": [],
+        "family_saturation": 0.0,
+        "history": [
+          {
+            "cycle": 4,
+            "evidence_refs": [],
+            "from": null,
+            "reason": "highest_evidence_linked_priority",
+            "to": "foreground"
+          },
+          {
+            "cycle": 5,
+            "evidence_refs": [],
+            "from": "foreground",
+            "reason": "waiting_for_executable_path_or_new_evidence",
+            "to": "suspended"
+          }
+        ],
+        "id": "AT000005",
+        "last_foreground_cycle": 4,
+        "last_updated_cycle": 5,
+        "new_evidence_refs": [],
+        "priority_score": 0.0,
+        "question_id": "Q000005",
+        "question_text": "What smallest reversible experiment could increase cognition without reducing reproducibility?",
+        "resume_condition": "new evidence or an executable path raises this thread above the current foreground priority",
+        "source": null,
+        "source_learning_family": null,
+        "source_provenance_refs": [],
+        "status": "suspended",
+        "suspension_reason": "waiting_for_executable_path_or_new_evidence",
+        "thread_progress_evidence_refs": []
+      }
+    ],
+    "decisions": [
+      {
+        "candidate_count": 3,
+        "candidate_summaries": [
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": null,
+            "legacy_focus_value": 1.0,
+            "new_evidence_refs": [],
+            "priority_score": 1.35,
+            "question_id": "Q000002",
+            "question_text": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
+            "replication_saturation_cost": 0.0,
+            "source": null,
+            "source_learning_family": null,
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 0
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [
+              "E000001"
+            ],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": null,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "question_text": "What next observation would most directly test whether slow_signal remains stable?",
+            "replication_saturation_cost": 0.0,
+            "source": "native_inquiry",
+            "source_learning_family": null,
+            "source_provenance_refs": [
+              "E000001"
+            ],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 0
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [
+              "P000001"
+            ],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": 2,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000003",
+            "question_text": "Will measured repository fields remain unchanged until the next self-observation unless an intervening code change alters the baseline?",
+            "replication_saturation_cost": 0.0,
+            "source": "repository_stability_prediction",
+            "source_learning_family": "repository_stability_without_intervention",
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 1
+          }
+        ],
+        "candidate_telemetry": [
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "new",
+            "new_evidence_refs": [],
+            "newly_executable": true,
+            "previous_status": null,
+            "priority_score": 1.35,
+            "question_id": "Q000002",
+            "resumption_opportunity": false,
+            "selected": true,
+            "status": "foreground",
+            "thread_id": "AT000001"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "new",
+            "new_evidence_refs": [],
+            "newly_executable": true,
+            "previous_status": null,
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000002"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "new",
+            "new_evidence_refs": [],
+            "newly_executable": true,
+            "previous_status": null,
+            "priority_score": 0.35,
+            "question_id": "Q000003",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000003"
+          }
+        ],
+        "changed_choice": false,
+        "cycle": 2,
+        "decision_margin": 1.0,
+        "evidence_refs": [],
+        "foreground_changed": false,
+        "id": "AD000001",
+        "legacy_counterfactual": {
+          "question_id": "Q000002",
+          "question_text": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?"
+        },
+        "policy_version": "persistent-multithread-agenda-v2",
+        "previous_foreground_question_id": null,
+        "previous_foreground_thread_id": null,
+        "priority_change_supported_by_new_evidence": false,
+        "rationale": "Maintain several persisted inquiry threads, preserve the legacy question choice as a counterfactual, and foreground the existing thread with the strongest current evidence-linked priority.",
+        "resumed_thread_id": null,
+        "selected": {
+          "actionability_value": 0.35,
+          "active_experiment_path": true,
+          "evidence_change_value": 0.0,
+          "evidence_refs": [],
+          "family_saturation": 0.0,
+          "frontier_value": 0.0,
+          "last_selected_cycle": null,
+          "legacy_focus_value": 1.0,
+          "new_evidence_refs": [],
+          "priority_score": 1.35,
+          "question_id": "Q000002",
+          "question_text": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
+          "replication_saturation_cost": 0.0,
+          "source": null,
+          "source_learning_family": null,
+          "source_provenance_refs": [],
+          "thread_progress_evidence_refs": [],
+          "times_selected": 0
+        },
+        "selected_thread_id": "AT000001",
+        "suspended_thread_ids": []
+      },
+      {
+        "candidate_count": 4,
+        "candidate_summaries": [
+          {
+            "actionability_value": 0.0,
+            "active_experiment_path": false,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": null,
+            "legacy_focus_value": 1.0,
+            "new_evidence_refs": [],
+            "priority_score": 1.0,
+            "question_id": "Q000004",
+            "question_text": "What observation could distinguish whether goal_directed_action and model_based_planning are meaningfully related rather than merely co-occurring?",
+            "replication_saturation_cost": 0.0,
+            "source": null,
+            "source_learning_family": null,
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 0
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.15,
+            "evidence_refs": [
+              "X000002",
+              "P000001",
+              "R000001",
+              "P000002"
+            ],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": 3,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [
+              "X000002",
+              "P000001",
+              "R000001"
+            ],
+            "priority_score": 0.5,
+            "question_id": "Q000003",
+            "question_text": "Will measured repository fields remain unchanged until the next self-observation unless an intervening code change alters the baseline?",
+            "replication_saturation_cost": 0.0,
+            "source": "repository_stability_prediction",
+            "source_learning_family": "repository_stability_without_intervention",
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [
+              "X000002",
+              "P000001",
+              "R000001"
+            ],
+            "times_selected": 2
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [
+              "E000001"
+            ],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": null,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "question_text": "What next observation would most directly test whether slow_signal remains stable?",
+            "replication_saturation_cost": 0.0,
+            "source": "native_inquiry",
+            "source_learning_family": null,
+            "source_provenance_refs": [
+              "E000001"
+            ],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 0
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": 2,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000002",
+            "question_text": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
+            "replication_saturation_cost": 0.0,
+            "source": null,
+            "source_learning_family": null,
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 1
+          }
+        ],
+        "candidate_telemetry": [
+          {
+            "active_experiment_path": false,
+            "lifecycle_source": "new",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": null,
+            "priority_score": 1.0,
+            "question_id": "Q000004",
+            "resumption_opportunity": false,
+            "selected": true,
+            "status": "foreground",
+            "thread_id": "AT000004"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [
+              "X000002",
+              "P000001",
+              "R000001"
+            ],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.5,
+            "question_id": "Q000003",
+            "resumption_opportunity": true,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000003"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000002"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "foreground",
+            "priority_score": 0.35,
+            "question_id": "Q000002",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000001"
+          }
+        ],
+        "changed_choice": false,
+        "cycle": 3,
+        "decision_margin": 0.5,
+        "evidence_refs": [],
+        "foreground_changed": true,
+        "id": "AD000002",
+        "legacy_counterfactual": {
+          "question_id": "Q000004",
+          "question_text": "What observation could distinguish whether goal_directed_action and model_based_planning are meaningfully related rather than merely co-occurring?"
+        },
+        "policy_version": "persistent-multithread-agenda-v2",
+        "previous_foreground_question_id": "Q000002",
+        "previous_foreground_thread_id": "AT000001",
+        "priority_change_supported_by_new_evidence": false,
+        "rationale": "Maintain several persisted inquiry threads, preserve the legacy question choice as a counterfactual, and foreground the existing thread with the strongest current evidence-linked priority.",
+        "resumed_thread_id": null,
+        "selected": {
+          "actionability_value": 0.0,
+          "active_experiment_path": false,
+          "evidence_change_value": 0.0,
+          "evidence_refs": [],
+          "family_saturation": 0.0,
+          "frontier_value": 0.0,
+          "last_selected_cycle": null,
+          "legacy_focus_value": 1.0,
+          "new_evidence_refs": [],
+          "priority_score": 1.0,
+          "question_id": "Q000004",
+          "question_text": "What observation could distinguish whether goal_directed_action and model_based_planning are meaningfully related rather than merely co-occurring?",
+          "replication_saturation_cost": 0.0,
+          "source": null,
+          "source_learning_family": null,
+          "source_provenance_refs": [],
+          "thread_progress_evidence_refs": [],
+          "times_selected": 0
+        },
+        "selected_thread_id": "AT000004",
+        "suspended_thread_ids": [
+          "AT000001"
+        ]
+      },
+      {
+        "candidate_count": 5,
+        "candidate_summaries": [
+          {
+            "actionability_value": 0.0,
+            "active_experiment_path": false,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": null,
+            "legacy_focus_value": 1.0,
+            "new_evidence_refs": [],
+            "priority_score": 1.0,
+            "question_id": "Q000005",
+            "question_text": "What smallest reversible experiment could increase cognition without reducing reproducibility?",
+            "replication_saturation_cost": 0.0,
+            "source": null,
+            "source_learning_family": null,
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 0
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.15,
+            "evidence_refs": [
+              "X000002",
+              "P000001",
+              "R000001",
+              "X000003",
+              "P000002",
+              "R000002",
+              "P000003"
+            ],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": 4,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [
+              "X000003",
+              "P000002",
+              "R000002"
+            ],
+            "priority_score": 0.5,
+            "question_id": "Q000003",
+            "question_text": "Will measured repository fields remain unchanged until the next self-observation unless an intervening code change alters the baseline?",
+            "replication_saturation_cost": 0.0,
+            "source": "repository_stability_prediction",
+            "source_learning_family": "repository_stability_without_intervention",
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [
+              "X000002",
+              "P000001",
+              "R000001",
+              "X000003",
+              "P000002",
+              "R000002"
+            ],
+            "times_selected": 3
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [
+              "E000001"
+            ],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": null,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "question_text": "What next observation would most directly test whether slow_signal remains stable?",
+            "replication_saturation_cost": 0.0,
+            "source": "native_inquiry",
+            "source_learning_family": null,
+            "source_provenance_refs": [
+              "E000001"
+            ],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 0
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": 2,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000002",
+            "question_text": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
+            "replication_saturation_cost": 0.0,
+            "source": null,
+            "source_learning_family": null,
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 1
+          }
+        ],
+        "candidate_telemetry": [
+          {
+            "active_experiment_path": false,
+            "lifecycle_source": "new",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": null,
+            "priority_score": 1.0,
+            "question_id": "Q000005",
+            "resumption_opportunity": false,
+            "selected": true,
+            "status": "foreground",
+            "thread_id": "AT000005"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [
+              "X000003",
+              "P000002",
+              "R000002"
+            ],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.5,
+            "question_id": "Q000003",
+            "resumption_opportunity": true,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000003"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000002"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.35,
+            "question_id": "Q000002",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000001"
+          }
+        ],
+        "changed_choice": false,
+        "cycle": 4,
+        "decision_margin": 0.5,
+        "evidence_refs": [],
+        "foreground_changed": true,
+        "id": "AD000003",
+        "legacy_counterfactual": {
+          "question_id": "Q000005",
+          "question_text": "What smallest reversible experiment could increase cognition without reducing reproducibility?"
+        },
+        "policy_version": "persistent-multithread-agenda-v2",
+        "previous_foreground_question_id": "Q000004",
+        "previous_foreground_thread_id": "AT000004",
+        "priority_change_supported_by_new_evidence": false,
+        "rationale": "Maintain several persisted inquiry threads, preserve the legacy question choice as a counterfactual, and foreground the existing thread with the strongest current evidence-linked priority.",
+        "resumed_thread_id": null,
+        "selected": {
+          "actionability_value": 0.0,
+          "active_experiment_path": false,
+          "evidence_change_value": 0.0,
+          "evidence_refs": [],
+          "family_saturation": 0.0,
+          "frontier_value": 0.0,
+          "last_selected_cycle": null,
+          "legacy_focus_value": 1.0,
+          "new_evidence_refs": [],
+          "priority_score": 1.0,
+          "question_id": "Q000005",
+          "question_text": "What smallest reversible experiment could increase cognition without reducing reproducibility?",
+          "replication_saturation_cost": 0.0,
+          "source": null,
+          "source_learning_family": null,
+          "source_provenance_refs": [],
+          "thread_progress_evidence_refs": [],
+          "times_selected": 0
+        },
+        "selected_thread_id": "AT000005",
+        "suspended_thread_ids": []
+      },
+      {
+        "candidate_count": 5,
+        "candidate_summaries": [
+          {
+            "actionability_value": 0.0,
+            "active_experiment_path": false,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [
+              "P000001",
+              "R000001",
+              "P000002",
+              "R000002",
+              "P000003",
+              "R000003"
+            ],
+            "family_saturation": 0.75,
+            "frontier_value": 0.6,
+            "last_selected_cycle": null,
+            "legacy_focus_value": 1.0,
+            "new_evidence_refs": [],
+            "priority_score": 1.6,
+            "question_id": "Q000006",
+            "question_text": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?",
+            "replication_saturation_cost": 0.0,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": "repository_stability_without_intervention",
+            "source_provenance_refs": [
+              "P000001",
+              "R000001",
+              "P000002",
+              "R000002",
+              "P000003",
+              "R000003"
+            ],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 0
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [
+              "E000001"
+            ],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": null,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "question_text": "What next observation would most directly test whether slow_signal remains stable?",
+            "replication_saturation_cost": 0.0,
+            "source": "native_inquiry",
+            "source_learning_family": null,
+            "source_provenance_refs": [
+              "E000001"
+            ],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 0
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": 2,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000002",
+            "question_text": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
+            "replication_saturation_cost": 0.0,
+            "source": null,
+            "source_learning_family": null,
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 1
+          },
+          {
+            "actionability_value": 0.0,
+            "active_experiment_path": false,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": 4,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.0,
+            "question_id": "Q000005",
+            "question_text": "What smallest reversible experiment could increase cognition without reducing reproducibility?",
+            "replication_saturation_cost": 0.0,
+            "source": null,
+            "source_learning_family": null,
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 1
+          }
+        ],
+        "candidate_telemetry": [
+          {
+            "active_experiment_path": false,
+            "lifecycle_source": "new",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": null,
+            "priority_score": 1.6,
+            "question_id": "Q000006",
+            "resumption_opportunity": false,
+            "selected": true,
+            "status": "foreground",
+            "thread_id": "AT000006"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000002"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.35,
+            "question_id": "Q000002",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000001"
+          },
+          {
+            "active_experiment_path": false,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "foreground",
+            "priority_score": 0.0,
+            "question_id": "Q000005",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000005"
+          }
+        ],
+        "changed_choice": false,
+        "cycle": 5,
+        "decision_margin": 1.25,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003"
+        ],
+        "foreground_changed": true,
+        "id": "AD000004",
+        "legacy_counterfactual": {
+          "question_id": "Q000006",
+          "question_text": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?"
+        },
+        "policy_version": "persistent-multithread-agenda-v2",
+        "previous_foreground_question_id": "Q000005",
+        "previous_foreground_thread_id": "AT000005",
+        "priority_change_supported_by_new_evidence": false,
+        "rationale": "Maintain several persisted inquiry threads, preserve the legacy question choice as a counterfactual, and foreground the existing thread with the strongest current evidence-linked priority.",
+        "resumed_thread_id": null,
+        "selected": {
+          "actionability_value": 0.0,
+          "active_experiment_path": false,
+          "evidence_change_value": 0.0,
+          "evidence_refs": [
+            "P000001",
+            "R000001",
+            "P000002",
+            "R000002",
+            "P000003",
+            "R000003"
+          ],
+          "family_saturation": 0.75,
+          "frontier_value": 0.6,
+          "last_selected_cycle": null,
+          "legacy_focus_value": 1.0,
+          "new_evidence_refs": [],
+          "priority_score": 1.6,
+          "question_id": "Q000006",
+          "question_text": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?",
+          "replication_saturation_cost": 0.0,
+          "source": "empirical_frontier_transfer",
+          "source_learning_family": "repository_stability_without_intervention",
+          "source_provenance_refs": [
+            "P000001",
+            "R000001",
+            "P000002",
+            "R000002",
+            "P000003",
+            "R000003"
+          ],
+          "thread_progress_evidence_refs": [],
+          "times_selected": 0
+        },
+        "selected_thread_id": "AT000006",
+        "suspended_thread_ids": [
+          "AT000005"
+        ]
+      },
+      {
+        "candidate_count": 5,
+        "candidate_summaries": [
+          {
+            "actionability_value": 0.0,
+            "active_experiment_path": false,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [
+              "P000001",
+              "R000001",
+              "P000002",
+              "R000002",
+              "P000003",
+              "R000003",
+              "P000004",
+              "R000004"
+            ],
+            "family_saturation": 0.833333,
+            "frontier_value": 0.666666,
+            "last_selected_cycle": 5,
+            "legacy_focus_value": 1.0,
+            "new_evidence_refs": [],
+            "priority_score": 1.666666,
+            "question_id": "Q000006",
+            "question_text": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?",
+            "replication_saturation_cost": 0.0,
+            "source": "empirical_frontier_transfer",
+            "source_learning_family": "repository_stability_without_intervention",
+            "source_provenance_refs": [
+              "P000001",
+              "R000001",
+              "P000002",
+              "R000002",
+              "P000003",
+              "R000003",
+              "P000004",
+              "R000004"
+            ],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 1
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [
+              "E000001"
+            ],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": null,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "question_text": "What next observation would most directly test whether slow_signal remains stable?",
+            "replication_saturation_cost": 0.0,
+            "source": "native_inquiry",
+            "source_learning_family": null,
+            "source_provenance_refs": [
+              "E000001"
+            ],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 0
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.0,
+            "evidence_refs": [],
+            "family_saturation": 0.0,
+            "frontier_value": 0.0,
+            "last_selected_cycle": 2,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [],
+            "priority_score": 0.35,
+            "question_id": "Q000002",
+            "question_text": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
+            "replication_saturation_cost": 0.0,
+            "source": null,
+            "source_learning_family": null,
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [],
+            "times_selected": 1
+          },
+          {
+            "actionability_value": 0.35,
+            "active_experiment_path": true,
+            "evidence_change_value": 0.3,
+            "evidence_refs": [
+              "X000002",
+              "P000001",
+              "R000001",
+              "X000003",
+              "P000002",
+              "R000002",
+              "X000004",
+              "P000003",
+              "R000003",
+              "X000005",
+              "P000004",
+              "R000004",
+              "P000005"
+            ],
+            "family_saturation": 0.833333,
+            "frontier_value": 0.0,
+            "last_selected_cycle": 6,
+            "legacy_focus_value": 0.0,
+            "new_evidence_refs": [
+              "X000004",
+              "P000003",
+              "R000003",
+              "X000005",
+              "P000004",
+              "R000004"
+            ],
+            "priority_score": 0.066667,
+            "question_id": "Q000003",
+            "question_text": "Will measured repository fields remain unchanged until the next self-observation unless an intervening code change alters the baseline?",
+            "replication_saturation_cost": 0.583333,
+            "source": "repository_stability_prediction",
+            "source_learning_family": "repository_stability_without_intervention",
+            "source_provenance_refs": [],
+            "thread_progress_evidence_refs": [
+              "X000002",
+              "P000001",
+              "R000001",
+              "X000003",
+              "P000002",
+              "R000002",
+              "X000004",
+              "P000003",
+              "R000003",
+              "X000005",
+              "P000004",
+              "R000004"
+            ],
+            "times_selected": 5
+          }
+        ],
+        "candidate_telemetry": [
+          {
+            "active_experiment_path": false,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "foreground",
+            "priority_score": 1.666666,
+            "question_id": "Q000006",
+            "resumption_opportunity": false,
+            "selected": true,
+            "status": "foreground",
+            "thread_id": "AT000006"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.35,
+            "question_id": "Q000001",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000002"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "active",
+            "new_evidence_refs": [],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.35,
+            "question_id": "Q000002",
+            "resumption_opportunity": false,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000001"
+          },
+          {
+            "active_experiment_path": true,
+            "lifecycle_source": "archived_reentry",
+            "new_evidence_refs": [
+              "X000004",
+              "P000003",
+              "R000003",
+              "X000005",
+              "P000004",
+              "R000004"
+            ],
+            "newly_executable": false,
+            "previous_status": "suspended",
+            "priority_score": 0.066667,
+            "question_id": "Q000003",
+            "resumption_opportunity": true,
+            "selected": false,
+            "status": "suspended",
+            "thread_id": "AT000003"
+          }
+        ],
+        "changed_choice": false,
+        "cycle": 6,
+        "decision_margin": 1.316666,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003",
+          "P000004",
+          "R000004"
+        ],
+        "foreground_changed": false,
+        "id": "AD000005",
+        "legacy_counterfactual": {
+          "question_id": "Q000006",
+          "question_text": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?"
+        },
+        "policy_version": "persistent-multithread-agenda-v2",
+        "previous_foreground_question_id": "Q000006",
+        "previous_foreground_thread_id": "AT000006",
+        "priority_change_supported_by_new_evidence": false,
+        "rationale": "Maintain several persisted inquiry threads, preserve the legacy question choice as a counterfactual, and foreground the existing thread with the strongest current evidence-linked priority.",
+        "resumed_thread_id": null,
+        "selected": {
+          "actionability_value": 0.0,
+          "active_experiment_path": false,
+          "evidence_change_value": 0.0,
+          "evidence_refs": [
+            "P000001",
+            "R000001",
+            "P000002",
+            "R000002",
+            "P000003",
+            "R000003",
+            "P000004",
+            "R000004"
+          ],
+          "family_saturation": 0.833333,
+          "frontier_value": 0.666666,
+          "last_selected_cycle": 5,
+          "legacy_focus_value": 1.0,
+          "new_evidence_refs": [],
+          "priority_score": 1.666666,
+          "question_id": "Q000006",
+          "question_text": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?",
+          "replication_saturation_cost": 0.0,
+          "source": "empirical_frontier_transfer",
+          "source_learning_family": "repository_stability_without_intervention",
+          "source_provenance_refs": [
+            "P000001",
+            "R000001",
+            "P000002",
+            "R000002",
+            "P000003",
+            "R000003",
+            "P000004",
+            "R000004"
+          ],
+          "thread_progress_evidence_refs": [],
+          "times_selected": 1
+        },
+        "selected_thread_id": "AT000006",
+        "suspended_thread_ids": []
+      }
+    ],
+    "foreground_thread_id": "AT000006",
+    "genuine_resumption_count": 0,
+    "last_decision_cycle": 6,
+    "last_genuine_resumption": null,
+    "next_decision_index": 6,
+    "next_thread_index": 7,
+    "started_cycle": 0,
+    "threads": [
+      {
+        "active_experiment_path": false,
+        "created_cycle": 5,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003",
+          "P000004",
+          "R000004"
+        ],
+        "family_saturation": 0.833333,
+        "history": [
+          {
+            "cycle": 5,
+            "evidence_refs": [
+              "P000001",
+              "R000001",
+              "P000002",
+              "R000002",
+              "P000003",
+              "R000003"
+            ],
+            "from": null,
+            "reason": "highest_evidence_linked_priority",
+            "to": "foreground"
+          }
+        ],
+        "id": "AT000006",
+        "last_foreground_cycle": 6,
+        "last_updated_cycle": 6,
+        "new_evidence_refs": [],
+        "priority_score": 1.666666,
+        "question_id": "Q000006",
+        "question_text": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?",
+        "resume_condition": null,
+        "source": "empirical_frontier_transfer",
+        "source_learning_family": "repository_stability_without_intervention",
+        "source_provenance_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003",
+          "P000004",
+          "R000004"
+        ],
+        "status": "foreground",
+        "suspension_reason": null,
+        "thread_progress_evidence_refs": []
+      },
+      {
+        "active_experiment_path": true,
+        "created_cycle": 2,
+        "evidence_refs": [
+          "E000001"
+        ],
+        "family_saturation": 0.0,
+        "history": [
+          {
+            "cycle": 2,
+            "evidence_refs": [
+              "E000001"
+            ],
+            "from": null,
+            "reason": "lower_priority_but_executable",
+            "to": "suspended"
+          }
+        ],
+        "id": "AT000002",
+        "last_foreground_cycle": null,
+        "last_updated_cycle": 6,
+        "new_evidence_refs": [],
+        "priority_score": 0.35,
+        "question_id": "Q000001",
+        "question_text": "What next observation would most directly test whether slow_signal remains stable?",
+        "resume_condition": "new evidence or an executable path raises this thread above the current foreground priority",
+        "source": "native_inquiry",
+        "source_learning_family": null,
+        "source_provenance_refs": [
+          "E000001"
+        ],
+        "status": "suspended",
+        "suspension_reason": "lower_priority_but_executable",
+        "thread_progress_evidence_refs": []
+      },
+      {
+        "active_experiment_path": true,
+        "created_cycle": 2,
+        "evidence_refs": [],
+        "family_saturation": 0.0,
+        "history": [
+          {
+            "cycle": 2,
+            "evidence_refs": [],
+            "from": null,
+            "reason": "highest_evidence_linked_priority",
+            "to": "foreground"
+          },
+          {
+            "cycle": 3,
+            "evidence_refs": [],
+            "from": "foreground",
+            "reason": "lower_priority_but_executable",
+            "to": "suspended"
+          }
+        ],
+        "id": "AT000001",
+        "last_foreground_cycle": 2,
+        "last_updated_cycle": 6,
+        "new_evidence_refs": [],
+        "priority_score": 0.35,
+        "question_id": "Q000002",
+        "question_text": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
+        "resume_condition": "new evidence or an executable path raises this thread above the current foreground priority",
+        "source": null,
+        "source_learning_family": null,
+        "source_provenance_refs": [],
+        "status": "suspended",
+        "suspension_reason": "lower_priority_but_executable",
+        "thread_progress_evidence_refs": []
+      },
+      {
+        "active_experiment_path": true,
+        "created_cycle": 2,
+        "evidence_refs": [
+          "X000002",
+          "P000001",
+          "R000001",
+          "X000003",
+          "P000002",
+          "R000002",
+          "X000004",
+          "P000003",
+          "R000003",
+          "X000005",
+          "P000004",
+          "R000004",
+          "P000005"
+        ],
+        "family_saturation": 0.833333,
+        "history": [
+          {
+            "cycle": 2,
+            "evidence_refs": [
+              "P000001"
+            ],
+            "from": null,
+            "reason": "lower_priority_but_executable",
+            "to": "suspended"
+          }
+        ],
+        "id": "AT000003",
+        "last_foreground_cycle": null,
+        "last_updated_cycle": 6,
+        "new_evidence_refs": [
+          "X000004",
+          "P000003",
+          "R000003",
+          "X000005",
+          "P000004",
+          "R000004"
+        ],
+        "priority_score": 0.066667,
+        "question_id": "Q000003",
+        "question_text": "Will measured repository fields remain unchanged until the next self-observation unless an intervening code change alters the baseline?",
+        "resume_condition": "new evidence or an executable path raises this thread above the current foreground priority",
+        "source": "repository_stability_prediction",
+        "source_learning_family": "repository_stability_without_intervention",
+        "source_provenance_refs": [],
+        "status": "suspended",
+        "suspension_reason": "mature_replication_can_continue_without_foreground_attention",
+        "thread_progress_evidence_refs": [
+          "X000002",
+          "P000001",
+          "R000001",
+          "X000003",
+          "P000002",
+          "R000002",
+          "X000004",
+          "P000003",
+          "R000003",
+          "X000005",
+          "P000004",
+          "R000004"
+        ]
+      }
+    ],
+    "version": "persistent-multithread-agenda-v2"
+  },
+  "change_proposals": [
+    {
+      "baseline_metric": 1.0,
+      "created_at": "2026-10-06T00:48:37.487636+00:00",
+      "created_cycle": 6,
+      "evidence_refs": [
+        "X000001",
+        "P000003",
+        "R000003",
+        "P000004",
+        "R000004"
+      ],
+      "expected_effect": "An experiment with a concrete evidence contract can close only from matching later evidence; an underspecified stale experiment is retained but marked as needing specification and no longer contributes to resolvable evidence hunger.",
+      "falsification": "Reject if unrelated evidence closes an experiment, history is deleted, evidence hunger still counts work that cannot be resolved, or any preserved behavior regresses.",
+      "files": [
+        "src/agenttest/core.py",
+        "src/agenttest/drives.py",
+        "tests/test_core.py"
+      ],
+      "hypothesis": "Separating evidence-ready experiments from underspecified investigations can prevent stale unresolved work from dominating attention while preserving every historical experiment and its provenance.",
+      "id": "M000001",
+      "protected_paths": [
+        ".github/workflows/growth.yml",
+        ".github/workflows/interact.yml",
+        ".github/workflows/reconcile.yml",
+        ".github/workflows/verify.yml",
+        "scripts/blocked_attention_eval.py",
+        "scripts/compare_eval.py",
+        "scripts/experiment_design_eval.py",
+        "scripts/preservation_eval.py",
+        "scripts/reconcile_verified_change.py",
+        "src/agenttest/action_lab.py",
+        "src/agenttest/change_control.py",
+        "src/agenttest/diagnostic_attention.py",
+        "src/agenttest/diagnostic_experiments.py",
+        "src/agenttest/diagnostic_inquiry.py",
+        "src/agenttest/diagnostic_replay.py",
+        "src/agenttest/diagnostic_self_model.py",
+        "src/agenttest/diagnostics.py",
+        "src/agenttest/evidence.py",
+        "src/agenttest/intervention.py",
+        "src/agenttest/proposal_review.py",
+        "src/agenttest/self_proposal.py"
+      ],
+      "rollback": "Revert the candidate change and restore the previous verified baseline.",
+      "schema_version": 1,
+      "selection_rationale": "Stale evidence debt was detected in experiment X000001 after 5 cycles despite later evaluated evidence; this overrides the saturated aggregate learning metric.",
+      "selection_signal": "stale_evidence_debt",
+      "source": "self-proposal-v1",
+      "source_diagnostic_id": null,
+      "status": "reviewed_supported_problem",
+      "target_dimension": "learning",
+      "test_plan": "Construct evidence-ready and underspecified experiments, provide later evaluated prediction evidence, verify only a legitimate match closes, verify stale underspecified work remains preserved with an explicit non-ready status, and run the baseline-owned preservation gate.",
+      "title": "Resolve stale experiment evidence debt"
+    }
+  ],
+  "cognition_candidates": [],
+  "cognition_events": [],
+  "concept_counts": {
+    "goal_directed_action": 5,
+    "model_based_planning": 5,
+    "observation": 5,
+    "persistent_plan": 5,
+    "planning_lab": 5,
+    "repository": 5
+  },
+  "created_at": "2026-10-06T00:48:37.270578+00:00",
+  "cycles": 6,
+  "drives": {
+    "calibration_gap": 0.0,
+    "continuity_repair": 0.0,
+    "empirical_frontier": 0.583333,
+    "evidence_hunger": 0.25,
+    "novelty_hunger": 0.0,
+    "prediction_error": 0.0,
+    "specification_pressure": 0.0,
+    "uncertainty": 0.3333333333333333
+  },
+  "empirical_learning": {
+    "families": {
+      "repository_stability_without_intervention": {
+        "change_observations": 0,
+        "completed_trials": 4,
+        "evaluable_trials": 4,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003",
+          "P000004",
+          "R000004"
+        ],
+        "evidence_state": "provisional_stability",
+        "experiment_refs": [
+          "X000002",
+          "X000003",
+          "X000004",
+          "X000005"
+        ],
+        "family": "repository_stability_without_intervention",
+        "inconclusive_trials": 0,
+        "last_completed_cycle": 5,
+        "next_expected_status": "confirmed",
+        "stability_rate": 1.0,
+        "stable_observations": 4
+      }
+    },
+    "updated_cycle": 6,
+    "version": "empirical-learning-v1"
+  },
+  "environment_snapshots": [
+    {
+      "baseline_fingerprint": "native-waiting-control",
+      "branch": "autonomous/growth",
+      "cycle": 2,
+      "python_files": 20,
+      "python_source_lines": 5000,
+      "test_files": 12,
+      "tracked_files": 100,
+      "working_tree_clean": true
+    },
+    {
+      "baseline_fingerprint": "native-waiting-control",
+      "branch": "autonomous/growth",
+      "cycle": 3,
+      "python_files": 20,
+      "python_source_lines": 5000,
+      "test_files": 12,
+      "tracked_files": 100,
+      "working_tree_clean": true
+    },
+    {
+      "baseline_fingerprint": "native-waiting-control",
+      "branch": "autonomous/growth",
+      "cycle": 4,
+      "python_files": 20,
+      "python_source_lines": 5000,
+      "test_files": 12,
+      "tracked_files": 100,
+      "working_tree_clean": true
+    },
+    {
+      "baseline_fingerprint": "native-waiting-control",
+      "branch": "autonomous/growth",
+      "cycle": 5,
+      "python_files": 20,
+      "python_source_lines": 5000,
+      "test_files": 12,
+      "tracked_files": 100,
+      "working_tree_clean": true
+    },
+    {
+      "baseline_fingerprint": "native-waiting-control",
+      "branch": "autonomous/growth",
+      "cycle": 6,
+      "python_files": 20,
+      "python_source_lines": 5000,
+      "test_files": 12,
+      "tracked_files": 100,
+      "working_tree_clean": true
+    }
+  ],
+  "episodes": [
+    {
+      "concepts": [
+        "native",
+        "observation",
+        "evidence"
+      ],
+      "content": "{\"action_absent\": null, \"action_present\": null, \"confirmations\": 1, \"evaluable\": 1, \"observation_refs\": [\"obs-1\", \"obs-2\"], \"refutations\": 0, \"relation\": {\"action\": null, \"comparison_status\": \"not_applicable\", \"feature\": \"slow_signal\", \"kind\": \"same_next_observation\"}, \"version\": \"native-inquiry-evidence-v1\"}",
+      "cycle": 1,
+      "id": "E000001",
+      "kind": "native_inquiry_evidence",
+      "time": "2026-10-04T00:00:00+00:00"
+    },
+    {
+      "concepts": [
+        "native",
+        "association",
+        "evidence"
+      ],
+      "content": "{\"measurement\": {\"action_absent\": {\"changed\": 0, \"evaluable\": 1, \"same\": 1}, \"action_present\": {\"changed\": 1, \"evaluable\": 1, \"same\": 0}, \"observed_change_rate_action_absent\": 0.0, \"observed_change_rate_action_present\": 1.0, \"observed_change_rate_difference\": 1.0}, \"measurement_kind\": \"comparative_action_exposure\", \"observation_refs\": [\"obs-a\", \"obs-b\", \"obs-c\"], \"relation\": {\"action\": \"interact\", \"comparison_status\": \"comparable\", \"feature\": \"slow_signal\", \"kind\": \"action_associated_with_change\"}, \"version\": \"native-inquiry-evidence-v2\"}",
+      "cycle": 1,
+      "id": "E000002",
+      "kind": "native_inquiry_evidence",
+      "time": "2026-10-04T00:00:00+00:00"
+    },
+    {
+      "concepts": [
+        "repository",
+        "observation"
+      ],
+      "content": "{\"baseline_fingerprint\": \"native-waiting-control\", \"branch\": \"autonomous/growth\", \"cycle\": 2, \"python_files\": 20, \"python_source_lines\": 5000, \"test_files\": 12, \"tracked_files\": 100, \"working_tree_clean\": true}",
+      "cycle": 2,
+      "id": "E000003",
+      "kind": "environment",
+      "time": "2026-10-05T02:00:00+00:00"
+    },
+    {
+      "concepts": [
+        "planning_lab",
+        "goal_directed_action",
+        "persistent_plan",
+        "model_based_planning"
+      ],
+      "content": "{\"action\": null, \"after\": null, \"before\": null, \"goal\": null, \"goal_reached\": null, \"matched_prediction\": null, \"plan_id\": null, \"predicted_after\": null}",
+      "cycle": 2,
+      "id": "E000004",
+      "kind": "planning_lab",
+      "time": "2026-10-05T02:00:00+00:00"
+    },
+    {
+      "concepts": [
+        "repository",
+        "observation"
+      ],
+      "content": "{\"baseline_fingerprint\": \"native-waiting-control\", \"branch\": \"autonomous/growth\", \"cycle\": 3, \"python_files\": 20, \"python_source_lines\": 5000, \"test_files\": 12, \"tracked_files\": 100, \"working_tree_clean\": true}",
+      "cycle": 3,
+      "id": "E000005",
+      "kind": "environment",
+      "time": "2026-10-05T02:01:00+00:00"
+    },
+    {
+      "concepts": [
+        "planning_lab",
+        "goal_directed_action",
+        "persistent_plan",
+        "model_based_planning"
+      ],
+      "content": "{\"action\": null, \"after\": null, \"before\": null, \"goal\": null, \"goal_reached\": null, \"matched_prediction\": null, \"plan_id\": null, \"predicted_after\": null}",
+      "cycle": 3,
+      "id": "E000006",
+      "kind": "planning_lab",
+      "time": "2026-10-05T02:01:00+00:00"
+    },
+    {
+      "concepts": [
+        "repository",
+        "observation"
+      ],
+      "content": "{\"baseline_fingerprint\": \"native-waiting-control\", \"branch\": \"autonomous/growth\", \"cycle\": 4, \"python_files\": 20, \"python_source_lines\": 5000, \"test_files\": 12, \"tracked_files\": 100, \"working_tree_clean\": true}",
+      "cycle": 4,
+      "id": "E000007",
+      "kind": "environment",
+      "time": "2026-10-05T02:02:00+00:00"
+    },
+    {
+      "concepts": [
+        "planning_lab",
+        "goal_directed_action",
+        "persistent_plan",
+        "model_based_planning"
+      ],
+      "content": "{\"action\": null, \"after\": null, \"before\": null, \"goal\": null, \"goal_reached\": null, \"matched_prediction\": null, \"plan_id\": null, \"predicted_after\": null}",
+      "cycle": 4,
+      "id": "E000008",
+      "kind": "planning_lab",
+      "time": "2026-10-05T02:02:00+00:00"
+    },
+    {
+      "concepts": [
+        "repository",
+        "observation"
+      ],
+      "content": "{\"baseline_fingerprint\": \"native-waiting-control\", \"branch\": \"autonomous/growth\", \"cycle\": 5, \"python_files\": 20, \"python_source_lines\": 5000, \"test_files\": 12, \"tracked_files\": 100, \"working_tree_clean\": true}",
+      "cycle": 5,
+      "id": "E000009",
+      "kind": "environment",
+      "time": "2026-10-05T02:03:00+00:00"
+    },
+    {
+      "concepts": [
+        "planning_lab",
+        "goal_directed_action",
+        "persistent_plan",
+        "model_based_planning"
+      ],
+      "content": "{\"action\": null, \"after\": null, \"before\": null, \"goal\": null, \"goal_reached\": null, \"matched_prediction\": null, \"plan_id\": null, \"predicted_after\": null}",
+      "cycle": 5,
+      "id": "E000010",
+      "kind": "planning_lab",
+      "time": "2026-10-05T02:03:00+00:00"
+    },
+    {
+      "concepts": [
+        "repository",
+        "observation"
+      ],
+      "content": "{\"baseline_fingerprint\": \"native-waiting-control\", \"branch\": \"autonomous/growth\", \"cycle\": 6, \"python_files\": 20, \"python_source_lines\": 5000, \"test_files\": 12, \"tracked_files\": 100, \"working_tree_clean\": true}",
+      "cycle": 6,
+      "id": "E000011",
+      "kind": "environment",
+      "time": "2026-10-05T02:04:00+00:00"
+    },
+    {
+      "concepts": [
+        "planning_lab",
+        "goal_directed_action",
+        "persistent_plan",
+        "model_based_planning"
+      ],
+      "content": "{\"action\": null, \"after\": null, \"before\": null, \"goal\": null, \"goal_reached\": null, \"matched_prediction\": null, \"plan_id\": null, \"predicted_after\": null}",
+      "cycle": 6,
+      "id": "E000012",
+      "kind": "planning_lab",
+      "time": "2026-10-05T02:04:00+00:00"
+    }
+  ],
+  "experiments": [
+    {
+      "cognition_candidate_id": null,
+      "created_at": "2026-10-06T00:48:37.290742+00:00",
+      "cycle": 1,
+      "falsification": "A later evaluable slow_signal value that differs counts against stability.",
+      "hypothesis": "Observed slow_signal tends to remain stable across consecutive evaluable observations.",
+      "id": "X000001",
+      "intention_id": "I000001",
+      "last_selected_cycle": 2,
+      "method": "Collect one later legitimate slow_signal observation and compare it with the prior measured value.",
+      "native_inquiry": {
+        "candidate_id": "NIC:test:stable-signal",
+        "evidence_refs": [
+          "E000001"
+        ],
+        "objective": "information_gain",
+        "objective_score": 0.62,
+        "relation": {
+          "action": null,
+          "comparison_status": "not_applicable",
+          "feature": "slow_signal",
+          "kind": "same_next_observation"
+        },
+        "resolution_evidence_floor_episode_count": 2,
+        "resolution_evidence_floor_episode_sequence": 2,
+        "version": "native-inquiry-candidate-v1"
+      },
+      "native_inquiry_candidate_id": "NIC:test:stable-signal",
+      "predicted_observation": "The next evaluable slow_signal reading matches the prior reading.",
+      "question_id": "Q000001",
+      "readiness": "awaiting_native_evidence",
+      "readiness_reason": "A native inquiry owns a dedicated fresh native-evidence resolution contract.",
+      "specification": {
+        "actionability": "actionable",
+        "available_fields": [
+          "observable",
+          "evidence_source",
+          "resolution_rule"
+        ],
+        "blocking_reason": null,
+        "current_grounded_evidence_can_supply": true,
+        "evaluated_cycle": 1,
+        "evidence_source": {
+          "kind": "native_inquiry_evidence",
+          "refs": [
+            "E000001"
+          ]
+        },
+        "grounded_evidence_refs": [
+          "E000001"
+        ],
+        "missing_fields": [],
+        "observable": "The next evaluable slow_signal reading matches the prior reading.",
+        "resolution_rule": "A later evaluable slow_signal value that differs counts against stability.",
+        "source_candidate_id": "NIC:test:stable-signal",
+        "version": "experiment-specification-v1"
+      },
+      "specification_history": [
+        {
+          "actionability": "actionable",
+          "cycle": 1,
+          "grounded_evidence_refs": [
+            "E000001"
+          ],
+          "missing_fields": []
+        }
+      ],
+      "status": "proposed",
+      "times_selected": 1
+    },
+    {
+      "cognition_candidate_id": null,
+      "completed_at": "2026-10-05T02:01:00+00:00",
+      "completion_source": "prediction_status_contract",
+      "created_at": "2026-10-05T02:00:00+00:00",
+      "cycle": 2,
+      "empirical_basis": null,
+      "evidence_contract": {
+        "expected_status": "confirmed",
+        "kind": "prediction_status",
+        "prediction_id": "P000001"
+      },
+      "evidence_refs": [
+        "P000001",
+        "R000001"
+      ],
+      "evidence_strength": 1.0,
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "hypothesis": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "id": "X000002",
+      "intention_id": null,
+      "last_selected_cycle": 2,
+      "learning_family": "repository_stability_without_intervention",
+      "method": "Compare the next repository self-observation with the pending prediction. A changed baseline invalidates the test rather than counting as support or falsification.",
+      "observed_prediction_status": "confirmed",
+      "outcome": "supported",
+      "predicted_observation": "The next comparable repository self-observation matches the prediction's measured fields.",
+      "question_id": "Q000003",
+      "readiness": "resolved",
+      "readiness_reason": "A structured prediction-status evidence contract is present.",
+      "source": "repository_stability_prediction",
+      "specification": {
+        "actionability": "evidence_ready",
+        "available_fields": [
+          "observable",
+          "evidence_source",
+          "resolution_rule"
+        ],
+        "blocking_reason": null,
+        "current_grounded_evidence_can_supply": true,
+        "evaluated_cycle": 3,
+        "evidence_source": {
+          "kind": "prediction",
+          "refs": [
+            "P000001"
+          ]
+        },
+        "grounded_evidence_refs": [
+          "P000001"
+        ],
+        "missing_fields": [],
+        "observable": {
+          "kind": "prediction_status",
+          "prediction_id": "P000001"
+        },
+        "resolution_rule": {
+          "expected_status": "confirmed",
+          "kind": "expected_prediction_status"
+        },
+        "source_candidate_id": null,
+        "version": "experiment-specification-v1"
+      },
+      "specification_history": [
+        {
+          "actionability": "evidence_ready",
+          "cycle": 3,
+          "grounded_evidence_refs": [
+            "P000001"
+          ],
+          "missing_fields": []
+        }
+      ],
+      "status": "completed",
+      "status_history": [
+        {
+          "cycle": 3,
+          "evidence_refs": [
+            "P000001",
+            "R000001"
+          ],
+          "from": "proposed",
+          "outcome": "supported",
+          "reason": "prediction_status_contract_resolved",
+          "to": "completed"
+        }
+      ],
+      "times_selected": 1
+    },
+    {
+      "cognition_candidate_id": null,
+      "completed_at": "2026-10-05T02:02:00+00:00",
+      "completion_source": "prediction_status_contract",
+      "created_at": "2026-10-05T02:01:00+00:00",
+      "cycle": 3,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 1,
+        "evidence_refs": [
+          "P000001",
+          "R000001"
+        ],
+        "inconclusive_trials": 0,
+        "stability_rate": 1.0,
+        "stable_observations": 1,
+        "version": "empirical-learning-v1"
+      },
+      "evidence_contract": {
+        "expected_status": "confirmed",
+        "kind": "prediction_status",
+        "prediction_id": "P000002"
+      },
+      "evidence_refs": [
+        "P000002",
+        "R000002"
+      ],
+      "evidence_strength": 1.0,
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "hypothesis": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "id": "X000003",
+      "intention_id": null,
+      "last_selected_cycle": 3,
+      "learning_family": "repository_stability_without_intervention",
+      "method": "Compare the next repository self-observation with the pending prediction. A changed baseline invalidates the test rather than counting as support or falsification.",
+      "observed_prediction_status": "confirmed",
+      "outcome": "supported",
+      "predicted_observation": "The next comparable repository self-observation matches the prediction's measured fields.",
+      "question_id": "Q000003",
+      "readiness": "resolved",
+      "readiness_reason": "A structured prediction-status evidence contract is present.",
+      "source": "repository_stability_prediction",
+      "specification": {
+        "actionability": "evidence_ready",
+        "available_fields": [
+          "observable",
+          "evidence_source",
+          "resolution_rule"
+        ],
+        "blocking_reason": null,
+        "current_grounded_evidence_can_supply": true,
+        "evaluated_cycle": 4,
+        "evidence_source": {
+          "kind": "prediction",
+          "refs": [
+            "P000002"
+          ]
+        },
+        "grounded_evidence_refs": [
+          "P000002"
+        ],
+        "missing_fields": [],
+        "observable": {
+          "kind": "prediction_status",
+          "prediction_id": "P000002"
+        },
+        "resolution_rule": {
+          "expected_status": "confirmed",
+          "kind": "expected_prediction_status"
+        },
+        "source_candidate_id": null,
+        "version": "experiment-specification-v1"
+      },
+      "specification_history": [
+        {
+          "actionability": "evidence_ready",
+          "cycle": 4,
+          "grounded_evidence_refs": [
+            "P000002"
+          ],
+          "missing_fields": []
+        }
+      ],
+      "status": "completed",
+      "status_history": [
+        {
+          "cycle": 4,
+          "evidence_refs": [
+            "P000002",
+            "R000002"
+          ],
+          "from": "proposed",
+          "outcome": "supported",
+          "reason": "prediction_status_contract_resolved",
+          "to": "completed"
+        }
+      ],
+      "times_selected": 1
+    },
+    {
+      "cognition_candidate_id": null,
+      "completed_at": "2026-10-05T02:03:00+00:00",
+      "completion_source": "prediction_status_contract",
+      "created_at": "2026-10-05T02:02:00+00:00",
+      "cycle": 4,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 2,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002"
+        ],
+        "inconclusive_trials": 0,
+        "stability_rate": 1.0,
+        "stable_observations": 2,
+        "version": "empirical-learning-v1"
+      },
+      "evidence_contract": {
+        "expected_status": "confirmed",
+        "kind": "prediction_status",
+        "prediction_id": "P000003"
+      },
+      "evidence_refs": [
+        "P000003",
+        "R000003"
+      ],
+      "evidence_strength": 1.0,
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "hypothesis": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "id": "X000004",
+      "intention_id": null,
+      "last_selected_cycle": 4,
+      "learning_family": "repository_stability_without_intervention",
+      "method": "Compare the next repository self-observation with the pending prediction. A changed baseline invalidates the test rather than counting as support or falsification.",
+      "observed_prediction_status": "confirmed",
+      "outcome": "supported",
+      "predicted_observation": "The next comparable repository self-observation matches the prediction's measured fields.",
+      "question_id": "Q000003",
+      "readiness": "resolved",
+      "readiness_reason": "A structured prediction-status evidence contract is present.",
+      "source": "repository_stability_prediction",
+      "specification": {
+        "actionability": "evidence_ready",
+        "available_fields": [
+          "observable",
+          "evidence_source",
+          "resolution_rule"
+        ],
+        "blocking_reason": null,
+        "current_grounded_evidence_can_supply": true,
+        "evaluated_cycle": 5,
+        "evidence_source": {
+          "kind": "prediction",
+          "refs": [
+            "P000003"
+          ]
+        },
+        "grounded_evidence_refs": [
+          "P000003"
+        ],
+        "missing_fields": [],
+        "observable": {
+          "kind": "prediction_status",
+          "prediction_id": "P000003"
+        },
+        "resolution_rule": {
+          "expected_status": "confirmed",
+          "kind": "expected_prediction_status"
+        },
+        "source_candidate_id": null,
+        "version": "experiment-specification-v1"
+      },
+      "specification_history": [
+        {
+          "actionability": "evidence_ready",
+          "cycle": 5,
+          "grounded_evidence_refs": [
+            "P000003"
+          ],
+          "missing_fields": []
+        }
+      ],
+      "status": "completed",
+      "status_history": [
+        {
+          "cycle": 5,
+          "evidence_refs": [
+            "P000003",
+            "R000003"
+          ],
+          "from": "proposed",
+          "outcome": "supported",
+          "reason": "prediction_status_contract_resolved",
+          "to": "completed"
+        }
+      ],
+      "times_selected": 1
+    },
+    {
+      "cognition_candidate_id": null,
+      "completed_at": "2026-10-05T02:04:00+00:00",
+      "completion_source": "prediction_status_contract",
+      "created_at": "2026-10-05T02:03:00+00:00",
+      "cycle": 5,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 3,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003"
+        ],
+        "inconclusive_trials": 0,
+        "stability_rate": 1.0,
+        "stable_observations": 3,
+        "version": "empirical-learning-v1"
+      },
+      "evidence_contract": {
+        "expected_status": "confirmed",
+        "kind": "prediction_status",
+        "prediction_id": "P000004"
+      },
+      "evidence_refs": [
+        "P000004",
+        "R000004"
+      ],
+      "evidence_strength": 1.0,
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "hypothesis": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "id": "X000005",
+      "intention_id": null,
+      "last_selected_cycle": 5,
+      "learning_family": "repository_stability_without_intervention",
+      "method": "Compare the next repository self-observation with the pending prediction. A changed baseline invalidates the test rather than counting as support or falsification.",
+      "observed_prediction_status": "confirmed",
+      "outcome": "supported",
+      "predicted_observation": "The next comparable repository self-observation matches the prediction's measured fields.",
+      "question_id": "Q000003",
+      "readiness": "resolved",
+      "readiness_reason": "A structured prediction-status evidence contract is present.",
+      "source": "repository_stability_prediction",
+      "specification": {
+        "actionability": "evidence_ready",
+        "available_fields": [
+          "observable",
+          "evidence_source",
+          "resolution_rule"
+        ],
+        "blocking_reason": null,
+        "current_grounded_evidence_can_supply": true,
+        "evaluated_cycle": 6,
+        "evidence_source": {
+          "kind": "prediction",
+          "refs": [
+            "P000004"
+          ]
+        },
+        "grounded_evidence_refs": [
+          "P000004"
+        ],
+        "missing_fields": [],
+        "observable": {
+          "kind": "prediction_status",
+          "prediction_id": "P000004"
+        },
+        "resolution_rule": {
+          "expected_status": "confirmed",
+          "kind": "expected_prediction_status"
+        },
+        "source_candidate_id": null,
+        "version": "experiment-specification-v1"
+      },
+      "specification_history": [
+        {
+          "actionability": "evidence_ready",
+          "cycle": 6,
+          "grounded_evidence_refs": [
+            "P000004"
+          ],
+          "missing_fields": []
+        }
+      ],
+      "status": "completed",
+      "status_history": [
+        {
+          "cycle": 6,
+          "evidence_refs": [
+            "P000004",
+            "R000004"
+          ],
+          "from": "proposed",
+          "outcome": "supported",
+          "reason": "prediction_status_contract_resolved",
+          "to": "completed"
+        }
+      ],
+      "times_selected": 1
+    },
+    {
+      "cognition_candidate_id": null,
+      "created_at": "2026-10-05T02:04:00+00:00",
+      "cycle": 6,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 4,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003",
+          "P000004",
+          "R000004"
+        ],
+        "inconclusive_trials": 0,
+        "stability_rate": 1.0,
+        "stable_observations": 4,
+        "version": "empirical-learning-v1"
+      },
+      "evidence_contract": {
+        "expected_status": "confirmed",
+        "kind": "prediction_status",
+        "prediction_id": "P000005"
+      },
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "hypothesis": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "id": "X000006",
+      "intention_id": null,
+      "last_selected_cycle": 6,
+      "learning_family": "repository_stability_without_intervention",
+      "method": "Compare the next repository self-observation with the pending prediction. A changed baseline invalidates the test rather than counting as support or falsification.",
+      "predicted_observation": "The next comparable repository self-observation matches the prediction's measured fields.",
+      "question_id": "Q000003",
+      "readiness": "evidence_ready",
+      "readiness_reason": "A pending repository-state prediction supplies a structured prediction-status evidence contract.",
+      "source": "repository_stability_prediction",
+      "status": "proposed",
+      "times_selected": 1
+    }
+  ],
+  "generation": 6,
+  "identity": {
+    "chosen_name": null,
+    "description": "A persistent experimental process, not a claim of consciousness.",
+    "designation": "Genesis-0",
+    "origin": "2026-09-29"
+  },
+  "intentions": [
+    {
+      "cycle": 1,
+      "dominant_drive": "uncertainty",
+      "evidence_refs": [
+        "E000001"
+      ],
+      "id": "I000001",
+      "kind": "reduce_uncertainty",
+      "native_inquiry_candidate_id": "NIC:test:stable-signal",
+      "rationale": "Explicit opt-in native inquiry staged from persisted grounded evidence using information_gain.",
+      "strength": 0.62,
+      "target": null
+    },
+    {
+      "cycle": 2,
+      "dominant_drive": "evidence_hunger",
+      "empirical_transfer": null,
+      "evidence_refs": [],
+      "id": "I000002",
+      "kind": "resolve_pending_evidence",
+      "rationale": "evidence_hunger had the highest current pressure (0.250); ties use a fixed order so the choice is reproducible.",
+      "strength": 0.25,
+      "target": "X000001"
+    },
+    {
+      "cycle": 3,
+      "dominant_drive": "uncertainty",
+      "empirical_transfer": null,
+      "evidence_refs": [],
+      "id": "I000003",
+      "kind": "reduce_uncertainty",
+      "rationale": "uncertainty had the highest current pressure (0.333); ties use a fixed order so the choice is reproducible.",
+      "strength": 0.3333333333333333,
+      "target": null
+    },
+    {
+      "cycle": 4,
+      "dominant_drive": "uncertainty",
+      "empirical_transfer": null,
+      "evidence_refs": [],
+      "id": "I000004",
+      "kind": "reduce_uncertainty",
+      "rationale": "uncertainty had the highest current pressure (0.333); ties use a fixed order so the choice is reproducible.",
+      "strength": 0.3333333333333333,
+      "target": null
+    },
+    {
+      "cycle": 5,
+      "dominant_drive": "empirical_frontier",
+      "empirical_transfer": {
+        "change_observations": 0,
+        "evaluable_trials": 3,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003"
+        ],
+        "evidence_state": "provisional_stability",
+        "family": "repository_stability_without_intervention",
+        "pressure": 0.525,
+        "saturation": 0.75,
+        "stability_rate": 1.0,
+        "stable_observations": 3
+      },
+      "evidence_refs": [
+        "P000001",
+        "R000001",
+        "P000002",
+        "R000002",
+        "P000003",
+        "R000003"
+      ],
+      "id": "I000005",
+      "kind": "explore_empirical_frontier",
+      "rationale": "empirical_frontier had the highest current pressure (0.525); empirical family repository_stability_without_intervention has 3 evaluable trials with saturation 0.750. Replication continues separately while foreground attention may move toward a distinct empirical frontier.",
+      "strength": 0.525,
+      "target": "repository_stability_without_intervention"
+    },
+    {
+      "cycle": 6,
+      "dominant_drive": "empirical_frontier",
+      "empirical_transfer": {
+        "change_observations": 0,
+        "evaluable_trials": 4,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003",
+          "P000004",
+          "R000004"
+        ],
+        "evidence_state": "provisional_stability",
+        "family": "repository_stability_without_intervention",
+        "pressure": 0.583333,
+        "saturation": 0.833333,
+        "stability_rate": 1.0,
+        "stable_observations": 4
+      },
+      "evidence_refs": [
+        "P000001",
+        "R000001",
+        "P000002",
+        "R000002",
+        "P000003",
+        "R000003",
+        "P000004",
+        "R000004"
+      ],
+      "id": "I000006",
+      "kind": "explore_empirical_frontier",
+      "rationale": "empirical_frontier had the highest current pressure (0.583); empirical family repository_stability_without_intervention has 4 evaluable trials with saturation 0.833. Replication continues separately while foreground attention may move toward a distinct empirical frontier.",
+      "strength": 0.583333,
+      "target": "repository_stability_without_intervention"
+    }
+  ],
+  "interactions": [],
+  "metrics": {
+    "adaptation": 0.0,
+    "agency": 1.0,
+    "cognition": 0.0,
+    "continuity": 1.0,
+    "curiosity": 1.0,
+    "learning": 1.0,
+    "memory": 1.0,
+    "open_endedness": 1.0,
+    "perception": 1.0,
+    "reflection": 0.8,
+    "reproducibility": 0.8,
+    "self_model": 1.0,
+    "semantic_memory": 1.0,
+    "world_model": 1.0
+  },
+  "next_episode_index": 13,
+  "planning_lab": {
+    "active_goal_id": null,
+    "active_objective_realization_id": null,
+    "active_plan_id": null,
+    "bootstrapped_cycle": null,
+    "bootstrapped_from_action_count": 0,
+    "bounds": 2,
+    "curiosity_decisions": [],
+    "curiosity_probes": [],
+    "episodic_memory_started_cycle": null,
+    "episodic_route_memories": [],
+    "executions": [],
+    "goals": [],
+    "last_action_cycle": null,
+    "last_objective_selection_cycle": null,
+    "last_self_experiment_cycle": null,
+    "last_transfer_probe_cycle": null,
+    "learned_effects": {
+      "east": {
+        "blocked_samples": 0,
+        "confidence": 0.0,
+        "modal_delta": null,
+        "unblocked_samples": 0
+      },
+      "north": {
+        "blocked_samples": 0,
+        "confidence": 0.0,
+        "modal_delta": null,
+        "unblocked_samples": 0
+      },
+      "south": {
+        "blocked_samples": 0,
+        "confidence": 0.0,
+        "modal_delta": null,
+        "unblocked_samples": 0
+      },
+      "west": {
+        "blocked_samples": 0,
+        "confidence": 0.0,
+        "modal_delta": null,
+        "unblocked_samples": 0
+      }
+    },
+    "memory_decisions": [],
+    "model_revisions": [],
+    "objective_decisions": [],
+    "objective_realization_decisions": [],
+    "objective_realization_started_cycle": null,
+    "objective_realizations": [],
+    "objective_selection_started_cycle": null,
+    "outcome_valuation_started_cycle": null,
+    "plans": [],
+    "position": [
+      0,
+      0
+    ],
+    "self_experiment_decisions": [],
+    "self_experiment_started_cycle": null,
+    "self_experiments": [],
+    "state_effects": {},
+    "status": "waiting_for_model",
+    "transfer_decisions": [],
+    "transfer_probes": [],
+    "transition_observations": [],
+    "version": "persistent-planning-lab-v9",
+    "visit_counts": {
+      "0,0": 1
+    },
+    "world_version": "bounded-stateful-world-v1"
+  },
+  "predictions": [
+    {
+      "created_at": "2026-10-05T02:00:00+00:00",
+      "cycle": 2,
+      "empirical_basis": null,
+      "errors": {},
+      "evaluated_at": "2026-10-05T02:01:00+00:00",
+      "evidence_strength": 1.0,
+      "expected": {
+        "baseline_fingerprint": "native-waiting-control",
+        "branch": "autonomous/growth",
+        "python_files": 20,
+        "python_source_lines": 5000,
+        "test_files": 12,
+        "tracked_files": 100,
+        "working_tree_clean": true
+      },
+      "expected_status": "confirmed",
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "id": "P000001",
+      "learning_family": "repository_stability_without_intervention",
+      "resolved_experiment_ids": [
+        "X000002"
+      ],
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "status": "confirmed"
+    },
+    {
+      "created_at": "2026-10-05T02:01:00+00:00",
+      "cycle": 3,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 1,
+        "evidence_refs": [
+          "P000001",
+          "R000001"
+        ],
+        "inconclusive_trials": 0,
+        "stability_rate": 1.0,
+        "stable_observations": 1,
+        "version": "empirical-learning-v1"
+      },
+      "errors": {},
+      "evaluated_at": "2026-10-05T02:02:00+00:00",
+      "evidence_strength": 1.0,
+      "expected": {
+        "baseline_fingerprint": "native-waiting-control",
+        "branch": "autonomous/growth",
+        "python_files": 20,
+        "python_source_lines": 5000,
+        "test_files": 12,
+        "tracked_files": 100,
+        "working_tree_clean": true
+      },
+      "expected_status": "confirmed",
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "id": "P000002",
+      "learning_family": "repository_stability_without_intervention",
+      "resolved_experiment_ids": [
+        "X000003"
+      ],
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "status": "confirmed"
+    },
+    {
+      "created_at": "2026-10-05T02:02:00+00:00",
+      "cycle": 4,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 2,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002"
+        ],
+        "inconclusive_trials": 0,
+        "stability_rate": 1.0,
+        "stable_observations": 2,
+        "version": "empirical-learning-v1"
+      },
+      "errors": {},
+      "evaluated_at": "2026-10-05T02:03:00+00:00",
+      "evidence_strength": 1.0,
+      "expected": {
+        "baseline_fingerprint": "native-waiting-control",
+        "branch": "autonomous/growth",
+        "python_files": 20,
+        "python_source_lines": 5000,
+        "test_files": 12,
+        "tracked_files": 100,
+        "working_tree_clean": true
+      },
+      "expected_status": "confirmed",
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "id": "P000003",
+      "learning_family": "repository_stability_without_intervention",
+      "resolved_experiment_ids": [
+        "X000004"
+      ],
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "status": "confirmed"
+    },
+    {
+      "created_at": "2026-10-05T02:03:00+00:00",
+      "cycle": 5,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 3,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003"
+        ],
+        "inconclusive_trials": 0,
+        "stability_rate": 1.0,
+        "stable_observations": 3,
+        "version": "empirical-learning-v1"
+      },
+      "errors": {},
+      "evaluated_at": "2026-10-05T02:04:00+00:00",
+      "evidence_strength": 1.0,
+      "expected": {
+        "baseline_fingerprint": "native-waiting-control",
+        "branch": "autonomous/growth",
+        "python_files": 20,
+        "python_source_lines": 5000,
+        "test_files": 12,
+        "tracked_files": 100,
+        "working_tree_clean": true
+      },
+      "expected_status": "confirmed",
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "id": "P000004",
+      "learning_family": "repository_stability_without_intervention",
+      "resolved_experiment_ids": [
+        "X000005"
+      ],
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "status": "confirmed"
+    },
+    {
+      "created_at": "2026-10-05T02:04:00+00:00",
+      "cycle": 6,
+      "empirical_basis": {
+        "change_observations": 0,
+        "evaluable_trials": 4,
+        "evidence_refs": [
+          "P000001",
+          "R000001",
+          "P000002",
+          "R000002",
+          "P000003",
+          "R000003",
+          "P000004",
+          "R000004"
+        ],
+        "inconclusive_trials": 0,
+        "stability_rate": 1.0,
+        "stable_observations": 4,
+        "version": "empirical-learning-v1"
+      },
+      "expected": {
+        "baseline_fingerprint": "native-waiting-control",
+        "branch": "autonomous/growth",
+        "python_files": 20,
+        "python_source_lines": 5000,
+        "test_files": 12,
+        "tracked_files": 100,
+        "working_tree_clean": true
+      },
+      "expected_status": "confirmed",
+      "falsification": "Any change in a measured comparable field violates this prediction.",
+      "id": "P000005",
+      "learning_family": "repository_stability_without_intervention",
+      "statement": "Measured repository fields will remain unchanged until the next self-observation unless an intervening code change alters the baseline.",
+      "status": "pending"
+    }
+  ],
+  "proposal_diagnostics": [],
+  "proposal_reviews": [
+    {
+      "considered_diagnostic_ids": [],
+      "considered_system_diagnostic_ids": [],
+      "created_at": "2026-10-06T00:48:37.487636+00:00",
+      "direct_evidence_refs": [
+        "X000001",
+        "P000003",
+        "R000003",
+        "P000004",
+        "R000004"
+      ],
+      "evidence_kinds": {
+        "experiments": 1,
+        "predictions": 2,
+        "reflections": 2
+      },
+      "id": "V000001",
+      "patch_authority": "candidate_allowed",
+      "proposal_id": "M000001",
+      "reason": "At least one experiment remains proposed despite later evaluated prediction evidence, directly demonstrating an unresolved evidence-closure gap.",
+      "required_next_evidence": null,
+      "resolved_evidence_count": 5,
+      "review_version": "proposal-review-v4",
+      "reviewed_cycle": 6,
+      "target_dimension": "learning",
+      "verdict": "supported_problem"
+    }
+  ],
+  "questions": [
+    {
+      "created_cycle": 1,
+      "id": "Q000001",
+      "last_selected_cycle": null,
+      "native_inquiry_candidate_id": "NIC:test:stable-signal",
+      "native_relation": {
+        "action": null,
+        "comparison_status": "not_applicable",
+        "feature": "slow_signal",
+        "kind": "same_next_observation"
+      },
+      "source": "native_inquiry",
+      "source_evidence_refs": [
+        "E000001"
+      ],
+      "status": "open",
+      "text": "What next observation would most directly test whether slow_signal remains stable?",
+      "times_selected": 0
+    },
+    {
+      "created_cycle": 2,
+      "id": "Q000002",
+      "last_selected_cycle": 2,
+      "status": "open",
+      "text": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
+      "times_selected": 1
+    },
+    {
+      "created_cycle": 2,
+      "id": "Q000003",
+      "last_selected_cycle": 6,
+      "source": "repository_stability_prediction",
+      "status": "open",
+      "text": "Will measured repository fields remain unchanged until the next self-observation unless an intervening code change alters the baseline?",
+      "times_selected": 5
+    },
+    {
+      "created_cycle": 3,
+      "id": "Q000004",
+      "last_selected_cycle": 3,
+      "status": "open",
+      "text": "What observation could distinguish whether goal_directed_action and model_based_planning are meaningfully related rather than merely co-occurring?",
+      "times_selected": 1
+    },
+    {
+      "created_cycle": 4,
+      "id": "Q000005",
+      "last_selected_cycle": 4,
+      "status": "open",
+      "text": "What smallest reversible experiment could increase cognition without reducing reproducibility?",
+      "times_selected": 1
+    },
+    {
+      "created_cycle": 5,
+      "id": "Q000006",
+      "last_selected_cycle": 6,
+      "source": "empirical_frontier_transfer",
+      "source_evidence_refs": [
+        "P000001",
+        "R000001",
+        "P000002",
+        "R000002",
+        "P000003",
+        "R000003",
+        "P000004",
+        "R000004"
+      ],
+      "source_learning_family": "repository_stability_without_intervention",
+      "status": "open",
+      "text": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?",
+      "times_selected": 2
+    }
+  ],
+  "reflections": [
+    {
+      "cycle": 3,
+      "evidence_strength": 1.0,
+      "id": "R000001",
+      "lesson": "Measured repository stability prediction was confirmed; use the observed error fields rather than inventing a cause.",
+      "outcome": "confirmed",
+      "prediction_id": "P000001",
+      "source": "prediction"
+    },
+    {
+      "cycle": 4,
+      "evidence_strength": 1.0,
+      "id": "R000002",
+      "lesson": "Measured repository stability prediction was confirmed; use the observed error fields rather than inventing a cause.",
+      "outcome": "confirmed",
+      "prediction_id": "P000002",
+      "source": "prediction"
+    },
+    {
+      "cycle": 5,
+      "evidence_strength": 1.0,
+      "id": "R000003",
+      "lesson": "Measured repository stability prediction was confirmed; use the observed error fields rather than inventing a cause.",
+      "outcome": "confirmed",
+      "prediction_id": "P000003",
+      "source": "prediction"
+    },
+    {
+      "cycle": 6,
+      "evidence_strength": 1.0,
+      "id": "R000004",
+      "lesson": "Measured repository stability prediction was confirmed; use the observed error fields rather than inventing a cause.",
+      "outcome": "confirmed",
+      "prediction_id": "P000004",
+      "source": "prediction"
+    }
+  ],
+  "schema_version": 25,
+  "self_model": {
+    "calibration": {
+      "calibrated_cycle": 6,
+      "coverage": 1.0,
+      "grounded": 19,
+      "observed": 8,
+      "total": 19,
+      "unverified": 11,
+      "verified": 0,
+      "version": "self-model-calibration-v1"
+    },
+    "capabilities": [
+      "persistent structured state",
+      "append-only event journal",
+      "deterministic semantic consolidation with source episode references",
+      "temporal world claims that preserve superseded observed values",
+      "question generation from accumulated concepts",
+      "selection of explicit falsifiable experiments",
+      "narrow repository self-perception through auditable sensors",
+      "one-step prediction of measured repository state",
+      "endogenous evidence-driven intention selection",
+      "validated boundary for optional model-generated candidate thoughts",
+      "evidence-backed self-authored change manifests without code execution",
+      "proposal review that distinguishes direct problem evidence from measurement gaps",
+      "verified non-mutating diagnostics that can resolve measurement gaps",
+      "intervention-aware prediction using a non-state repository baseline fingerprint",
+      "verified read-only self-model grounding diagnostics",
+      "evidence-grounded self-model calibration with explicit uncertainty",
+      "baseline-scoped diagnostic re-evaluation after interventions",
+      "verified read-only inquiry-family diagnostics",
+      "persistent human interaction surface with evidence-linked responses"
+    ],
+    "capability_claims": {
+      "append-only event journal": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "The live state does not currently expose a citable journal-write evidence ID.",
+        "status": "unverified"
+      },
+      "baseline-scoped diagnostic re-evaluation after interventions": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No explicit calibration rule has been defined for this capability claim.",
+        "status": "unverified"
+      },
+      "deterministic semantic consolidation with source episode references": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "rationale": "Semantic memory entries retain source episode references.",
+        "status": "observed"
+      },
+      "endogenous evidence-driven intention selection": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [
+          "I000003",
+          "I000004",
+          "I000005",
+          "I000006"
+        ],
+        "rationale": "Persisted intention selections are present.",
+        "status": "observed"
+      },
+      "evidence-backed self-authored change manifests without code execution": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No citable proposal-review evidence exists yet for a self-authored manifest.",
+        "status": "unverified"
+      },
+      "evidence-grounded self-model calibration with explicit uncertainty": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No explicit calibration rule has been defined for this capability claim.",
+        "status": "unverified"
+      },
+      "intervention-aware prediction using a non-state repository baseline fingerprint": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No explicit calibration rule has been defined for this capability claim.",
+        "status": "unverified"
+      },
+      "narrow repository self-perception through auditable sensors": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "rationale": "Environment episodes record repository sensor observations.",
+        "status": "observed"
+      },
+      "one-step prediction of measured repository state": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [
+          "P000002",
+          "P000003",
+          "P000004",
+          "P000005"
+        ],
+        "rationale": "Persisted repository predictions are present.",
+        "status": "observed"
+      },
+      "persistent human interaction surface with evidence-linked responses": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No human interaction record with a citable stimulus episode exists yet.",
+        "status": "unverified"
+      },
+      "persistent structured state": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [
+          "E000011",
+          "E000012"
+        ],
+        "rationale": "Persistent episodes are present in the loaded state across the current history.",
+        "status": "observed"
+      },
+      "proposal review that distinguishes direct problem evidence from measurement gaps": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No proposal review has been persisted yet.",
+        "status": "unverified"
+      },
+      "question generation from accumulated concepts": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [
+          "Q000003",
+          "Q000004",
+          "Q000005",
+          "Q000006"
+        ],
+        "rationale": "Persisted generated questions are present.",
+        "status": "observed"
+      },
+      "selection of explicit falsifiable experiments": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [
+          "X000003",
+          "X000004",
+          "X000005",
+          "X000006"
+        ],
+        "rationale": "Persisted experiments with falsification criteria are present.",
+        "status": "observed"
+      },
+      "temporal world claims that preserve superseded observed values": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [
+          "W000012",
+          "W000013",
+          "W000014",
+          "W000015"
+        ],
+        "rationale": "Current provenance-backed world claims are present.",
+        "status": "observed"
+      },
+      "validated boundary for optional model-generated candidate thoughts": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No accepted live cognition candidate exists; provider-unavailable events do not verify grounding acceptance.",
+        "status": "unverified"
+      },
+      "verified non-mutating diagnostics that can resolve measurement gaps": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No explicit calibration rule has been defined for this capability claim.",
+        "status": "unverified"
+      },
+      "verified read-only inquiry-family diagnostics": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No explicit calibration rule has been defined for this capability claim.",
+        "status": "unverified"
+      },
+      "verified read-only self-model grounding diagnostics": {
+        "calibrated_cycle": 6,
+        "evidence_refs": [],
+        "reason": "No explicit calibration rule has been defined for this capability claim.",
+        "status": "unverified"
+      }
+    },
+    "last_updated_cycle": 6,
+    "limitations": [
+      "Self-authored change manifests cannot apply or merge code.",
+      "Governance and preservation files are excluded from self-authored changes.",
+      "Proposal review can withhold patch authority when evidence does not identify the failing layer.",
+      "Diagnostic authority is limited to verified harnesses running on isolated or read-only state.",
+      "Repository intervention detection identifies changed content but does not infer why it changed.",
+      "Self-model calibration records evidence status but does not prove unverified capabilities.",
+      "Inquiry-family diagnostics use deterministic lexical similarity and do not establish semantic equivalence in every context.",
+      "Interaction replies are deterministic state renderings and do not imply subjective experience.",
+      "Semantic memory is lexical and co-occurrence based rather than embedding based.",
+      "The world model currently represents only directly derived repository and evaluation claims.",
+      "Perception is limited to explicitly implemented auditable sensors.",
+      "Model cognition is optional and its output is untrusted until validated.",
+      "Model cognition cannot directly modify evidence, metrics, tools, or code.",
+      "Environmental actions are not independently executed.",
+      "No evidence currently establishes consciousness or subjective experience.",
+      "Code changes are proposals until independently evaluated."
+    ]
+  },
+  "semantic_memory": {
+    "associations": {
+      "association|evidence": {
+        "concepts": [
+          "association",
+          "evidence"
+        ],
+        "count": 1,
+        "episode_refs": [
+          "E000002"
+        ],
+        "first_cycle": 1,
+        "last_cycle": 1
+      },
+      "association|native": {
+        "concepts": [
+          "association",
+          "native"
+        ],
+        "count": 1,
+        "episode_refs": [
+          "E000002"
+        ],
+        "first_cycle": 1,
+        "last_cycle": 1
+      },
+      "evidence|native": {
+        "concepts": [
+          "evidence",
+          "native"
+        ],
+        "count": 2,
+        "episode_refs": [
+          "E000001",
+          "E000002"
+        ],
+        "first_cycle": 1,
+        "last_cycle": 1
+      },
+      "evidence|observation": {
+        "concepts": [
+          "evidence",
+          "observation"
+        ],
+        "count": 1,
+        "episode_refs": [
+          "E000001"
+        ],
+        "first_cycle": 1,
+        "last_cycle": 1
+      },
+      "goal_directed_action|model_based_planning": {
+        "concepts": [
+          "goal_directed_action",
+          "model_based_planning"
+        ],
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "goal_directed_action|persistent_plan": {
+        "concepts": [
+          "goal_directed_action",
+          "persistent_plan"
+        ],
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "goal_directed_action|planning_lab": {
+        "concepts": [
+          "goal_directed_action",
+          "planning_lab"
+        ],
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "model_based_planning|persistent_plan": {
+        "concepts": [
+          "model_based_planning",
+          "persistent_plan"
+        ],
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "model_based_planning|planning_lab": {
+        "concepts": [
+          "model_based_planning",
+          "planning_lab"
+        ],
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "native|observation": {
+        "concepts": [
+          "native",
+          "observation"
+        ],
+        "count": 1,
+        "episode_refs": [
+          "E000001"
+        ],
+        "first_cycle": 1,
+        "last_cycle": 1
+      },
+      "observation|repository": {
+        "concepts": [
+          "observation",
+          "repository"
+        ],
+        "count": 5,
+        "episode_refs": [
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "persistent_plan|planning_lab": {
+        "concepts": [
+          "persistent_plan",
+          "planning_lab"
+        ],
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      }
+    },
+    "concepts": {
+      "association": {
+        "concept": "association",
+        "count": 1,
+        "episode_refs": [
+          "E000002"
+        ],
+        "first_cycle": 1,
+        "last_cycle": 1
+      },
+      "evidence": {
+        "concept": "evidence",
+        "count": 2,
+        "episode_refs": [
+          "E000001",
+          "E000002"
+        ],
+        "first_cycle": 1,
+        "last_cycle": 1
+      },
+      "goal_directed_action": {
+        "concept": "goal_directed_action",
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "model_based_planning": {
+        "concept": "model_based_planning",
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "native": {
+        "concept": "native",
+        "count": 2,
+        "episode_refs": [
+          "E000001",
+          "E000002"
+        ],
+        "first_cycle": 1,
+        "last_cycle": 1
+      },
+      "observation": {
+        "concept": "observation",
+        "count": 6,
+        "episode_refs": [
+          "E000001",
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "first_cycle": 1,
+        "last_cycle": 6
+      },
+      "persistent_plan": {
+        "concept": "persistent_plan",
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "planning_lab": {
+        "concept": "planning_lab",
+        "count": 5,
+        "episode_refs": [
+          "E000004",
+          "E000006",
+          "E000008",
+          "E000010",
+          "E000012"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      },
+      "repository": {
+        "concept": "repository",
+        "count": 5,
+        "episode_refs": [
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "first_cycle": 2,
+        "last_cycle": 6
+      }
+    },
+    "inquiry_families": {
+      "families": [
+        {
+          "family_id": "F001",
+          "question_refs": [
+            "Q000001"
+          ],
+          "representative": "What next observation would most directly test whether slow_signal remains stable?",
+          "size": 1
+        },
+        {
+          "family_id": "F002",
+          "question_refs": [
+            "Q000002"
+          ],
+          "representative": "What obtainable evidence would resolve pending experiment X000001 with the least additional assumption?",
+          "size": 1
+        },
+        {
+          "family_id": "F003",
+          "question_refs": [
+            "Q000003"
+          ],
+          "representative": "Will measured repository fields remain unchanged until the next self-observation unless an intervening code change alters the baseline?",
+          "size": 1
+        },
+        {
+          "family_id": "F004",
+          "question_refs": [
+            "Q000004"
+          ],
+          "representative": "What observation could distinguish whether goal_directed_action and model_based_planning are meaningfully related rather than merely co-occurring?",
+          "size": 1
+        },
+        {
+          "family_id": "F005",
+          "question_refs": [
+            "Q000005"
+          ],
+          "representative": "What smallest reversible experiment could increase cognition without reducing reproducibility?",
+          "size": 1
+        },
+        {
+          "family_id": "F006",
+          "question_refs": [
+            "Q000006"
+          ],
+          "representative": "Which distinct measurable relationship should be tested next to challenge or extend the learned repository_stability_without_intervention pattern?",
+          "size": 1
+        }
+      ],
+      "family_count": 6,
+      "open_endedness": 1.0,
+      "question_count": 6,
+      "question_to_family": {
+        "Q000001": "F001",
+        "Q000002": "F002",
+        "Q000003": "F003",
+        "Q000004": "F004",
+        "Q000005": "F005",
+        "Q000006": "F006"
+      },
+      "similarity_threshold": 0.72,
+      "updated_cycle": 6,
+      "version": "inquiry-family-state-v1"
+    },
+    "last_episode_index": 12,
+    "last_episode_sequence": 12
+  },
+  "surprises": [],
+  "updated_at": "2026-10-06T00:48:37.395249+00:00",
+  "world_model": {
+    "claims": [
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.306538+00:00",
+        "created_cycle": 2,
+        "evidence_refs": [
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "id": "W000001",
+        "last_seen_cycle": 6,
+        "observed_at": null,
+        "predicate": "branch",
+        "source_type": "observed_sensor",
+        "status": "current",
+        "subject": "repository",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "autonomous/growth"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.306538+00:00",
+        "created_cycle": 2,
+        "evidence_refs": [
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "id": "W000002",
+        "last_seen_cycle": 6,
+        "observed_at": null,
+        "predicate": "baseline_fingerprint",
+        "source_type": "observed_sensor",
+        "status": "current",
+        "subject": "repository",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "native-waiting-control"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.306538+00:00",
+        "created_cycle": 2,
+        "evidence_refs": [
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "id": "W000003",
+        "last_seen_cycle": 6,
+        "observed_at": null,
+        "predicate": "tracked_files",
+        "source_type": "observed_sensor",
+        "status": "current",
+        "subject": "repository",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": 100
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.306538+00:00",
+        "created_cycle": 2,
+        "evidence_refs": [
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "id": "W000004",
+        "last_seen_cycle": 6,
+        "observed_at": null,
+        "predicate": "python_files",
+        "source_type": "observed_sensor",
+        "status": "current",
+        "subject": "repository",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": 20
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.306538+00:00",
+        "created_cycle": 2,
+        "evidence_refs": [
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "id": "W000005",
+        "last_seen_cycle": 6,
+        "observed_at": null,
+        "predicate": "python_source_lines",
+        "source_type": "observed_sensor",
+        "status": "current",
+        "subject": "repository",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": 5000
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.306538+00:00",
+        "created_cycle": 2,
+        "evidence_refs": [
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "id": "W000006",
+        "last_seen_cycle": 6,
+        "observed_at": null,
+        "predicate": "test_files",
+        "source_type": "observed_sensor",
+        "status": "current",
+        "subject": "repository",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": 12
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.306538+00:00",
+        "created_cycle": 2,
+        "evidence_refs": [
+          "E000003",
+          "E000005",
+          "E000007",
+          "E000009",
+          "E000011"
+        ],
+        "id": "W000007",
+        "last_seen_cycle": 6,
+        "observed_at": null,
+        "predicate": "working_tree_clean",
+        "source_type": "observed_sensor",
+        "status": "current",
+        "subject": "repository",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": true
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.325467+00:00",
+        "created_cycle": 3,
+        "evidence_refs": [
+          "P000001",
+          "R000001"
+        ],
+        "id": "W000008",
+        "last_seen_cycle": 3,
+        "observed_at": "2026-10-05T02:01:00+00:00",
+        "predicate": "status",
+        "source_type": "prediction_evaluation",
+        "status": "current",
+        "subject": "prediction.P000001",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "confirmed"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.325467+00:00",
+        "created_cycle": 3,
+        "evidence_refs": [
+          "X000002"
+        ],
+        "id": "W000009",
+        "last_seen_cycle": 3,
+        "observed_at": "2026-10-05T02:01:00+00:00",
+        "predicate": "outcome",
+        "source_type": "experiment_outcome",
+        "status": "current",
+        "subject": "experiment.X000002",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "supported"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.353480+00:00",
+        "created_cycle": 4,
+        "evidence_refs": [
+          "P000002",
+          "R000002"
+        ],
+        "id": "W000010",
+        "last_seen_cycle": 4,
+        "observed_at": "2026-10-05T02:02:00+00:00",
+        "predicate": "status",
+        "source_type": "prediction_evaluation",
+        "status": "current",
+        "subject": "prediction.P000002",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "confirmed"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.353480+00:00",
+        "created_cycle": 4,
+        "evidence_refs": [
+          "X000003"
+        ],
+        "id": "W000011",
+        "last_seen_cycle": 4,
+        "observed_at": "2026-10-05T02:02:00+00:00",
+        "predicate": "outcome",
+        "source_type": "experiment_outcome",
+        "status": "current",
+        "subject": "experiment.X000003",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "supported"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.371582+00:00",
+        "created_cycle": 5,
+        "evidence_refs": [
+          "P000003",
+          "R000003"
+        ],
+        "id": "W000012",
+        "last_seen_cycle": 5,
+        "observed_at": "2026-10-05T02:03:00+00:00",
+        "predicate": "status",
+        "source_type": "prediction_evaluation",
+        "status": "current",
+        "subject": "prediction.P000003",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "confirmed"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.371582+00:00",
+        "created_cycle": 5,
+        "evidence_refs": [
+          "X000004"
+        ],
+        "id": "W000013",
+        "last_seen_cycle": 5,
+        "observed_at": "2026-10-05T02:03:00+00:00",
+        "predicate": "outcome",
+        "source_type": "experiment_outcome",
+        "status": "current",
+        "subject": "experiment.X000004",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "supported"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.394262+00:00",
+        "created_cycle": 6,
+        "evidence_refs": [
+          "P000004",
+          "R000004"
+        ],
+        "id": "W000014",
+        "last_seen_cycle": 6,
+        "observed_at": "2026-10-05T02:04:00+00:00",
+        "predicate": "status",
+        "source_type": "prediction_evaluation",
+        "status": "current",
+        "subject": "prediction.P000004",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "confirmed"
+      },
+      {
+        "confidence": 1.0,
+        "created_at": "2026-10-06T00:48:37.394262+00:00",
+        "created_cycle": 6,
+        "evidence_refs": [
+          "X000005"
+        ],
+        "id": "W000015",
+        "last_seen_cycle": 6,
+        "observed_at": "2026-10-05T02:04:00+00:00",
+        "predicate": "outcome",
+        "source_type": "experiment_outcome",
+        "status": "current",
+        "subject": "experiment.X000005",
+        "superseded_by": null,
+        "supersedes": null,
+        "value": "supported"
+      }
+    ],
+    "current": {
+      "experiment.X000002::outcome": "W000009",
+      "experiment.X000003::outcome": "W000011",
+      "experiment.X000004::outcome": "W000013",
+      "experiment.X000005::outcome": "W000015",
+      "prediction.P000001::status": "W000008",
+      "prediction.P000002::status": "W000010",
+      "prediction.P000003::status": "W000012",
+      "prediction.P000004::status": "W000014",
+      "repository::baseline_fingerprint": "W000002",
+      "repository::branch": "W000001",
+      "repository::python_files": "W000004",
+      "repository::python_source_lines": "W000005",
+      "repository::test_files": "W000006",
+      "repository::tracked_files": "W000003",
+      "repository::working_tree_clean": "W000007"
+    },
+    "last_snapshot_index": 5,
+    "seen_experiment_status": {
+      "X000002": "[\"completed\", \"supported\", 1.0]",
+      "X000003": "[\"completed\", \"supported\", 1.0]",
+      "X000004": "[\"completed\", \"supported\", 1.0]",
+      "X000005": "[\"completed\", \"supported\", 1.0]"
+    },
+    "seen_prediction_status": {
+      "P000001": "confirmed",
+      "P000002": "confirmed",
+      "P000003": "confirmed",
+      "P000004": "confirmed"
+    }
+  }
+}

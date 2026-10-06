@@ -1652,7 +1652,7 @@ class PlanningLabTests(unittest.TestCase):
 
         self.assertTrue(
             imports.issubset(
-                {"__future__", "json", "collections", "typing", "action_lab"}
+                {"__future__", "json", "collections", "typing", "action_lab", "objective_identity"}
             )
         )
 
