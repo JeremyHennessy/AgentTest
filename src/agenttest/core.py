@@ -28,6 +28,18 @@ from .native_inquiry import (
 )
 from .perception import COMPARABLE_FIELDS, changed_fields
 from .planning_lab import step_planning_lab
+from .public_observation import (
+    SOURCE as PUBLIC_OBSERVATION_SOURCE,
+    admit as admit_public_observation,
+    allocate_selected as allocate_public_observation,
+    bind_evidence as bind_public_evidence,
+    ingest as ingest_public_observation,
+    load_bundle as load_public_bundle,
+    obtainable_contract as obtainable_public_contract,
+    require_capacity_proofs as require_public_capacity_proofs,
+    registry_eligible as public_registry_eligible,
+    plan_public_resolutions,
+)
 from .semantic import (
     actionable_open_questions,
     consolidate_inquiry_families,
@@ -824,6 +836,225 @@ def _resolve_experiments_from_prediction(
     return resolved
 
 
+def _resolve_native_inquiry_state(loaded, experiment_id, evidence_ref, now):
+    """Validate and resolve on a private state copy; no persistence or clock access."""
+    experiment = next(
+        (
+            item
+            for item in loaded.get("experiments", [])
+            if str(item.get("id")) == str(experiment_id)
+        ),
+        None,
+    )
+    if experiment is None:
+        raise ValueError("native inquiry experiment was not found")
+    if experiment.get("status") != "proposed":
+        raise ValueError("native inquiry experiment is not proposed")
+    if experiment.get("readiness") != "awaiting_native_evidence":
+        raise ValueError("native inquiry experiment is not awaiting native evidence")
+
+    native = experiment.get("native_inquiry")
+    if not isinstance(native, dict):
+        raise ValueError("experiment is not a native inquiry experiment")
+    expected_relation = native.get("relation")
+    if not isinstance(expected_relation, dict):
+        raise ValueError("native inquiry relation is unavailable")
+    sequence_floor = native.get(
+        "resolution_evidence_floor_episode_sequence"
+    )
+    legacy_floor = native.get("resolution_evidence_floor_episode_count")
+    if sequence_floor is not None:
+        if type(sequence_floor) is not int or sequence_floor < 0:
+            raise ValueError(
+                "native inquiry resolution evidence sequence floor is unavailable"
+            )
+    elif type(legacy_floor) is not int or legacy_floor < 0:
+        raise ValueError("native inquiry resolution evidence floor is unavailable")
+
+    episodes = loaded.get("episodes", [])
+    episode_index = next(
+        (
+            index
+            for index, item in enumerate(episodes)
+            if str(item.get("id")) == str(evidence_ref)
+        ),
+        None,
+    )
+    episode = episodes[episode_index] if episode_index is not None else None
+    if episode is None or episode.get("kind") != "native_inquiry_evidence":
+        raise ValueError("native inquiry outcome evidence was not found")
+
+    if sequence_floor is not None:
+        evidence_sequence = episode_sequence(episode.get("id"))
+        if evidence_sequence is None:
+            raise ValueError(
+                "native inquiry outcome evidence has no monotonic episode sequence"
+            )
+        if evidence_sequence <= sequence_floor:
+            raise ValueError("native inquiry outcome evidence predates the inquiry")
+    else:
+        next_episode_index = loaded.get("next_episode_index")
+        if (
+            type(next_episode_index) is int
+            and next_episode_index != len(episodes) + 1
+        ):
+            raise ValueError(
+                "legacy native inquiry evidence floor cannot be used after "
+                "episode archival"
+            )
+        if episode_index < legacy_floor:
+            raise ValueError("native inquiry outcome evidence predates the inquiry")
+    try:
+        payload = json.loads(str(episode.get("content") or ""))
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("native inquiry outcome evidence is not valid JSON") from exc
+    evidence = validate_native_evidence_payload(payload)
+    relation = evidence.get("relation")
+    if relation != expected_relation:
+        raise ValueError("native inquiry outcome relation does not match experiment")
+
+    grounding_observation_refs: set[str] = set()
+    episodes_by_id = {
+        str(item.get("id")): item
+        for item in episodes
+        if item.get("id")
+    }
+    for grounding_ref in native.get("evidence_refs", []):
+        grounding_episode = episodes_by_id.get(str(grounding_ref))
+        if (
+            not isinstance(grounding_episode, dict)
+            or grounding_episode.get("kind") != "native_inquiry_evidence"
+        ):
+            continue
+        try:
+            grounding_payload = json.loads(
+                str(grounding_episode.get("content") or "")
+            )
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError(
+                "native inquiry grounding evidence is not valid JSON"
+            ) from exc
+        grounding_evidence = validate_native_evidence_payload(grounding_payload)
+        if grounding_evidence.get("relation") != expected_relation:
+            continue
+        grounding_observation_refs.update(
+            str(ref) for ref in grounding_evidence.get("observation_refs", [])
+        )
+
+    outcome_observation_refs = {
+        str(ref) for ref in evidence.get("observation_refs", [])
+    }
+    if not outcome_observation_refs - grounding_observation_refs:
+        raise ValueError(
+            "native inquiry outcome evidence contains no post-inquiry observation"
+        )
+
+    if evidence.get("measurement_kind") != "binary_transition_outcomes":
+        raise ValueError(
+            "native inquiry resolver currently supports temporal binary outcomes only"
+        )
+    if relation.get("kind") not in {
+        "same_next_observation",
+        "changes_next_observation",
+    }:
+        raise ValueError("native inquiry resolver requires a temporal relation")
+
+    measurement = evidence.get("measurement")
+    if not isinstance(measurement, dict):
+        raise ValueError("native inquiry outcome measurement is unavailable")
+    evaluable = int(measurement.get("evaluable", 0) or 0)
+    confirmations = int(measurement.get("confirmations", 0) or 0)
+    refutations = int(measurement.get("refutations", 0) or 0)
+    if evaluable != 1 or confirmations + refutations != 1:
+        raise ValueError(
+            "native inquiry resolution requires exactly one evaluable transition"
+        )
+    if confirmations not in {0, 1} or refutations not in {0, 1}:
+        raise ValueError("native inquiry outcome must be unambiguous")
+    outcome = "supported" if confirmations == 1 else "falsified"
+
+    state = deepcopy(loaded)
+    resolved_experiment = next(
+        item
+        for item in state["experiments"]
+        if str(item.get("id")) == str(experiment_id)
+    )
+    cycle = int(state.get("cycles", 0) or 0)
+
+    resolved_experiment["status"] = "completed"
+    resolved_experiment["readiness"] = "resolved"
+    resolved_experiment["outcome"] = outcome
+    resolved_experiment["evidence_strength"] = 1.0
+    resolved_experiment["evidence_refs"] = [str(evidence_ref)]
+    resolved_experiment["completion_source"] = "native_evidence_contract"
+    resolved_experiment["completed_at"] = now
+    resolved_experiment["native_resolution"] = {
+        "version": "native-inquiry-resolution-v1",
+        "evidence_ref": str(evidence_ref),
+        "relation": deepcopy(relation),
+        "measurement_kind": evidence["measurement_kind"],
+        "outcome": outcome,
+    }
+    resolved_experiment.setdefault("status_history", []).append(
+        {
+            "cycle": cycle,
+            "from": "proposed",
+            "to": "completed",
+            "reason": "native_evidence_contract_resolved",
+            "evidence_refs": [str(evidence_ref)],
+            "outcome": outcome,
+        }
+    )
+
+    reflection = {
+        "id": f"R{len(state.get('reflections', [])) + 1:06d}",
+        "source": "native_inquiry",
+        "experiment_id": str(experiment_id),
+        "evidence_ref": str(evidence_ref),
+        "cycle": cycle,
+        "outcome": outcome,
+        "evidence_strength": 1.0,
+        "lesson": (
+            "One matching evaluable native transition "
+            f"{outcome} the bounded temporal inquiry. Treat this as an "
+            "experiment outcome, not as a general causal fact."
+        ),
+    }
+    state.setdefault("reflections", []).append(reflection)
+
+    return {"experiment": deepcopy(resolved_experiment), "reflection": deepcopy(reflection),
+            "evidence": deepcopy(evidence), "state": state}
+
+
+def _dispatch_public_resolutions(state, newly_bound, now):
+    """All-or-nothing scratch application; original state is never modified."""
+    batch = plan_public_resolutions(state, newly_bound)
+    scratch = deepcopy(state)
+    receipts = deepcopy(batch["receipts"])
+    for plan in batch["plans"]:
+        result = _resolve_native_inquiry_state(scratch, plan["experiment_id"], plan["evidence_ref"], now)
+        scratch = result["state"]
+        if result["experiment"]["outcome"] != plan["outcome"]:
+            raise ValueError("public resolution outcome disagrees with raw pair")
+        reflection_id = result["reflection"]["id"]
+        if sum(r.get("id") == reflection_id for r in scratch["reflections"]) != 1:
+            raise ValueError("public resolution reflection identity is ambiguous")
+        experiment = next(e for e in scratch["experiments"] if e["id"] == plan["experiment_id"])
+        receipt = {**plan["receipt"], "reflection_id": reflection_id}
+        experiment["public_resolution_receipt"] = receipt
+        experiment["status_history"][-1]["public_resolution_key"] = receipt["key"]
+        scratch["reflections"][-1]["public_resolution_key"] = receipt["key"]
+        receipts.append({"experiment_id": plan["experiment_id"], "status": "resolved", "receipt": receipt})
+    return scratch, receipts
+
+
+def _guard_public_dispatch(store_path, enabled, inlet):
+    if enabled is not False and enabled is not True:
+        raise ValueError("copied resolution dispatch flag must be boolean")
+    if enabled and (Path(store_path).resolve() == Path("state/organism.json").resolve() or inlet is None):
+        raise ValueError("public resolution dispatch requires an explicit copied store and current inlet")
+
+
 class AgentCore:
     """Persistent loop with memory, world model, prediction, drives and cognition."""
 
@@ -873,220 +1104,20 @@ class AgentCore:
         }
 
     def resolve_native_inquiry(
-        self,
-        experiment_id: str,
-        evidence_ref: str,
-        *,
-        enabled: bool = False,
-        persist: bool = False,
-        _now_override: str | None = None,
+        self, experiment_id: str, evidence_ref: str, *, enabled: bool = False,
+        persist: bool = False, _now_override: str | None = None,
     ) -> dict[str, Any]:
-        """Resolve one temporal native inquiry from one matching outcome transition.
-
-        The interface is disabled and non-persisting by default. It does not
-        increment the organism cycle or grant action authority.
-        """
+        """Explicit disabled/nonpersisting interface; no cycle or action authority."""
         if enabled is not True:
             raise RuntimeError("native inquiry outcome resolver is disabled by default")
-
-        loaded = self.store.load()
-        experiment = next(
-            (
-                item
-                for item in loaded.get("experiments", [])
-                if str(item.get("id")) == str(experiment_id)
-            ),
-            None,
+        result = _resolve_native_inquiry_state(
+            self.store.load(), experiment_id, evidence_ref, _now_override or utc_now(),
         )
-        if experiment is None:
-            raise ValueError("native inquiry experiment was not found")
-        if experiment.get("status") != "proposed":
-            raise ValueError("native inquiry experiment is not proposed")
-        if experiment.get("readiness") != "awaiting_native_evidence":
-            raise ValueError("native inquiry experiment is not awaiting native evidence")
-
-        native = experiment.get("native_inquiry")
-        if not isinstance(native, dict):
-            raise ValueError("experiment is not a native inquiry experiment")
-        expected_relation = native.get("relation")
-        if not isinstance(expected_relation, dict):
-            raise ValueError("native inquiry relation is unavailable")
-        sequence_floor = native.get(
-            "resolution_evidence_floor_episode_sequence"
-        )
-        legacy_floor = native.get("resolution_evidence_floor_episode_count")
-        if sequence_floor is not None:
-            if type(sequence_floor) is not int or sequence_floor < 0:
-                raise ValueError(
-                    "native inquiry resolution evidence sequence floor is unavailable"
-                )
-        elif type(legacy_floor) is not int or legacy_floor < 0:
-            raise ValueError("native inquiry resolution evidence floor is unavailable")
-
-        episodes = loaded.get("episodes", [])
-        episode_index = next(
-            (
-                index
-                for index, item in enumerate(episodes)
-                if str(item.get("id")) == str(evidence_ref)
-            ),
-            None,
-        )
-        episode = episodes[episode_index] if episode_index is not None else None
-        if episode is None or episode.get("kind") != "native_inquiry_evidence":
-            raise ValueError("native inquiry outcome evidence was not found")
-
-        if sequence_floor is not None:
-            evidence_sequence = episode_sequence(episode.get("id"))
-            if evidence_sequence is None:
-                raise ValueError(
-                    "native inquiry outcome evidence has no monotonic episode sequence"
-                )
-            if evidence_sequence <= sequence_floor:
-                raise ValueError("native inquiry outcome evidence predates the inquiry")
-        else:
-            next_episode_index = loaded.get("next_episode_index")
-            if (
-                type(next_episode_index) is int
-                and next_episode_index != len(episodes) + 1
-            ):
-                raise ValueError(
-                    "legacy native inquiry evidence floor cannot be used after "
-                    "episode archival"
-                )
-            if episode_index < legacy_floor:
-                raise ValueError("native inquiry outcome evidence predates the inquiry")
-        try:
-            payload = json.loads(str(episode.get("content") or ""))
-        except (TypeError, ValueError, json.JSONDecodeError) as exc:
-            raise ValueError("native inquiry outcome evidence is not valid JSON") from exc
-        evidence = validate_native_evidence_payload(payload)
-        relation = evidence.get("relation")
-        if relation != expected_relation:
-            raise ValueError("native inquiry outcome relation does not match experiment")
-
-        grounding_observation_refs: set[str] = set()
-        episodes_by_id = {
-            str(item.get("id")): item
-            for item in episodes
-            if item.get("id")
-        }
-        for grounding_ref in native.get("evidence_refs", []):
-            grounding_episode = episodes_by_id.get(str(grounding_ref))
-            if (
-                not isinstance(grounding_episode, dict)
-                or grounding_episode.get("kind") != "native_inquiry_evidence"
-            ):
-                continue
-            try:
-                grounding_payload = json.loads(
-                    str(grounding_episode.get("content") or "")
-                )
-            except (TypeError, ValueError, json.JSONDecodeError) as exc:
-                raise ValueError(
-                    "native inquiry grounding evidence is not valid JSON"
-                ) from exc
-            grounding_evidence = validate_native_evidence_payload(grounding_payload)
-            if grounding_evidence.get("relation") != expected_relation:
-                continue
-            grounding_observation_refs.update(
-                str(ref) for ref in grounding_evidence.get("observation_refs", [])
-            )
-
-        outcome_observation_refs = {
-            str(ref) for ref in evidence.get("observation_refs", [])
-        }
-        if not outcome_observation_refs - grounding_observation_refs:
-            raise ValueError(
-                "native inquiry outcome evidence contains no post-inquiry observation"
-            )
-
-        if evidence.get("measurement_kind") != "binary_transition_outcomes":
-            raise ValueError(
-                "native inquiry resolver currently supports temporal binary outcomes only"
-            )
-        if relation.get("kind") not in {
-            "same_next_observation",
-            "changes_next_observation",
-        }:
-            raise ValueError("native inquiry resolver requires a temporal relation")
-
-        measurement = evidence.get("measurement")
-        if not isinstance(measurement, dict):
-            raise ValueError("native inquiry outcome measurement is unavailable")
-        evaluable = int(measurement.get("evaluable", 0) or 0)
-        confirmations = int(measurement.get("confirmations", 0) or 0)
-        refutations = int(measurement.get("refutations", 0) or 0)
-        if evaluable != 1 or confirmations + refutations != 1:
-            raise ValueError(
-                "native inquiry resolution requires exactly one evaluable transition"
-            )
-        if confirmations not in {0, 1} or refutations not in {0, 1}:
-            raise ValueError("native inquiry outcome must be unambiguous")
-        outcome = "supported" if confirmations == 1 else "falsified"
-
-        state = loaded if persist else deepcopy(loaded)
-        resolved_experiment = next(
-            item
-            for item in state["experiments"]
-            if str(item.get("id")) == str(experiment_id)
-        )
-        now = _now_override or utc_now()
-        cycle = int(state.get("cycles", 0) or 0)
-
-        resolved_experiment["status"] = "completed"
-        resolved_experiment["readiness"] = "resolved"
-        resolved_experiment["outcome"] = outcome
-        resolved_experiment["evidence_strength"] = 1.0
-        resolved_experiment["evidence_refs"] = [str(evidence_ref)]
-        resolved_experiment["completion_source"] = "native_evidence_contract"
-        resolved_experiment["completed_at"] = now
-        resolved_experiment["native_resolution"] = {
-            "version": "native-inquiry-resolution-v1",
-            "evidence_ref": str(evidence_ref),
-            "relation": deepcopy(relation),
-            "measurement_kind": evidence["measurement_kind"],
-            "outcome": outcome,
-        }
-        resolved_experiment.setdefault("status_history", []).append(
-            {
-                "cycle": cycle,
-                "from": "proposed",
-                "to": "completed",
-                "reason": "native_evidence_contract_resolved",
-                "evidence_refs": [str(evidence_ref)],
-                "outcome": outcome,
-            }
-        )
-
-        reflection = {
-            "id": f"R{len(state.get('reflections', [])) + 1:06d}",
-            "source": "native_inquiry",
-            "experiment_id": str(experiment_id),
-            "evidence_ref": str(evidence_ref),
-            "cycle": cycle,
-            "outcome": outcome,
-            "evidence_strength": 1.0,
-            "lesson": (
-                "One matching evaluable native transition "
-                f"{outcome} the bounded temporal inquiry. Treat this as an "
-                "experiment outcome, not as a general causal fact."
-            ),
-        }
-        state.setdefault("reflections", []).append(reflection)
-
         if persist:
-            self.store.save(state)
-
-        return {
-            "enabled": True,
-            "persisted": bool(persist),
-            "resolved": True,
-            "experiment": deepcopy(resolved_experiment),
-            "reflection": deepcopy(reflection),
-            "evidence": deepcopy(evidence),
-            "state": deepcopy(state),
-        }
+            self.store.save(result["state"])
+        return {"enabled": True, "persisted": bool(persist), "resolved": True,
+                "experiment": deepcopy(result["experiment"]), "reflection": deepcopy(result["reflection"]),
+                "evidence": deepcopy(result["evidence"]), "state": deepcopy(result["state"])}
 
     def propose_native_inquiry(
         self,
@@ -1196,10 +1227,27 @@ class AgentCore:
         _phase42_counterfactual: bool = False,
         _withhold_current_prediction_evidence: bool = False,
         _now_override: str | None = None,
+        copy_public_observations: str | Path | None = None,
+        copy_early_public_admission: bool = False,
+        copy_frontier_grounded_handoff: bool = False,
+        copy_public_capacity: dict[str, Any] | None = None,
+        copy_public_resolution_dispatch: bool = False,
     ) -> dict[str, Any]:
         if action_lab and planning_lab:
             raise ValueError("action_lab and planning_lab are mutually exclusive")
+        _guard_public_dispatch(self.store.path, copy_public_resolution_dispatch, copy_public_observations)
         state = self.store.load()
+        if (copy_early_public_admission or copy_frontier_grounded_handoff) and self.store.path.resolve() == Path("state/organism.json").resolve():
+            raise ValueError("frontier preparation requires an explicit copied store")
+        if copy_frontier_grounded_handoff and not copy_early_public_admission:
+            raise ValueError("frontier handoff requires common early public admission")
+        public_trace = None
+        if copy_public_observations is not None:
+            if self.store.path.resolve() == Path("state/organism.json").resolve():
+                raise ValueError("public observation inlet requires an explicit copied store")
+            public_trace = ingest_public_observation(
+                state, load_public_bundle(copy_public_observations),
+            )
         state["cycles"] += 1
         state["generation"] = state["cycles"]
         cycle = state["cycles"]
@@ -1317,6 +1365,23 @@ class AgentCore:
                 ],
             )
 
+        public_bound = []
+        if public_trace is not None:
+            for pair in public_trace["pairs"]:
+                self._remember(
+                    state, cycle, now, "native_inquiry_evidence",
+                    json.dumps(pair["evidence"], sort_keys=True),
+                    ["native_evidence", pair["relation"], pair["evidence"]["relation"]["feature"]],
+                )
+                bind_public_evidence(
+                    state, public_trace["source"], pair["pair_id"],
+                    pair["relation"], state["episodes"][-1]["id"],
+                )
+                public_bound.append({"source_id": public_trace["source"], "pair_id": pair["pair_id"],
+                                     "relation": pair["relation"], "evidence_ref": state["episodes"][-1]["id"]})
+        dispatch_receipts = []
+        if copy_public_resolution_dispatch:
+            state, dispatch_receipts = _dispatch_public_resolutions(state, public_bound, now)
         semantic_update = consolidate_semantic_memory(state)
         world_update = consolidate_world(state)
         empirical_learning_update = consolidate_empirical_learning(state)
@@ -1344,20 +1409,38 @@ class AgentCore:
                 cognition_provider,
             )
 
+        if public_trace is not None and copy_early_public_admission:
+            contracts = admit_public_observation(
+                state, public_trace["source"], self._upsert_question,
+            )
+        if copy_early_public_admission:
+            require_public_capacity_proofs(state, copy_public_capacity or {})
+        frontier_pool = self._frontier_obtainable_pool(state, copy_public_capacity or {}) if copy_early_public_admission else []
+        public_allocations_before_generation = [item["id"] for item in state.get("experiments", [])
+                                                if item.get("public_observation_family")] if copy_early_public_admission else []
         legacy_question_text = self._generate_question(
             state,
             surprise,
             intention,
             thought,
             strict_question_attention=strict_question_attention,
+            copy_frontier_grounded_handoff=copy_frontier_grounded_handoff,
+            copy_public_capacity=copy_public_capacity,
         )
         legacy_question = self._upsert_question(state, legacy_question_text)
-        if intention.get("kind") == "explore_empirical_frontier":
-            legacy_question.setdefault("source", "empirical_frontier_transfer")
-            legacy_question["source_learning_family"] = intention.get("target")
-            legacy_question["source_evidence_refs"] = list(
-                intention.get("evidence_refs", [])
-            )
+        if public_trace is not None:
+            if not copy_early_public_admission:
+                contracts = admit_public_observation(
+                    state, public_trace["source"], self._upsert_question,
+                )
+            public_trace["contracts"] = contracts
+            public_trace["eligible_families"] = [
+                q["public_observation_family"] for q in state["questions"]
+                if q.get("source") == PUBLIC_OBSERVATION_SOURCE
+                and public_registry_eligible(state, q)
+            ]
+        self._annotate_frontier_question(legacy_question, legacy_question_text, intention,
+                                         policy_enabled=copy_frontier_grounded_handoff)
 
         # Build the next repository prediction path after the cycle's drive and
         # intention are already chosen, but before agenda scoring. This preserves
@@ -1447,6 +1530,11 @@ class AgentCore:
                         _phase42_counterfactual=True,
                         _withhold_current_prediction_evidence=True,
                         _now_override=now,
+                        copy_public_observations=copy_public_observations,
+                        copy_early_public_admission=copy_early_public_admission,
+                        copy_frontier_grounded_handoff=copy_frontier_grounded_handoff,
+                        copy_public_capacity=copy_public_capacity,
+                        copy_public_resolution_dispatch=copy_public_resolution_dispatch,
                     )
                 counterfactual_decision = counterfactual_result.get(
                     "agenda_decision"
@@ -1549,15 +1637,49 @@ class AgentCore:
         question["last_selected_cycle"] = cycle
         inquiry_update = consolidate_inquiry_families(state)
 
-        experiment = self._select_or_propose_experiment(
-            state,
-            question,
-            intention,
-            thought,
-            require_grounded=(
-                strict_experiment_admission and observation is not None
-            ),
-        )
+        if question.get("source") == PUBLIC_OBSERVATION_SOURCE:
+            # Never allow a generic intention's target to substitute an
+            # unrelated experiment for the actually selected native question.
+            experiment = allocate_public_observation(state, question, agenda_decision, now)
+        else:
+            experiment = self._select_or_propose_experiment(
+                state,
+                question,
+                intention,
+                thought,
+                require_grounded=(
+                    strict_experiment_admission and observation is not None
+                ),
+            )
+        if public_trace is not None:
+            public_trace["selected_question_id"] = question["id"]
+            public_trace["native_selected"] = question.get("source") == PUBLIC_OBSERVATION_SOURCE
+            public_trace["allocation_id"] = experiment["id"] if public_trace["native_selected"] and experiment else None
+            public_trace["selection_status"] = (
+                "selected" if public_trace["native_selected"] else
+                "ordinary_defer" if public_trace["eligible_families"] else
+                "exhausted" if public_trace["contracts"] else "zero_pairs_stop"
+            )
+
+        if copy_early_public_admission:
+            # Origin is separate from the selected question's source provenance.
+            frontier_trace = {
+                "policy_enabled": copy_frontier_grounded_handoff,
+                "intention_origin": {
+                    "id": intention.get("id"), "kind": intention.get("kind"),
+                    "target": intention.get("target"),
+                    "evidence_refs": list(intention.get("evidence_refs", [])),
+                },
+                "eligible_pool": [{"question_id": item["question"]["id"],
+                                   "selection_order": list(item["order"]),
+                                   "source_evidence_refs": list(item["question"].get("source_evidence_refs", [])),
+                                   "availability": item["proof"]["availability"]}
+                                  for item in frontier_pool],
+                "generated_legacy_question_id": legacy_question["id"],
+                "passive_allocation_ids_before_generation": public_allocations_before_generation,
+                "agenda_selected_question_id": question["id"],
+                "returned_experiment_id": experiment.get("id") if experiment else None,
+            }
 
         target_experiment = next(
             (item for item in state["experiments"]
@@ -1623,8 +1745,12 @@ class AgentCore:
             ),
             "metrics": state["metrics"],
         }
+        if copy_early_public_admission:
+            event["copy_frontier_handoff_trace"] = frontier_trace
+        if copy_public_resolution_dispatch:
+            event["public_resolution_dispatch"] = dispatch_receipts
         self.store.append_journal(event)
-        return {
+        result = {
             "cycle": cycle,
             "surprise": surprise,
             "prediction_result": prediction_result,
@@ -1656,6 +1782,13 @@ class AgentCore:
             "prediction_experiment": prediction_experiment,
             "metrics": state["metrics"],
         }
+        if copy_early_public_admission:
+            result["copy_frontier_handoff_trace"] = frontier_trace
+        if public_trace is not None:
+            result["public_observation_trace"] = public_trace
+        if copy_public_resolution_dispatch:
+            result["public_resolution_dispatch"] = dispatch_receipts
+        return result
 
     def record_outcome(
         self,
@@ -1954,6 +2087,8 @@ class AgentCore:
         thought: dict[str, Any] | None,
         *,
         strict_question_attention: bool = False,
+        copy_frontier_grounded_handoff: bool = False,
+        copy_public_capacity: dict[str, Any] | None = None,
     ) -> str:
         if intention["kind"] == "specify_experiment" and intention.get("target"):
             return (
@@ -1973,10 +2108,11 @@ class AgentCore:
             intention["kind"] == "explore_empirical_frontier"
             and intention.get("target")
         ):
-            return (
-                "Which distinct measurable relationship should be tested next to "
-                f"challenge or extend the learned {intention['target']} pattern?"
-            )
+            if copy_frontier_grounded_handoff:
+                pool = self._frontier_obtainable_pool(state, copy_public_capacity or {})
+                if pool:
+                    return str(min(pool, key=lambda item: item["order"])["question"]["text"])
+            return self._frontier_template(intention["target"])
 
         if thought is not None:
             candidate = thought["question"].strip()
@@ -2054,6 +2190,39 @@ class AgentCore:
             )
         }
 
+    @staticmethod
+    def _frontier_template(target: Any) -> str:
+        return ("Which distinct measurable relationship should be tested next to "
+                f"challenge or extend the learned {target} pattern?")
+
+    def _annotate_frontier_question(self, question: dict[str, Any], text: str,
+                                    intention: dict[str, Any], *, policy_enabled: bool) -> None:
+        if (intention.get("kind") == "explore_empirical_frontier"
+                and (not policy_enabled or (
+                    text == self._frontier_template(intention.get("target"))
+                    and question.get("source") in {None, "empirical_frontier_transfer"}))):
+            question.setdefault("source", "empirical_frontier_transfer")
+            question["source_learning_family"] = intention.get("target")
+            question["source_evidence_refs"] = list(intention.get("evidence_refs", []))
+
+    @staticmethod
+    def _question_order(question: dict[str, Any]) -> tuple:
+        return (int(question.get("times_selected", 0) or 0),
+                int(question.get("last_selected_cycle", -1) or -1),
+                int(question.get("created_cycle", 0) or 0),
+                str(question.get("id", "")))
+
+    def _frontier_obtainable_pool(self, state: dict[str, Any], capacity_receipts: dict[str, Any]) -> list[dict[str, Any]]:
+        # All provable passive contracts across every registered source/feature.
+        # No experiment status alone, preferred world/name or objective score.
+        pool = []
+        for question in state.get("questions", []):
+            proof = obtainable_public_contract(state, question, capacity_receipts)
+            if proof is not None:
+                pool.append({"question": question, "proof": proof,
+                             "order": self._question_order(question)})
+        return pool
+
     def _least_selected_eligible_open_question(
         self,
         state: dict[str, Any],
@@ -2077,12 +2246,7 @@ class AgentCore:
             return None
         return min(
             eligible,
-            key=lambda question: (
-                int(question.get("times_selected", 0) or 0),
-                int(question.get("last_selected_cycle", -1) or -1),
-                int(question.get("created_cycle", 0) or 0),
-                str(question.get("id", "")),
-            ),
+            key=self._question_order,
         )
 
     def _question_exists(self, state: dict[str, Any], text: str) -> bool:
@@ -2145,6 +2309,10 @@ class AgentCore:
         *,
         require_grounded: bool = False,
     ) -> dict[str, Any] | None:
+        if question.get("source") == PUBLIC_OBSERVATION_SOURCE:
+            # Native allocation belongs exclusively to the actual post-agenda
+            # hook. A generic intention or thought cannot authorize it here.
+            return None
         if intention["kind"] == "specify_experiment" and intention.get("target"):
             match = next(
                 (
