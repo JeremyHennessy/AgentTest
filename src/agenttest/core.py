@@ -47,6 +47,7 @@ from .semantic import (
     question_has_active_experiment_path,
 )
 from .state import DIMENSIONS, StateStore, utc_now
+from .persistence_recovery import (RecoveryStore, digest, serialize_journal_event, serialize_state_store)
 from .world import consolidate_world
 
 _STOPWORDS = {
@@ -1795,9 +1796,18 @@ class AgentCore:
         experiment_id: str,
         outcome: str,
         evidence_strength: float = 0.5,
+        *,
+        copy_recovery_root: str | Path | None = None,
     ) -> dict[str, Any]:
         if not 0.0 <= evidence_strength <= 1.0:
             raise ValueError("evidence_strength must be between 0 and 1")
+
+        recovery = None
+        if copy_recovery_root is not None:
+            recovery = RecoveryStore(copy_recovery_root, copied_only=True)
+            if self.store.path.resolve() != recovery.state:
+                raise ValueError("copy recovery root does not own this StateStore path")
+            recovery.recover()
 
         state = self.store.load()
         match = next(
@@ -1807,7 +1817,25 @@ class AgentCore:
         if match is None:
             raise KeyError(f"Unknown experiment: {experiment_id}")
         if match["status"] == "completed":
-            raise ValueError(f"Experiment already completed: {experiment_id}")
+            if recovery is None:
+                raise ValueError(f"Experiment already completed: {experiment_id}")
+            reflections = [
+                item
+                for item in state.get("reflections", [])
+                if item.get("source") == "experiment"
+                and item.get("experiment_id") == experiment_id
+            ]
+            if (
+                match.get("outcome") != outcome
+                or float(match.get("evidence_strength", -1.0)) != float(evidence_strength)
+                or len(reflections) != 1
+                or reflections[0].get("outcome") != outcome
+                or float(reflections[0].get("evidence_strength", -1.0)) != float(evidence_strength)
+            ):
+                raise ValueError(
+                    f"Recovered experiment outcome conflicts with retry: {experiment_id}"
+                )
+            return deepcopy(reflections[0])
 
         match["status"] = "completed"
         match["outcome"] = outcome
@@ -1830,16 +1858,34 @@ class AgentCore:
         consolidate_world(state)
         _calibrate_self_model(state)
         self._update_metrics(state)
-        self.store.save(state)
-        self.store.append_journal(
-            {
+        if recovery is None:
+            self.store.save(state)
+            self.store.append_journal(
+                {
+                    "event": "experiment_outcome",
+                    "time": utc_now(),
+                    "cycle": state["cycles"],
+                    "experiment_id": experiment_id,
+                    "evidence_strength": evidence_strength,
+                }
+            )
+        else:
+            before_state, before_journal = recovery.read()
+            next_state = serialize_state_store(state, utc_now())
+            event = {
                 "event": "experiment_outcome",
                 "time": utc_now(),
                 "cycle": state["cycles"],
                 "experiment_id": experiment_id,
                 "evidence_strength": evidence_strength,
             }
-        )
+            recovery.commit(
+                "experiment-outcome-" + experiment_id,
+                digest(before_state),
+                digest(before_journal),
+                next_state,
+                serialize_journal_event(event),
+            )
         return reflection
 
     def _evaluate_prediction(
