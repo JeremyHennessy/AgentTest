@@ -299,6 +299,7 @@ def _learning_loop_gap(state: dict[str, Any]) -> tuple[bool, list[str]]:
         if experiment.get("status") != "proposed":
             continue
         if experiment.get("readiness") in {
+            "awaiting_native_evidence",
             "awaiting_specification_or_evidence",
             "needs_specification",
         }:
@@ -702,6 +703,28 @@ def classify_proposal(
                 "resolved_evidence_count": len(cited),
                 "evidence_kinds": dict(kinds),
                 "direct_evidence_refs": direct_refs,
+            }
+
+        native_waiting_refs = [
+            str(experiment["id"])
+            for experiment in state.get("experiments", [])
+            if experiment.get("id")
+            and experiment.get("status") == "proposed"
+            and experiment.get("readiness") == "awaiting_native_evidence"
+        ]
+        if native_waiting_refs:
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "Pending native inquiries await directly evaluable native evidence. "
+                    "Unrelated prediction reflections do not demonstrate a native "
+                    "outcome or a closure-code defect."
+                ),
+                "required_next_evidence": "Collect directly evaluable native outcome evidence.",
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_evidence_refs": native_waiting_refs[-6:],
             }
 
         underspecified_refs = _underspecified_learning_work(state)
