@@ -28,6 +28,17 @@ from .native_inquiry import (
 )
 from .perception import COMPARABLE_FIELDS, changed_fields
 from .planning_lab import step_planning_lab
+from .public_observation import (
+    SOURCE as PUBLIC_OBSERVATION_SOURCE,
+    admit as admit_public_observation,
+    allocate_selected as allocate_public_observation,
+    bind_evidence as bind_public_evidence,
+    ingest as ingest_public_observation,
+    load_bundle as load_public_bundle,
+    obtainable_contract as obtainable_public_contract,
+    require_capacity_proofs as require_public_capacity_proofs,
+    registry_eligible as public_registry_eligible,
+)
 from .semantic import (
     actionable_open_questions,
     consolidate_inquiry_families,
@@ -1196,10 +1207,25 @@ class AgentCore:
         _phase42_counterfactual: bool = False,
         _withhold_current_prediction_evidence: bool = False,
         _now_override: str | None = None,
+        copy_public_observations: str | Path | None = None,
+        copy_early_public_admission: bool = False,
+        copy_frontier_grounded_handoff: bool = False,
+        copy_public_capacity: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if action_lab and planning_lab:
             raise ValueError("action_lab and planning_lab are mutually exclusive")
         state = self.store.load()
+        if (copy_early_public_admission or copy_frontier_grounded_handoff) and self.store.path.resolve() == Path("state/organism.json").resolve():
+            raise ValueError("frontier preparation requires an explicit copied store")
+        if copy_frontier_grounded_handoff and not copy_early_public_admission:
+            raise ValueError("frontier handoff requires common early public admission")
+        public_trace = None
+        if copy_public_observations is not None:
+            if self.store.path.resolve() == Path("state/organism.json").resolve():
+                raise ValueError("public observation inlet requires an explicit copied store")
+            public_trace = ingest_public_observation(
+                state, load_public_bundle(copy_public_observations),
+            )
         state["cycles"] += 1
         state["generation"] = state["cycles"]
         cycle = state["cycles"]
@@ -1317,6 +1343,17 @@ class AgentCore:
                 ],
             )
 
+        if public_trace is not None:
+            for pair in public_trace["pairs"]:
+                self._remember(
+                    state, cycle, now, "native_inquiry_evidence",
+                    json.dumps(pair["evidence"], sort_keys=True),
+                    ["native_evidence", pair["relation"], pair["evidence"]["relation"]["feature"]],
+                )
+                bind_public_evidence(
+                    state, public_trace["source"], pair["pair_id"],
+                    pair["relation"], state["episodes"][-1]["id"],
+                )
         semantic_update = consolidate_semantic_memory(state)
         world_update = consolidate_world(state)
         empirical_learning_update = consolidate_empirical_learning(state)
@@ -1344,20 +1381,38 @@ class AgentCore:
                 cognition_provider,
             )
 
+        if public_trace is not None and copy_early_public_admission:
+            contracts = admit_public_observation(
+                state, public_trace["source"], self._upsert_question,
+            )
+        if copy_early_public_admission:
+            require_public_capacity_proofs(state, copy_public_capacity or {})
+        frontier_pool = self._frontier_obtainable_pool(state, copy_public_capacity or {}) if copy_early_public_admission else []
+        public_allocations_before_generation = [item["id"] for item in state.get("experiments", [])
+                                                if item.get("public_observation_family")] if copy_early_public_admission else []
         legacy_question_text = self._generate_question(
             state,
             surprise,
             intention,
             thought,
             strict_question_attention=strict_question_attention,
+            copy_frontier_grounded_handoff=copy_frontier_grounded_handoff,
+            copy_public_capacity=copy_public_capacity,
         )
         legacy_question = self._upsert_question(state, legacy_question_text)
-        if intention.get("kind") == "explore_empirical_frontier":
-            legacy_question.setdefault("source", "empirical_frontier_transfer")
-            legacy_question["source_learning_family"] = intention.get("target")
-            legacy_question["source_evidence_refs"] = list(
-                intention.get("evidence_refs", [])
-            )
+        if public_trace is not None:
+            if not copy_early_public_admission:
+                contracts = admit_public_observation(
+                    state, public_trace["source"], self._upsert_question,
+                )
+            public_trace["contracts"] = contracts
+            public_trace["eligible_families"] = [
+                q["public_observation_family"] for q in state["questions"]
+                if q.get("source") == PUBLIC_OBSERVATION_SOURCE
+                and public_registry_eligible(state, q)
+            ]
+        self._annotate_frontier_question(legacy_question, legacy_question_text, intention,
+                                         policy_enabled=copy_frontier_grounded_handoff)
 
         # Build the next repository prediction path after the cycle's drive and
         # intention are already chosen, but before agenda scoring. This preserves
@@ -1447,6 +1502,10 @@ class AgentCore:
                         _phase42_counterfactual=True,
                         _withhold_current_prediction_evidence=True,
                         _now_override=now,
+                        copy_public_observations=copy_public_observations,
+                        copy_early_public_admission=copy_early_public_admission,
+                        copy_frontier_grounded_handoff=copy_frontier_grounded_handoff,
+                        copy_public_capacity=copy_public_capacity,
                     )
                 counterfactual_decision = counterfactual_result.get(
                     "agenda_decision"
@@ -1549,15 +1608,49 @@ class AgentCore:
         question["last_selected_cycle"] = cycle
         inquiry_update = consolidate_inquiry_families(state)
 
-        experiment = self._select_or_propose_experiment(
-            state,
-            question,
-            intention,
-            thought,
-            require_grounded=(
-                strict_experiment_admission and observation is not None
-            ),
-        )
+        if question.get("source") == PUBLIC_OBSERVATION_SOURCE:
+            # Never allow a generic intention's target to substitute an
+            # unrelated experiment for the actually selected native question.
+            experiment = allocate_public_observation(state, question, agenda_decision, now)
+        else:
+            experiment = self._select_or_propose_experiment(
+                state,
+                question,
+                intention,
+                thought,
+                require_grounded=(
+                    strict_experiment_admission and observation is not None
+                ),
+            )
+        if public_trace is not None:
+            public_trace["selected_question_id"] = question["id"]
+            public_trace["native_selected"] = question.get("source") == PUBLIC_OBSERVATION_SOURCE
+            public_trace["allocation_id"] = experiment["id"] if public_trace["native_selected"] and experiment else None
+            public_trace["selection_status"] = (
+                "selected" if public_trace["native_selected"] else
+                "ordinary_defer" if public_trace["eligible_families"] else
+                "exhausted" if public_trace["contracts"] else "zero_pairs_stop"
+            )
+
+        if copy_early_public_admission:
+            # Origin is separate from the selected question's source provenance.
+            frontier_trace = {
+                "policy_enabled": copy_frontier_grounded_handoff,
+                "intention_origin": {
+                    "id": intention.get("id"), "kind": intention.get("kind"),
+                    "target": intention.get("target"),
+                    "evidence_refs": list(intention.get("evidence_refs", [])),
+                },
+                "eligible_pool": [{"question_id": item["question"]["id"],
+                                   "selection_order": list(item["order"]),
+                                   "source_evidence_refs": list(item["question"].get("source_evidence_refs", [])),
+                                   "availability": item["proof"]["availability"]}
+                                  for item in frontier_pool],
+                "generated_legacy_question_id": legacy_question["id"],
+                "passive_allocation_ids_before_generation": public_allocations_before_generation,
+                "agenda_selected_question_id": question["id"],
+                "returned_experiment_id": experiment.get("id") if experiment else None,
+            }
 
         target_experiment = next(
             (item for item in state["experiments"]
@@ -1623,8 +1716,10 @@ class AgentCore:
             ),
             "metrics": state["metrics"],
         }
+        if copy_early_public_admission:
+            event["copy_frontier_handoff_trace"] = frontier_trace
         self.store.append_journal(event)
-        return {
+        result = {
             "cycle": cycle,
             "surprise": surprise,
             "prediction_result": prediction_result,
@@ -1656,6 +1751,11 @@ class AgentCore:
             "prediction_experiment": prediction_experiment,
             "metrics": state["metrics"],
         }
+        if copy_early_public_admission:
+            result["copy_frontier_handoff_trace"] = frontier_trace
+        if public_trace is not None:
+            result["public_observation_trace"] = public_trace
+        return result
 
     def record_outcome(
         self,
@@ -1954,6 +2054,8 @@ class AgentCore:
         thought: dict[str, Any] | None,
         *,
         strict_question_attention: bool = False,
+        copy_frontier_grounded_handoff: bool = False,
+        copy_public_capacity: dict[str, Any] | None = None,
     ) -> str:
         if intention["kind"] == "specify_experiment" and intention.get("target"):
             return (
@@ -1973,10 +2075,11 @@ class AgentCore:
             intention["kind"] == "explore_empirical_frontier"
             and intention.get("target")
         ):
-            return (
-                "Which distinct measurable relationship should be tested next to "
-                f"challenge or extend the learned {intention['target']} pattern?"
-            )
+            if copy_frontier_grounded_handoff:
+                pool = self._frontier_obtainable_pool(state, copy_public_capacity or {})
+                if pool:
+                    return str(min(pool, key=lambda item: item["order"])["question"]["text"])
+            return self._frontier_template(intention["target"])
 
         if thought is not None:
             candidate = thought["question"].strip()
@@ -2054,6 +2157,39 @@ class AgentCore:
             )
         }
 
+    @staticmethod
+    def _frontier_template(target: Any) -> str:
+        return ("Which distinct measurable relationship should be tested next to "
+                f"challenge or extend the learned {target} pattern?")
+
+    def _annotate_frontier_question(self, question: dict[str, Any], text: str,
+                                    intention: dict[str, Any], *, policy_enabled: bool) -> None:
+        if (intention.get("kind") == "explore_empirical_frontier"
+                and (not policy_enabled or (
+                    text == self._frontier_template(intention.get("target"))
+                    and question.get("source") in {None, "empirical_frontier_transfer"}))):
+            question.setdefault("source", "empirical_frontier_transfer")
+            question["source_learning_family"] = intention.get("target")
+            question["source_evidence_refs"] = list(intention.get("evidence_refs", []))
+
+    @staticmethod
+    def _question_order(question: dict[str, Any]) -> tuple:
+        return (int(question.get("times_selected", 0) or 0),
+                int(question.get("last_selected_cycle", -1) or -1),
+                int(question.get("created_cycle", 0) or 0),
+                str(question.get("id", "")))
+
+    def _frontier_obtainable_pool(self, state: dict[str, Any], capacity_receipts: dict[str, Any]) -> list[dict[str, Any]]:
+        # All provable passive contracts across every registered source/feature.
+        # No experiment status alone, preferred world/name or objective score.
+        pool = []
+        for question in state.get("questions", []):
+            proof = obtainable_public_contract(state, question, capacity_receipts)
+            if proof is not None:
+                pool.append({"question": question, "proof": proof,
+                             "order": self._question_order(question)})
+        return pool
+
     def _least_selected_eligible_open_question(
         self,
         state: dict[str, Any],
@@ -2077,12 +2213,7 @@ class AgentCore:
             return None
         return min(
             eligible,
-            key=lambda question: (
-                int(question.get("times_selected", 0) or 0),
-                int(question.get("last_selected_cycle", -1) or -1),
-                int(question.get("created_cycle", 0) or 0),
-                str(question.get("id", "")),
-            ),
+            key=self._question_order,
         )
 
     def _question_exists(self, state: dict[str, Any], text: str) -> bool:
@@ -2145,6 +2276,10 @@ class AgentCore:
         *,
         require_grounded: bool = False,
     ) -> dict[str, Any] | None:
+        if question.get("source") == PUBLIC_OBSERVATION_SOURCE:
+            # Native allocation belongs exclusively to the actual post-agenda
+            # hook. A generic intention or thought cannot authorize it here.
+            return None
         if intention["kind"] == "specify_experiment" and intention.get("target"):
             match = next(
                 (
