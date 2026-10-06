@@ -1,0 +1,932 @@
+from __future__ import annotations
+
+from collections import Counter
+from typing import Any
+
+from .change_control import validate_change_manifest
+from .state import utc_now
+
+REVIEW_VERSION = "proposal-review-v4"
+
+
+def _evidence_index(state: dict[str, Any]) -> dict[str, tuple[str, dict[str, Any]]]:
+    index: dict[str, tuple[str, dict[str, Any]]] = {}
+    for key in (
+        "episodes",
+        "surprises",
+        "predictions",
+        "intentions",
+        "questions",
+        "experiments",
+        "reflections",
+        "cognition_events",
+        "cognition_candidates",
+    ):
+        for item in state.get(key, []):
+            identifier = item.get("id")
+            if identifier:
+                index[str(identifier)] = (key, item)
+    for claim in state.get("world_model", {}).get("claims", []):
+        identifier = claim.get("id")
+        if identifier:
+            index[str(identifier)] = ("world_claims", claim)
+    for diagnostic in state.get("proposal_diagnostics", []):
+        identifier = diagnostic.get("id")
+        if identifier:
+            index[str(identifier)] = ("proposal_diagnostics", diagnostic)
+    for diagnostic in state.get("system_diagnostics", []):
+        identifier = diagnostic.get("id")
+        if identifier and diagnostic.get("status") == "completed":
+            index[str(identifier)] = ("system_diagnostics", diagnostic)
+    return index
+
+
+def _completed_diagnostic_ids(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> list[str]:
+    return sorted(
+        str(diagnostic["id"])
+        for diagnostic in state.get("proposal_diagnostics", [])
+        if diagnostic.get("proposal_id") == proposal_id
+        and diagnostic.get("status") == "completed"
+        and diagnostic.get("id")
+    )
+
+
+def _current_baseline_fingerprint(state: dict[str, Any]) -> str | None:
+    for snapshot in reversed(state.get("environment_snapshots", [])):
+        fingerprint = snapshot.get("baseline_fingerprint")
+        if isinstance(fingerprint, str) and fingerprint:
+            return fingerprint
+    return None
+
+
+def _system_diagnostic_matches_current_baseline(
+    state: dict[str, Any],
+    diagnostic: dict[str, Any],
+) -> bool:
+    current = _current_baseline_fingerprint(state)
+    if current is None:
+        return True
+    diagnostic_fingerprint = diagnostic.get("baseline_fingerprint")
+    return isinstance(diagnostic_fingerprint, str) and diagnostic_fingerprint == current
+
+
+def _latest_current_system_diagnostic(
+    state: dict[str, Any],
+    kind: str,
+) -> dict[str, Any] | None:
+    return next(
+        (
+            item
+            for item in reversed(state.get("system_diagnostics", []))
+            if item.get("kind") == kind
+            and item.get("status") == "completed"
+            and _system_diagnostic_matches_current_baseline(state, item)
+        ),
+        None,
+    )
+
+
+def _proposal_source_system_diagnostic(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    proposal = next(
+        (
+            item
+            for item in state.get("change_proposals", [])
+            if str(item.get("id")) == proposal_id
+        ),
+        None,
+    )
+    if proposal is None or not proposal.get("source_diagnostic_id"):
+        return proposal, None
+    source_id = str(proposal.get("source_diagnostic_id"))
+    diagnostic = next(
+        (
+            item
+            for item in state.get("system_diagnostics", [])
+            if str(item.get("id")) == source_id
+            and item.get("status") == "completed"
+        ),
+        None,
+    )
+    return proposal, diagnostic
+
+
+def _existing_review(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> dict[str, Any] | None:
+    current_diagnostics = _completed_diagnostic_ids(state, proposal_id)
+    for review in reversed(state.get("proposal_reviews", [])):
+        if review.get("proposal_id") != proposal_id:
+            continue
+        if review.get("review_version") != REVIEW_VERSION:
+            continue
+        if review.get("considered_diagnostic_ids", []) != current_diagnostics:
+            continue
+        if _cached_review_requires_lifecycle_recheck(state, proposal_id, review):
+            continue
+        if _cached_review_requires_baseline_recheck(state, proposal_id):
+            continue
+        return review
+    return None
+
+
+def _successful_cognition_exists(state: dict[str, Any]) -> bool:
+    if state.get("cognition_candidates"):
+        return True
+    return any(
+        event.get("status") == "accepted"
+        for event in state.get("cognition_events", [])
+    )
+
+
+def _latest_completed_diagnostic(
+    state: dict[str, Any],
+    proposal_id: str,
+    kind: str,
+) -> dict[str, Any] | None:
+    for diagnostic in reversed(state.get("proposal_diagnostics", [])):
+        if (
+            diagnostic.get("proposal_id") == proposal_id
+            and diagnostic.get("kind") == kind
+            and diagnostic.get("status") == "completed"
+        ):
+            return diagnostic
+    return None
+
+
+
+def _cited_experiment_design_diagnostic(
+    cited: list[tuple[str, dict[str, Any]]],
+    proposal: dict[str, Any],
+) -> dict[str, Any] | None:
+    expected_id = proposal.get("source_diagnostic_id")
+    for kind, item in cited:
+        if kind != "system_diagnostics":
+            continue
+        if item.get("kind") != "experiment_design":
+            continue
+        if item.get("status") != "completed":
+            continue
+        if expected_id is not None and str(item.get("id")) != str(expected_id):
+            continue
+        return item
+    return None
+
+
+def _same_cycle_untriaged_specification_backlog(
+    state: dict[str, Any],
+    diagnostic: dict[str, Any],
+) -> bool:
+    if diagnostic.get("outcome") != "specification_backlog":
+        return False
+    diagnostic_cycle = int(diagnostic.get("created_cycle", 0) or 0)
+    ids = [
+        str(item)
+        for item in diagnostic.get("result", {}).get(
+            "untriaged_specification_ids",
+            [],
+        )
+        if item
+    ]
+    if not ids:
+        return False
+    experiments = {
+        str(item.get("id")): item
+        for item in state.get("experiments", [])
+        if item.get("id")
+    }
+    matched = [experiments.get(identifier) for identifier in ids]
+    if any(item is None for item in matched):
+        return False
+    return all(
+        int(item.get("cycle", 0) or 0) >= diagnostic_cycle
+        for item in matched
+        if item is not None
+    )
+
+
+
+def _cached_review_requires_lifecycle_recheck(
+    state: dict[str, Any],
+    proposal_id: str,
+    review: dict[str, Any],
+) -> bool:
+    if review.get("verdict") != "supported_problem":
+        return False
+    proposal = next(
+        (
+            item
+            for item in state.get("change_proposals", [])
+            if str(item.get("id")) == proposal_id
+        ),
+        None,
+    )
+    if (
+        proposal is None
+        or proposal.get("selection_signal")
+        != "experiment_design_specification_backlog"
+    ):
+        return False
+    source_diagnostic_id = str(proposal.get("source_diagnostic_id") or "")
+    if not source_diagnostic_id:
+        return False
+    diagnostic = next(
+        (
+            item
+            for item in state.get("system_diagnostics", [])
+            if str(item.get("id")) == source_diagnostic_id
+            and item.get("status") == "completed"
+        ),
+        None,
+    )
+    return (
+        diagnostic is not None
+        and _same_cycle_untriaged_specification_backlog(state, diagnostic)
+    )
+
+
+def _cached_review_requires_baseline_recheck(
+    state: dict[str, Any],
+    proposal_id: str,
+) -> bool:
+    proposal, diagnostic = _proposal_source_system_diagnostic(state, proposal_id)
+    if proposal is None or not proposal.get("source_diagnostic_id"):
+        return False
+    if diagnostic is None:
+        return True
+    return not _system_diagnostic_matches_current_baseline(state, diagnostic)
+
+
+def _cited_attention_control_diagnostic(
+    cited: list[tuple[str, dict[str, Any]]],
+    proposal: dict[str, Any],
+) -> dict[str, Any] | None:
+    expected_id = proposal.get("source_diagnostic_id")
+    for kind, item in cited:
+        if kind != "system_diagnostics":
+            continue
+        if item.get("kind") != "attention_control":
+            continue
+        if item.get("status") != "completed":
+            continue
+        if expected_id is not None and str(item.get("id")) != str(expected_id):
+            continue
+        return item
+    return None
+
+
+def _learning_loop_gap(state: dict[str, Any]) -> tuple[bool, list[str]]:
+    predictions = {
+        str(prediction.get("id")): prediction
+        for prediction in state.get("predictions", [])
+        if prediction.get("status") in {"confirmed", "violated"}
+        and prediction.get("id")
+    }
+    prediction_reflections = [
+        reflection
+        for reflection in state.get("reflections", [])
+        if reflection.get("source") == "prediction"
+        and str(reflection.get("prediction_id")) in predictions
+    ]
+
+    for experiment in state.get("experiments", []):
+        if experiment.get("status") != "proposed":
+            continue
+        if experiment.get("readiness") in {
+            "awaiting_specification_or_evidence",
+            "needs_specification",
+        }:
+            continue
+        created_cycle = int(experiment.get("cycle", 0))
+        later = [
+            reflection
+            for reflection in prediction_reflections
+            if int(reflection.get("cycle", 0)) > created_cycle
+        ]
+        if later:
+            refs = [str(experiment["id"])]
+            for reflection in later[-2:]:
+                prediction_id = str(reflection["prediction_id"])
+                if prediction_id not in refs:
+                    refs.append(prediction_id)
+                reflection_id = str(reflection.get("id"))
+                if reflection_id and reflection_id != "None" and reflection_id not in refs:
+                    refs.append(reflection_id)
+            return True, refs
+    return False, []
+
+
+def _underspecified_learning_work(state: dict[str, Any]) -> list[str]:
+    refs: list[str] = []
+    for experiment in state.get("experiments", []):
+        if (
+            experiment.get("status") == "proposed"
+            and experiment.get("readiness")
+            in {"awaiting_specification_or_evidence", "needs_specification"}
+            and experiment.get("id")
+        ):
+            refs.append(str(experiment["id"]))
+    return refs[-6:]
+
+
+def _repeated_reflection_pattern(state: dict[str, Any]) -> tuple[bool, list[str]]:
+    reflections = state.get("reflections", [])
+    groups: dict[str, list[str]] = {}
+    for reflection in reflections:
+        lesson = " ".join(str(reflection.get("lesson", "")).lower().split())
+        if not lesson:
+            continue
+        groups.setdefault(lesson, []).append(str(reflection.get("id")))
+    repeated = [
+        refs
+        for refs in groups.values()
+        if len([ref for ref in refs if ref and ref != "None"]) >= 2
+    ]
+    if not repeated:
+        return False, []
+    refs = max(repeated, key=len)
+    return True, refs[-6:]
+
+
+def classify_proposal(
+    state: dict[str, Any],
+    proposal: dict[str, Any],
+) -> dict[str, Any]:
+    valid, validation_reason = validate_change_manifest(proposal, state)
+    evidence_index = _evidence_index(state)
+    cited = [
+        evidence_index[ref]
+        for ref in proposal.get("evidence_refs", [])
+        if ref in evidence_index
+    ]
+    kinds = Counter(kind for kind, _ in cited)
+    target = proposal.get("target_dimension")
+
+    if not valid:
+        return {
+            "verdict": "needs_evidence",
+            "patch_authority": "none",
+            "reason": "The manifest does not currently satisfy change-control validation.",
+            "required_next_evidence": validation_reason or "A structurally valid manifest.",
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+    if target == "reproducibility":
+        replay = _latest_completed_diagnostic(
+            state,
+            str(proposal.get("id")),
+            "deterministic_replay",
+        )
+        if replay is not None and replay.get("outcome") in {"divergent", "failure"}:
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "The latest completed deterministic-replay diagnostic for this "
+                    "proposal reports divergence."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": replay.get("id"),
+            }
+
+        if replay is not None and replay.get("outcome") == "stable":
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "The latest verified deterministic-replay diagnostic completed "
+                    "on isolated temporary state and produced equivalent normalized "
+                    "results. No reproducibility defect is currently supported."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": replay.get("id"),
+            }
+
+        return {
+            "verdict": "measurement_gap",
+            "patch_authority": "diagnostic_only",
+            "reason": (
+                "The cited evidence shows evaluated predictions and reflections, but "
+                "no current deterministic-replay diagnostic resolves the question."
+            ),
+            "required_next_evidence": (
+                "Run a non-mutating deterministic replay diagnostic on equivalent "
+                "controlled inputs and record whether normalized outputs diverge."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+
+    if target == "self_model":
+        grounding = _latest_completed_diagnostic(
+            state,
+            str(proposal.get("id")),
+            "self_model_grounding",
+        )
+        if grounding is not None and grounding.get("outcome") == "grounding_gap":
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "The latest verified read-only self-model diagnostic found "
+                    "capability claims without explicit calibration records. This "
+                    "supports a traceability problem, not a claim that the "
+                    "capabilities themselves are false."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": grounding.get("id"),
+            }
+
+        if grounding is not None and grounding.get("outcome") == "grounded":
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "The latest verified self-model diagnostic found every capability "
+                    "claim explicitly calibrated as verified, observed, or unverified "
+                    "with valid provenance or uncertainty rationale."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": grounding.get("id"),
+            }
+
+        return {
+            "verdict": "measurement_gap",
+            "patch_authority": "diagnostic_only",
+            "reason": (
+                "The self-model proposal concerns calibration and traceability, but "
+                "no current verified grounding diagnostic has measured claim-by-claim "
+                "coverage yet."
+            ),
+            "required_next_evidence": (
+                "Run the verified read-only self-model grounding diagnostic and "
+                "record whether each capability has an explicit status plus evidence "
+                "or an unverified rationale."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+    if target == "open_endedness":
+        inquiry = _latest_completed_diagnostic(
+            state,
+            str(proposal.get("id")),
+            "inquiry_family",
+        )
+        if (
+            inquiry is not None
+            and inquiry.get("outcome") == "paraphrase_churn"
+            and inquiry.get("result", {}).get("metric_status") in {"inflated", "unknown"}
+        ):
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "The latest verified inquiry-family diagnostic found repeated "
+                    "question families and showed that exact-string scoring materially "
+                    "overstates family-based open-endedness."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": inquiry.get("id"),
+            }
+
+        if (
+            inquiry is not None
+            and inquiry.get("result", {}).get("metric_status") == "aligned"
+            and inquiry.get("outcome") in {"diverse", "paraphrase_churn"}
+        ):
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "The latest verified inquiry-family diagnostic found no material "
+                    "inflation in the reported open-endedness metric relative to "
+                    "distinct inquiry families."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": inquiry.get("id"),
+            }
+
+        if (
+            inquiry is not None
+            and inquiry.get("outcome") == "diverse"
+            and inquiry.get("result", {}).get("metric_status") == "unknown"
+        ):
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "The verified inquiry-family diagnostic found distinct question "
+                    "families and no paraphrase-churn signal. Metric alignment is not "
+                    "available in this legacy or synthetic context, so no corrective "
+                    "patch is authorized."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": inquiry.get("id"),
+            }
+
+        if inquiry is not None and inquiry.get("outcome") == "insufficient_data":
+            return {
+                "verdict": "needs_evidence",
+                "patch_authority": "none",
+                "reason": (
+                    "The verified inquiry-family diagnostic does not yet have enough "
+                    "questions to evaluate metric alignment."
+                ),
+                "required_next_evidence": (
+                    "Accumulate at least four evidence-backed questions, then rerun "
+                    "the inquiry-family diagnostic."
+                ),
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": inquiry.get("id"),
+            }
+
+        return {
+            "verdict": "needs_evidence",
+            "patch_authority": "none",
+            "reason": (
+                "The cited questions are real, but exact-string uniqueness does not "
+                "show whether the reported metric matches distinct inquiry families."
+            ),
+            "required_next_evidence": (
+                "Run the verified read-only inquiry-family diagnostic to compare "
+                "reported open-endedness with family-based open-endedness."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+    if target == "learning":
+        diagnostic_signals = {
+            "experiment_design_specification_churn": "specification_churn",
+            "experiment_design_specification_backlog": "specification_backlog",
+        }
+        selection_signal = proposal.get("selection_signal")
+        if selection_signal in diagnostic_signals:
+            diagnostic = _cited_experiment_design_diagnostic(cited, proposal)
+            expected_outcome = diagnostic_signals[selection_signal]
+            if diagnostic is None or diagnostic.get("outcome") != expected_outcome:
+                return {
+                    "verdict": "needs_evidence",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The diagnostic-backed learning proposal does not cite a completed "
+                        "experiment-design diagnostic with the expected outcome."
+                    ),
+                    "required_next_evidence": (
+                        f"Cite a completed experiment-design diagnostic reporting "
+                        f"{expected_outcome}."
+                    ),
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                }
+            if not _system_diagnostic_matches_current_baseline(state, diagnostic):
+                current = _latest_current_system_diagnostic(
+                    state,
+                    "experiment_design",
+                )
+                if current is None:
+                    return {
+                        "verdict": "needs_evidence",
+                        "patch_authority": "none",
+                        "reason": (
+                            "The cited experiment-design diagnostic was measured on a "
+                            "different code baseline and no current-baseline diagnostic "
+                            "has replaced it yet."
+                        ),
+                        "required_next_evidence": (
+                            "Run the protected experiment-design diagnostic on the "
+                            "current baseline before authorizing a patch."
+                        ),
+                        "resolved_evidence_count": len(cited),
+                        "evidence_kinds": dict(kinds),
+                    }
+                if current.get("outcome") != expected_outcome:
+                    return {
+                        "verdict": "no_problem_observed",
+                        "patch_authority": "none",
+                        "reason": (
+                            "The proposal cites an old-baseline experiment-design "
+                            "diagnostic, while the current-baseline protected diagnostic "
+                            f"{current.get('id')} reports {current.get('outcome')} instead "
+                            f"of {expected_outcome}."
+                        ),
+                        "required_next_evidence": None,
+                        "resolved_evidence_count": len(cited),
+                        "evidence_kinds": dict(kinds),
+                        "direct_diagnostic_id": current.get("id"),
+                    }
+                return {
+                    "verdict": "superseded_evidence",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The cited experiment-design diagnostic belongs to an old code "
+                        "baseline. A current-baseline diagnostic reports the same problem, "
+                        "so this manifest is closed without patch authority and a fresh "
+                        "proposal must cite the current diagnostic."
+                    ),
+                    "required_next_evidence": (
+                        f"Author a fresh proposal from protected diagnostic "
+                        f"{current.get('id')}."
+                    ),
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                    "direct_diagnostic_id": current.get("id"),
+                }
+            if (
+                selection_signal == "experiment_design_specification_backlog"
+                and _same_cycle_untriaged_specification_backlog(state, diagnostic)
+            ):
+                return {
+                    "verdict": "no_problem_observed",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The cited specification backlog contains only experiments "
+                        "created in the diagnostic's own cycle. They could not have "
+                        "been triaged before the cycle's experiment-creation step, so "
+                        "this is expected one-cycle lifecycle latency rather than a "
+                        "supported triage-code defect."
+                    ),
+                    "required_next_evidence": None,
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                    "direct_diagnostic_id": diagnostic.get("id"),
+                }
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    f"Protected experiment-design diagnostic {diagnostic.get('id')} reports "
+                    f"{expected_outcome}, directly supporting the proposal's targeted "
+                    "experiment-design problem."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": diagnostic.get("id"),
+            }
+
+        gap, direct_refs = _learning_loop_gap(state)
+        if gap:
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "At least one experiment remains proposed despite later evaluated prediction "
+                    "evidence, directly demonstrating an unresolved evidence-closure gap."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_evidence_refs": direct_refs,
+            }
+
+        underspecified_refs = _underspecified_learning_work(state)
+        if underspecified_refs:
+            return {
+                "verdict": "no_problem_observed",
+                "patch_authority": "none",
+                "reason": (
+                    "Outstanding proposed experiments are explicitly classified as awaiting "
+                    "specification or needing specification. Their persistence is unresolved "
+                    "inquiry work, not evidence that the experiment-closure code is defective."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_evidence_refs": underspecified_refs,
+            }
+
+    if (
+        target == "agency"
+        and proposal.get("selection_signal")
+        == "attention_control_blocked_attention_loop"
+    ):
+        diagnostic = _cited_attention_control_diagnostic(cited, proposal)
+        if diagnostic is None or diagnostic.get("outcome") != "blocked_attention_loop":
+            return {
+                "verdict": "needs_evidence",
+                "patch_authority": "none",
+                "reason": (
+                    "The attention-control proposal does not cite a completed protected "
+                    "diagnostic reporting blocked_attention_loop."
+                ),
+                "required_next_evidence": (
+                    "Cite a completed attention-control diagnostic reporting "
+                    "blocked_attention_loop."
+                ),
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+            }
+        if not _system_diagnostic_matches_current_baseline(state, diagnostic):
+            current = _latest_current_system_diagnostic(
+                state,
+                "attention_control",
+            )
+            if current is None:
+                return {
+                    "verdict": "needs_evidence",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The cited attention-control diagnostic was measured on a "
+                        "different code baseline and no current-baseline diagnostic "
+                        "has replaced it yet."
+                    ),
+                    "required_next_evidence": (
+                        "Run the protected attention-control diagnostic on the current "
+                        "baseline before authorizing a patch."
+                    ),
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                }
+            if current.get("outcome") != "blocked_attention_loop":
+                return {
+                    "verdict": "no_problem_observed",
+                    "patch_authority": "none",
+                    "reason": (
+                        "The proposal cites an old-baseline blocked-attention result, "
+                        "while the current-baseline protected diagnostic "
+                        f"{current.get('id')} reports {current.get('outcome')}."
+                    ),
+                    "required_next_evidence": None,
+                    "resolved_evidence_count": len(cited),
+                    "evidence_kinds": dict(kinds),
+                    "direct_diagnostic_id": current.get("id"),
+                }
+            return {
+                "verdict": "superseded_evidence",
+                "patch_authority": "none",
+                "reason": (
+                    "The cited blocked-attention diagnostic belongs to an old code "
+                    "baseline. A current-baseline diagnostic reports the same problem, "
+                    "so this manifest is closed without patch authority and a fresh "
+                    "proposal must cite the current diagnostic."
+                ),
+                "required_next_evidence": (
+                    f"Author a fresh proposal from protected diagnostic "
+                    f"{current.get('id')}."
+                ),
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_diagnostic_id": current.get("id"),
+            }
+        return {
+            "verdict": "supported_problem",
+            "patch_authority": "candidate_allowed",
+            "reason": (
+                f"Protected attention-control diagnostic {diagnostic.get('id')} reports "
+                "blocked_attention_loop, directly showing attention returned to work "
+                "after that work was explicitly classified as blocked."
+            ),
+            "required_next_evidence": None,
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+            "direct_diagnostic_id": diagnostic.get("id"),
+        }
+
+    if target == "reflection":
+        repeated, direct_refs = _repeated_reflection_pattern(state)
+        if repeated:
+            return {
+                "verdict": "supported_problem",
+                "patch_authority": "candidate_allowed",
+                "reason": (
+                    "Repeated reflections contain the same evidence-backed lesson, supporting "
+                    "a need for structured pattern consolidation."
+                ),
+                "required_next_evidence": None,
+                "resolved_evidence_count": len(cited),
+                "evidence_kinds": dict(kinds),
+                "direct_evidence_refs": direct_refs,
+            }
+
+    if target == "cognition" and not _successful_cognition_exists(state):
+        return {
+            "verdict": "needs_evidence",
+            "patch_authority": "none",
+            "reason": (
+                "No successful cognition-provider evidence exists, so a cognition deficit "
+                "cannot currently be attributed to code."
+            ),
+            "required_next_evidence": (
+                "Configure a provider and record at least one grounded cognition attempt before "
+                "diagnosing cognition code."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+    measurement_targets = {"memory", "perception", "semantic_memory"}
+    if target in measurement_targets:
+        return {
+            "verdict": "measurement_gap",
+            "patch_authority": "diagnostic_only",
+            "reason": (
+                "The manifest primarily proposes better measurement or traceability. Existing "
+                "evidence does not establish a behavioral defect requiring corrective code."
+            ),
+            "required_next_evidence": (
+                "Add or run a non-mutating diagnostic that can demonstrate a specific failure "
+                "before authorizing corrective behavior changes."
+            ),
+            "resolved_evidence_count": len(cited),
+            "evidence_kinds": dict(kinds),
+        }
+
+    return {
+        "verdict": "needs_evidence",
+        "patch_authority": "none",
+        "reason": (
+            "The cited evidence is real but does not yet demonstrate that the proposed code "
+            "surface is the first layer where behavior becomes incorrect."
+        ),
+        "required_next_evidence": (
+            "Gather a direct observation or controlled diagnostic that connects the target "
+            "behavior to the proposed code layer."
+        ),
+        "resolved_evidence_count": len(cited),
+        "evidence_kinds": dict(kinds),
+    }
+
+
+def review_change_proposal(
+    state: dict[str, Any],
+    proposal: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, bool]:
+    if proposal is None:
+        proposals = state.get("change_proposals", [])
+        proposal = next(
+            (
+                item
+                for item in proposals
+                if item.get("status")
+                in {
+                    "proposed",
+                    "reviewed_measurement_gap",
+                    "reviewed_needs_evidence",
+                    "reviewed_supported_problem",
+                }
+            ),
+            None,
+        )
+    if proposal is None:
+        return None, False
+
+    existing = _existing_review(state, str(proposal.get("id")))
+    if existing is not None:
+        return existing, False
+
+    classification = classify_proposal(state, proposal)
+    verdict = classification["verdict"]
+    status_by_verdict = {
+        "supported_problem": "reviewed_supported_problem",
+        "measurement_gap": "reviewed_measurement_gap",
+        "needs_evidence": "reviewed_needs_evidence",
+        "no_problem_observed": "closed_no_problem_observed",
+        "superseded_evidence": "closed_superseded_evidence",
+    }
+    proposal["status"] = status_by_verdict[verdict]
+
+    review = {
+        "id": f"V{len(state.get('proposal_reviews', [])) + 1:06d}",
+        "proposal_id": proposal["id"],
+        "target_dimension": proposal.get("target_dimension"),
+        "review_version": REVIEW_VERSION,
+        "created_at": utc_now(),
+        "reviewed_cycle": state.get("cycles", 0),
+        "considered_diagnostic_ids": _completed_diagnostic_ids(
+            state,
+            str(proposal["id"]),
+        ),
+        "considered_system_diagnostic_ids": sorted(
+            str(ref)
+            for ref in proposal.get("evidence_refs", [])
+            if str(ref).startswith("SD")
+        ),
+        **classification,
+    }
+    state.setdefault("proposal_reviews", []).append(review)
+    return review, True
