@@ -36,6 +36,15 @@ class InteractionWorkflowIdempotencyTests(unittest.TestCase):
         self.assertGreaterEqual(workflow.count("          import os"), 2)
         self.assertIn('source = Path(os.environ["INTERACTION_RESPONSE_SOURCE"])', workflow)
 
+    def test_growth_and_interaction_share_versioned_serialization_group(self):
+        interaction = (ROOT / ".github/workflows/interact.yml").read_text(encoding="utf-8")
+        growth = (ROOT / ".github/workflows/growth.yml").read_text(encoding="utf-8")
+        group = "group: agenttest-autonomous-growth-v2"
+        self.assertIn(group, interaction)
+        self.assertIn(group, growth)
+        self.assertNotIn("group: agenttest-autonomous-growth\n", interaction)
+        self.assertNotIn("group: agenttest-autonomous-growth\n", growth)
+
     def test_workflow_does_not_use_message_text_as_request_identity(self):
         workflow = (ROOT / ".github/workflows/interact.yml").read_text(encoding="utf-8")
         self.assertNotIn("request_id = message", workflow)
