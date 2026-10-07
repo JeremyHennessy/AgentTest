@@ -1224,6 +1224,9 @@ class AgentCore:
         strict_experiment_admission: bool = False,
         action_lab: bool = False,
         planning_lab: bool = False,
+        current_world_investigation: bool = False,
+        heartbeat_request_id: str | None = None,
+        heartbeat_claim_commit: str | None = None,
         _phase42_counterfactual: bool = False,
         _withhold_current_prediction_evidence: bool = False,
         _now_override: str | None = None,
@@ -1236,7 +1239,26 @@ class AgentCore:
         if action_lab and planning_lab:
             raise ValueError("action_lab and planning_lab are mutually exclusive")
         _guard_public_dispatch(self.store.path, copy_public_resolution_dispatch, copy_public_observations)
+        heartbeat_claim = None
+        if current_world_investigation:
+            if (not planning_lab or action_lab or cognition or _phase42_counterfactual
+                    or copy_public_observations is not None or copy_early_public_admission
+                    or copy_frontier_grounded_handoff or copy_public_resolution_dispatch):
+                raise ValueError("current-world investigation requires an ordinary cognition-free planning heartbeat")
+            from .heartbeat_claim import validate_cycle_claim
+            heartbeat_claim = validate_cycle_claim(
+                self.store.path, heartbeat_request_id or "", heartbeat_claim_commit or "",
+                {"mode": "current_world_investigation", "planning_lab": planning_lab,
+                 "strict_experiment_admission": strict_experiment_admission,
+                 "cognition": cognition, "stimulus": stimulus,
+                 "observation_supplied": observation is not None},
+            )
+        elif heartbeat_request_id is not None or heartbeat_claim_commit is not None:
+            raise ValueError("heartbeat claims require current-world investigation mode")
         state = self.store.load()
+        if not current_world_investigation and state.get("current_world_heartbeat"):
+            from .heartbeat_claim import reject_unfinished_claim
+            reject_unfinished_claim(state)
         if (copy_early_public_admission or copy_frontier_grounded_handoff) and self.store.path.resolve() == Path("state/organism.json").resolve():
             raise ValueError("frontier preparation requires an explicit copied store")
         if copy_frontier_grounded_handoff and not copy_early_public_admission:
@@ -1251,6 +1273,9 @@ class AgentCore:
         state["cycles"] += 1
         state["generation"] = state["cycles"]
         cycle = state["cycles"]
+        if planning_lab and not current_world_investigation and state.get("current_world_investigation"):
+            from .current_world_investigation import disable_prepared_case
+            disable_prepared_case(state)
         now = _now_override or utc_now()
         surprise = None
         prediction_result = None
@@ -1336,7 +1361,11 @@ class AgentCore:
 
         planning_lab_result = None
         if planning_lab:
-            planning_lab_result = step_planning_lab(state)
+            if current_world_investigation:
+                from .current_world_investigation import consume_prepared_case
+                planning_lab_result = consume_prepared_case(state, request_id=heartbeat_request_id)
+            else:
+                planning_lab_result = step_planning_lab(state)
             self._remember(
                 state,
                 cycle,
@@ -1354,15 +1383,19 @@ class AgentCore:
                             "matched_prediction"
                         ),
                         "plan_id": planning_lab_result.get("plan_id"),
+                        **({key: planning_lab_result.get(key) for key in
+                            ("owner", "case_id", "case_hash", "attempt_id", "outcome_id", "belief_id")}
+                           if current_world_investigation else {}),
                     },
                     sort_keys=True,
                 ),
-                [
+                (["planning_lab", "current_world_investigation", "owned_movement_evidence"]
+                 if current_world_investigation else [
                     "planning_lab",
                     "goal_directed_action",
                     "persistent_plan",
                     "model_based_planning",
-                ],
+                ]),
             )
 
         public_bound = []
@@ -1503,6 +1536,10 @@ class AgentCore:
                 counterfactual_record["reason"] = (
                     "no_current_prediction_evidence_to_withhold"
                 )
+            elif current_world_investigation:
+                # A copied diagnostic cannot consume remote heartbeat authority or
+                # silently substitute the legacy planner. Leave causality unproven.
+                counterfactual_record["reason"] = "current_world_authority_counterfactual_not_replayed"
             elif cognition:
                 # Never replay a model/provider call merely to satisfy a
                 # scientific diagnostic. Normal autonomous operation is
@@ -1697,10 +1734,15 @@ class AgentCore:
                 if target_experiment is not None else "unchecked"
             ),
         }
+        current_world_preparation = None
+        if current_world_investigation:
+            from .current_world_investigation import prepare_next_case
+            current_world_preparation = prepare_next_case(state, request_id=heartbeat_request_id)
         self_model_calibration = _calibrate_self_model(state)
         state["self_model"]["last_updated_cycle"] = cycle
         self._update_metrics(state)
-        self.store.save(state)
+        if not current_world_investigation:
+            self.store.save(state)
 
         event = {
             "event": "cycle",
@@ -1749,6 +1791,11 @@ class AgentCore:
             event["copy_frontier_handoff_trace"] = frontier_trace
         if copy_public_resolution_dispatch:
             event["public_resolution_dispatch"] = dispatch_receipts
+        if current_world_investigation:
+            from .heartbeat_claim import finish_heartbeat
+            event["current_world_preparation"] = current_world_preparation
+            finish_heartbeat(state, event, heartbeat_claim, heartbeat_claim_commit)
+            self.store.save(state)
         self.store.append_journal(event)
         result = {
             "cycle": cycle,
@@ -1782,6 +1829,10 @@ class AgentCore:
             "prediction_experiment": prediction_experiment,
             "metrics": state["metrics"],
         }
+        if current_world_investigation:
+            result["current_world_preparation"] = current_world_preparation
+            result["heartbeat_request_id"] = heartbeat_request_id
+            result["durability"] = "local_calculation_awaiting_verified_git_commit"
         if copy_early_public_admission:
             result["copy_frontier_handoff_trace"] = frontier_trace
         if public_trace is not None:

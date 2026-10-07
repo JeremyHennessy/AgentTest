@@ -2509,6 +2509,161 @@ def _create_plan(
     return plan
 
 
+def _next_planning_execution_id(lab: dict[str, Any]) -> str:
+    """Keep PX identities unique across retained executions and their evidence."""
+    identifiers = [row.get("id") for row in lab.get("executions", [])]
+    identifiers.extend(
+        row.get("source_id") for row in lab.get("transition_observations", [])
+    )
+    indices = [
+        int(identifier[2:])
+        for identifier in identifiers
+        if isinstance(identifier, str)
+        and identifier.startswith("PX")
+        and identifier[2:].isascii()
+        and identifier[2:].isdigit()
+    ]
+    return f"PX{max(len(lab.get('executions', [])), *indices, 0) + 1:06d}"
+
+
+def execute_investigation_action(
+    state: dict[str, Any], *, action: str, case_id: str, attempt_id: str,
+) -> dict[str, Any]:
+    """Record one authorized investigation action in the existing current world.
+
+    The caller owns authority and investigation lifecycle checks. This operation
+    neither bootstraps observations nor advances a legacy plan or objective.
+    """
+    if action not in ACTION_ORDER:
+        raise ValueError(f"action is not permitted: {action}")
+    if any(not isinstance(value, str) or not value.strip()
+           for value in (case_id, attempt_id)):
+        raise ValueError("investigation action requires case_id and attempt_id")
+    existing_lab = state.get("planning_lab")
+    if (not isinstance(existing_lab, dict)
+            or existing_lab.get("world_version") != STATEFUL_WORLD_VERSION):
+        raise ValueError("investigation action requires the existing stateful current world")
+    position = existing_lab.get("position")
+    bounds = existing_lab.get("bounds")
+    if (not isinstance(position, list) or len(position) != 2
+            or any(type(value) is not int for value in position)
+            or type(bounds) is not int or bounds < 1
+            or not _in_bounds(tuple(position), bounds)):
+        raise ValueError("investigation action requires a valid current-world position and bounds")
+
+    lab = ensure_planning_lab_state(state)
+    cycle = int(state.get("cycles", 0) or 0)
+    before = list(position)
+    _rebuild_model(lab)
+    predicted_after = _state_effect_prediction(lab, before, action)
+    outcome = apply_bounded_action(
+        before, action, bounds=bounds, world_version=STATEFUL_WORLD_VERSION,
+    )
+    after = list(outcome["after"])
+    execution = {
+        "id": _next_planning_execution_id(lab),
+        "execution_kind": "investigation_action",
+        "case_id": case_id,
+        "attempt_id": attempt_id,
+        "cycle": cycle,
+        # Keep investigation evidence out of completed legacy-route memories.
+        "goal_id": None,
+        "plan_id": None,
+        "step_index": None,
+        "plan_length": 0,
+        "action": action,
+        "before": before,
+        "predicted_after": predicted_after,
+        "after": after,
+        "delta": list(outcome["delta"]),
+        "blocked": bool(outcome["blocked"]),
+        "matched_prediction": (
+            after == predicted_after if predicted_after is not None else None
+        ),
+        "world_version": STATEFUL_WORLD_VERSION,
+    }
+    lab["executions"].append(execution)
+    lab["transition_observations"].append({
+        "source": "investigation_action",
+        "source_id": execution["id"],
+        **{key: execution[key] for key in (
+            "case_id", "attempt_id", "cycle", "action", "before", "after",
+            "delta", "blocked", "world_version",
+        )},
+    })
+    lab["position"] = after
+    position_key = _position_key(after)
+    lab["visit_counts"][position_key] = (
+        int(lab["visit_counts"].get(position_key, 0) or 0) + 1
+    )
+    lab["last_action_cycle"] = cycle
+    learned = _rebuild_model(lab)
+
+    interruption = {
+        "investigation_execution_id": execution["id"],
+        "investigation_case_id": case_id,
+        "investigation_attempt_id": attempt_id,
+    }
+    displaced_plan_id = None
+    goal = _active_goal(lab)
+    plan = _active_plan(lab)
+    if after != before and lab.get("active_plan_id") is not None:
+        displaced_plan_id = lab["active_plan_id"]
+        if plan is not None and plan.get("status") == "active":
+            plan.update(
+                status="invalidated", invalidated_cycle=cycle,
+                invalidation_reason="investigation_action_changed_state",
+                **interruption,
+            )
+        lab["active_plan_id"] = None
+
+    # The precommit's evidence assumptions may be displaced even by a blocked
+    # action. Retain its provenance but never call this its realization.
+    cancelled_precommit_id = lab.get("active_objective_realization_id")
+    if cancelled_precommit_id is not None:
+        for decision in lab["objective_realization_decisions"]:
+            if (decision.get("id") == cancelled_precommit_id
+                    and decision.get("status") == "precommitted"):
+                decision.update(
+                    status="cancelled_investigation_action", cancelled_cycle=cycle,
+                    cancellation_reason="investigation_action_superseded_precommit",
+                    **interruption,
+                )
+        lab["active_objective_realization_id"] = None
+
+    cancelled_goal_id = None
+    if goal is not None and after == list(goal.get("target", [])):
+        # An incidental target arrival is not completion of the interrupted
+        # plan/objective, and retaining an active zero-step goal prevents resume.
+        cancelled_goal_id = goal.get("id")
+        goal.update(
+            status="cancelled", cancelled_cycle=cycle,
+            cancellation_reason="investigation_action_reached_target",
+            **interruption,
+        )
+        lab["active_goal_id"] = None
+    replan_required = bool(lab.get("active_goal_id") and not lab.get("active_plan_id"))
+    lab["status"] = (
+        "needs_replan" if replan_required else
+        "executing_plan" if lab.get("active_plan_id") else
+        "investigation_action_executed"
+    )
+    return {
+        **execution,
+        "lab_version": PLANNING_LAB_VERSION,
+        "status": lab["status"],
+        "goal": [],
+        "goal_reached": False,
+        "replan_required": replan_required,
+        "remaining_plan_steps": 0,
+        "model_revision_id": None,
+        "displaced_plan_id": displaced_plan_id,
+        "cancelled_goal_id": cancelled_goal_id,
+        "cancelled_objective_realization_decision_id": cancelled_precommit_id,
+        "learned_effects": learned,
+    }
+
+
 def step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
     """Report blocked provenance alongside the one actual operation, if any."""
     lab = ensure_planning_lab_state(state)
@@ -2686,7 +2841,7 @@ def _step_planning_lab(state: dict[str, Any]) -> dict[str, Any]:
     matched_prediction = after == predicted_after
 
     execution = {
-        "id": f"PX{len(lab.get('executions', [])) + 1:06d}",
+        "id": _next_planning_execution_id(lab),
         "cycle": cycle,
         "goal_id": goal["id"],
         "plan_id": plan["id"],

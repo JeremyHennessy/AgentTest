@@ -8,7 +8,7 @@ forbidden = {
     (str(api_root / "experiments/open_object_world_challenge.py"), name)
     for name in ("initial_world", "observe_world", "transition")
 } | {
-    (str(api_root / "experiments/grounded_policy_v2/policy.py"), name)
+    (str(api_root / "src/agenttest/grounded_policy/policy.py"), name)
     for name in ("build_cohort", "evaluate", "_reconstruct_cohort", "verify_cohort", "verify_evaluation")
 }
 

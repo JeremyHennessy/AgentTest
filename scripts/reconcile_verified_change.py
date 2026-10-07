@@ -26,6 +26,9 @@ def main() -> None:
 
     store = StateStore(args.state)
     state = store.load()
+    if (state.get("current_world_heartbeat") or {}).get("pending"):
+        from agenttest.heartbeat_claim import reject_unfinished_claim
+        reject_unfinished_claim(state)
     receipt, created = record_verified_intervention(
         state,
         proposal_id=args.proposal_id,
