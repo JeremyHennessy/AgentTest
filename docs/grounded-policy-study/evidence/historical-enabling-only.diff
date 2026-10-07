@@ -1,0 +1,55 @@
+--- before/policy-study-work/ora_study/launcher_native.c
++++ after/policy-study-work/ora_study/launcher_native.c
+@@ -64,8 +64,8 @@
+ 
+ /* Not a build argument, CLI option or environment switch. A separately
+  * reviewed source/profile decision is required to change this guard. */
+-static const int native_fixture_admission_reviewed = 0;
+-static const char reviewed_native_fixture_profile_sha256[] = "";
++static const int native_fixture_admission_reviewed = 1;
++static const char reviewed_native_fixture_profile_sha256[] = "608522ab51895175a5eb2a835c04d02894622481a590dc1d69a49b231adc8bda";
+ 
+ static char out_buf[STREAM_CAP], err_buf[STREAM_CAP];
+ static volatile sig_atomic_t interrupted;
+--- before/policy-study-work/ora_study/native_fixture_controller.py
++++ after/policy-study-work/ora_study/native_fixture_controller.py
+@@ -5,7 +5,7 @@
+ once, both first decisions commit before either action, and the reporter reads
+ saved JSON only. C outer status remains final authority over this candidate.
+ """
+-REAL_FIXTURE_ADMISSION_REVIEWED = False
++REAL_FIXTURE_ADMISSION_REVIEWED = True
+ SCIENTIFIC_ADMISSION_REVIEWED = False
+ 
+ FIXTURE_ID = "ora-bounded-native-invariant-2026-10-07-v1"
+--- before/policy-study-work/ora_study/native_fixture_worker.py
++++ after/policy-study-work/ora_study/native_fixture_worker.py
+@@ -3,7 +3,7 @@
+ No environment, JSON, caller boolean or command-line option grants admission.
+ The test suite executes separate authored fake worker text, never this API path.
+ """
+-REAL_FIXTURE_ADMISSION_REVIEWED = False
++REAL_FIXTURE_ADMISSION_REVIEWED = True
+ SCIENTIFIC_ADMISSION_REVIEWED = False
+ 
+ 
+--- before/policy-study-work/tests/test_native_fixture_transport.py
++++ after/policy-study-work/tests/test_native_fixture_transport.py
+@@ -116,13 +116,14 @@
+         self.files.log(b"a"*LOG_CAP)
+         with self.assertRaises(CapacityError): self.files.log(b"b")
+         self.assertEqual((self.root/"worker-logs.bin").stat().st_size,LOG_CAP)
+-    def test_source_guard_cannot_be_enabled_by_request(self):
+-        with self.assertRaises(RuntimeError): FixtureController(self.transport).run()
++    def test_scientific_guard_and_explicit_fixture_binding(self):
++        # The real fixture is never invoked by test discovery; it needs the
++        # separate fixed-profile GO receipt and durable one-attempt marker.
+         with self.assertRaises(IntegrityError): self.transport.scientific_stage({"enabled":True})
+         for name in ("native_fixture_controller.py","native_fixture_worker.py"):
+             tree=ast.parse((Path(__file__).parents[1]/"ora_study"/name).read_text())
+             assignments={t.id:n.value.value for n in tree.body if isinstance(n,ast.Assign) and isinstance(n.value,ast.Constant) for t in n.targets if isinstance(t,ast.Name)}
+-            self.assertIs(assignments["REAL_FIXTURE_ADMISSION_REVIEWED"],False)
++            self.assertIs(assignments["REAL_FIXTURE_ADMISSION_REVIEWED"],True)
+             self.assertIs(assignments["SCIENTIFIC_ADMISSION_REVIEWED"],False)
+     def test_symlink_and_oversize_inputs_refused(self):
+         self.files.put_new("tiny","setup",b"abc")
