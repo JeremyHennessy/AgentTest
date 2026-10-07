@@ -2,11 +2,12 @@
 
 This is a bounded software rollout lane for the existing stateful planning world.
 It is not activation of a new world, an external actuator, a provider, or a claim
-of successful autonomous science. The CLI remains default off. The approved October 7 rollout enables
-`CURRENT_WORLD_INVESTIGATION` in `growth.yml` for at most two owned actions in
-the existing world. No repository variable or external setting enables this path.
-After a terminal null, rejection or the two-action limit, the source-controlled
-gate is returned to `false`; the checkpoint, history and current position remain.
+of successful autonomous science. The CLI remains default off. The approved October 7 rollout reached a durable
+terminal null at cycle 6,516 without executing an owned action. The source-controlled
+`CURRENT_WORLD_INVESTIGATION` gate in `growth.yml` is now `false`. Its checkpoint,
+history and current position are preserved; the next ordinary planning heartbeat
+retires any remaining lane authority and resumes the existing planner. No repository
+variable or external setting enables this path.
 
 ## Ownership and evidence
 
@@ -181,5 +182,27 @@ choice, discovery prefix, score or threshold is altered to produce activity.
 
 The exact report is [current-world-readiness-20261007.json](current-world-readiness-20261007.json).
 The [read-only admission run](https://github.com/JeremyHennessy/AgentTest/actions/runs/37631489016)
-used zero world actions. Live receipts will be reported after the bounded rollout;
-this preflight alone does not establish a live action or a durable outcome.
+used zero world actions. This preflight alone does not establish a live action or a durable outcome;
+the separately observed live result is below.
+
+## First live heartbeat and terminal result
+
+The first enabled natural heartbeat, [run 37634612533](https://github.com/JeremyHennessy/AgentTest/actions/runs/37634612533),
+completed successfully at cycle 6,516. Request `heartbeat:37634612533` first
+persisted claim commit `372fa323779186dee359978b4c4d674eb45c6c59`. The real Core
+then stored case `CWC000001` with a null selection. Its first-tick action slot
+correctly remained empty. No owned movement occurred, and no replacement choice
+was forced.
+
+The request and matching journal were verified before publication and again after
+fetching the resulting remote commit, `b9d7b62a5834fbca9951c9f79284d45d175e1e2d`.
+The workflow completed its existing invariant and preservation checks. The
+[receipt summary](current-world-rollout-20261007.json) records the exact case hash
+and provenance. This establishes a real heartbeat, portable claim, coherent durable
+null result and safe abstention; it does not establish a learned action benefit.
+
+The workflow gate is disabled after this terminal result. The case, evidence,
+claim history and world position are retained. Ordinary operation after the
+rollback is a separate observation and must not be inferred from this receipt.
+The finite movement model and frozen discovery prefix remain capability limits;
+a richer world has not been activated.
