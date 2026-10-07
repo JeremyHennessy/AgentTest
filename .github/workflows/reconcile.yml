@@ -33,18 +33,36 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Prepare persistent state branch
+      - name: Fetch durable state without merging source
         shell: bash
         run: |
           git config user.name "agenttest-governance"
           git config user.email "agenttest-governance@users.noreply.github.com"
-          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth || true
-          if git show-ref --verify --quiet refs/remotes/origin/autonomous/growth; then
-            git checkout -B autonomous/growth origin/autonomous/growth
-            git merge --no-edit origin/main
-          else
-            git checkout -b autonomous/growth origin/main
+          transport_path="$(mktemp "$RUNNER_TEMP/heartbeat-writer-guard-XXXXXX.py")"
+          git show "HEAD:scripts/heartbeat_transport.py" > "$transport_path"
+          echo "WRITER_TRANSPORT=$transport_path" >> "$GITHUB_ENV"
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          git checkout -B autonomous/growth origin/autonomous/growth
+          echo "WRITER_REMOTE_BASE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Check pending heartbeat before any source merge
+        id: heartbeat_writer_gate
+        shell: bash
+        run: |
+          status=0
+          python -I -B "$WRITER_TRANSPORT" writer-check --root "$GITHUB_WORKSPACE" || status=$?
+          if [ "$status" = "75" ]; then
+            echo "deferred=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          exit "$status"
+
+      - name: 'Heartbeat pending: deferred writer'
+        if: steps.heartbeat_writer_gate.outputs.deferred == 'true'
+        run: exit 75
+
+      - name: Merge source after the writer gate clears
+        run: git merge --no-edit origin/main
 
       - name: Resolve verified merged change
         id: evidence
@@ -91,4 +109,5 @@ jobs:
             exit 0
           fi
           git commit -m "Record verified intervention reconciliation"
-          git push origin autonomous/growth
+          python -I -B "$WRITER_TRANSPORT" publish --root "$GITHUB_WORKSPACE" --candidate "$(git rev-parse HEAD)" --expected-parent "$WRITER_REMOTE_BASE"
+
