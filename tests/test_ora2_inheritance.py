@@ -13,7 +13,7 @@ def fixture():
                      'before': before, 'after': after, 'action': 'north',
                      'delta': [after[0] - before[0], 0], 'blocked': False, 'world_version': WORLD})
     return {'schema_version': 24, 'cycles': 12,
-            'identity': {'chosen_name': 'Ora fixture, not historical Ora'},
+            'identity': {'designation': 'authored-fixture', 'chosen_name': 'Ora fixture, not historical Ora'},
             'planning_lab': {'world_version': WORLD, 'bounds': 2, 'position': [0, 0],
                              'transition_observations': rows}}
 
@@ -108,3 +108,11 @@ class InheritanceTests(unittest.TestCase):
         origin = project(data)
         self.assertEqual(public_observation(origin['position']), {'position': [0, 0]})
         self.assertNotIn('secret', origin)
+
+    def test_null_chosen_name_is_preserved_without_inventing_one(self):
+        data = fixture()
+        data['identity']['chosen_name'] = None
+        before = copy.deepcopy(data['identity'])
+        origin = project(data)
+        self.assertEqual(origin['identity'], before)
+        self.assertIsNone(origin['identity']['chosen_name'])

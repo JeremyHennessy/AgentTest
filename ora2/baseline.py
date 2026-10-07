@@ -47,8 +47,10 @@ def project(snapshot: dict) -> dict:
     if type(snapshot.get('cycles')) is not int or snapshot['cycles'] <= 0:
         raise ProtocolError('experienced snapshot required, not cycle-zero starter')
     identity = snapshot.get('identity')
-    if type(identity) is not dict or not identity.get('chosen_name'):
-        raise ProtocolError('historical identity is missing')
+    if (type(identity) is not dict or type(identity.get('designation')) is not str or
+            not identity['designation'] or 'chosen_name' not in identity or
+            (identity['chosen_name'] is not None and type(identity['chosen_name']) is not str)):
+        raise ProtocolError('historical identity does not match the Phase 41 schema')
     lab = snapshot.get('planning_lab', {})
     if lab.get('world_version') != WORLD or lab.get('bounds') != 2:
         raise ProtocolError('only the unchanged Phase 41 stateful world is admitted')
