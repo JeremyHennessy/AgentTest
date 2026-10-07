@@ -1,0 +1,49 @@
+name: Current-world admission (read only)
+
+on:
+  push:
+    branches: [phase42/current-world-executive-20261007]
+
+permissions:
+  contents: read
+
+jobs:
+  full-history-admission:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 3449926e336cda1194a98a509990b03bfea2151b
+          path: source
+          fetch-depth: 1
+          sparse-checkout: state/organism.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check pinned source and inspect without action or state writes
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: candidate/src
+        run: |
+          set -euo pipefail
+          test "$(git -C candidate rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C source rev-parse HEAD)" = "3449926e336cda1194a98a509990b03bfea2151b"
+          test "$(git -C source rev-parse HEAD:state/organism.json)" = "f91515038ddf5b7479152147457af6e21828da92"
+          mkdir -p admission
+          python -B candidate/scripts/current_world_readiness.py --state source/state/organism.json --expected-sha256 4f65c06cf6df61edb2d2a1aaa65a6dab14da2de8d2c1075580fb931bf37039e2 --output admission/current-world-readiness.json 2>&1 | tee admission/readiness.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: current-world-admission-${{ github.sha }}
+          path: admission/
+          retention-days: 7
+          if-no-files-found: warn
