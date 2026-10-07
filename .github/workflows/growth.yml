@@ -16,8 +16,8 @@ jobs:
   grow:
     runs-on: ubuntu-latest
     env:
-      # Approved bounded existing-world rollout: at most two owned actions.
-      CURRENT_WORLD_INVESTIGATION: 'true'
+      # Bounded rollout ended in a preserved null; ordinary planning resumes.
+      CURRENT_WORLD_INVESTIGATION: 'false'
       HEARTBEAT_REQUEST_ID: heartbeat:${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
