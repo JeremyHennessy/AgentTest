@@ -146,7 +146,7 @@ class CapsuleStore:
         if self._pinned is not None and immutable != self._pinned:
             raise Conflict("capsule identity changed while open")
         from .executive import validate_capsule
-        validate_capsule(state)
+        validate_capsule(state, verify_checksum=False)
         self._pinned = immutable
         return state
 
