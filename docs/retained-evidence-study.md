@@ -73,10 +73,14 @@ this study does not claim operating-system crash recovery or power-loss safety.
 
 ## Read-path interpretation
 
-Retained native outcome evidence reaches agenda telemetry: the study question
-has priority 0.50 versus 0.35 with the new outcome withheld, reflecting the new
-experiment, outcome and reflection references. Higher-priority ordinary questions
-still win. Do not call this lost evidence or justify agenda-score tuning.
+Native outcome evidence reaches agenda telemetry. All eight default-flag pairs
+and the four production action-1 pairs have retained priority 0.50 versus 0.35
+withheld. In the four production action-8 pairs, retained priority is 0.15 versus
+0.35 withheld: new experiment/outcome/reflection refs are present, but completion
+also removes the active-experiment path. Thus the score contrast includes both
+knowledge and lifecycle consequences, not a pure evidence bonus. Higher-priority
+ordinary questions still win. Do not call this lost evidence or justify agenda-
+score tuning.
 
 The recorder also incorporates the blocked transitions. The frozen selector
 consumes global feature/action association counts, without conditioning on
