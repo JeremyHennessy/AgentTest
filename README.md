@@ -4,6 +4,10 @@ AgentTest is an original experiment in persistent machine growth.
 
 The project asks whether persistent perception, memory, prediction, evidence review, diagnostics, constrained self-improvement, and human interaction can accumulate into richer adaptive behavior without confusing activity, code churn, or human-like language with progress.
 
+## Operational handoff
+
+[Current operations, evidence boundaries and new-world readiness gates](docs/CURRENT_OPERATIONS.md). This is the maintained operational entry point. The older Ora-Handoff offline release is a frozen historical archive.
+
 ## Current capabilities
 
 - persistent episodic and semantic memory;
