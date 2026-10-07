@@ -16,8 +16,8 @@ jobs:
   grow:
     runs-on: ubuntu-latest
     env:
-      # Source-controlled dormant gate. A separate reviewed commit enables it.
-      CURRENT_WORLD_INVESTIGATION: 'false'
+      # Approved bounded existing-world rollout: at most two owned actions.
+      CURRENT_WORLD_INVESTIGATION: 'true'
       HEARTBEAT_REQUEST_ID: heartbeat:${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
