@@ -68,9 +68,22 @@ jobs:
         shell: bash
         run: |
           for attempt in $(seq 1 60); do
-            busy="$(
-              gh run list                 --repo "$GITHUB_REPOSITORY"                 --workflow reconcile.yml                 --limit 20                 --json status                 --jq '[.[] | select(.status != "completed")] | length'
-            )"
+            # Queued reconciliation shares growth's writer lane; only active work
+            # must finish before dispatch. Leave queued runs for GitHub to serialize.
+            if ! busy="$(
+              gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --workflow reconcile.yml \
+                --limit 20 \
+                --json status \
+                --jq 'if type != "array" then error("Invalid reconciliation response")
+                  elif any(.[]; .status != "queued" and .status != "in_progress" and .status != "completed")
+                  then error("Unknown reconciliation status")
+                  else [.[] | select(.status == "in_progress")] | length end'
+            )"; then
+              echo "Could not determine reconciliation activity; refusing growth dispatch."
+              exit 1
+            fi
             if [ "$busy" = "0" ]; then
               exit 0
             fi
