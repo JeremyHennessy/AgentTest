@@ -1,131 +1,197 @@
-# Ora: current operations and new-world readiness
+# Ora: current operations and ground-up Phase 42 readiness
 
-## Scope and date
+## Authority and checkpoint
 
-Verified checkpoint: **2026-10-06 23:55 UTC**. This is a dated operational
-checkpoint, not a promise that branch heads or live counts remain unchanged.
-Recheck the linked branches and exact-commit checks before using this handoff.
-This document supersedes the old offline kit as an operational entry point;
-it does not rewrite or invalidate that historical archive.
+Updated **2026-10-07 02:05 UTC**. This is the maintained operational handoff and
+forward plan. It supersedes earlier benchmark and roadmap requirements for the
+Phase 42 redesign; historical documents, results and counter meanings remain
+preserved. A dated checkpoint is not a claim about a moving branch's latest cycle.
+Recheck exact commits and required CI before publication, merge or rollout.
 
-## Authoritative sources
-
-- Production code: [`main` at `4671b811c854223ff15ad5d3c520c511c6434421`](https://github.com/JeremyHennessy/AgentTest/commit/4671b811c854223ff15ad5d3c520c511c6434421).
-  [Exact-main verification](https://github.com/JeremyHennessy/AgentTest/actions/runs/37533070347) succeeded.
-- Persistent state: [`autonomous/growth` at `0a043b7e7669dad6985c24b19d3c628ab2ee90d9`](https://github.com/JeremyHennessy/AgentTest/commit/0a043b7e7669dad6985c24b19d3c628ab2ee90d9), cycle 5909.
-  [Growth run](https://github.com/JeremyHennessy/AgentTest/actions/runs/37548936688) passed 412 tests,
-  30/30 behavioral preservation, Phase 42 integrity and journal-scope checks,
-  and persisted successfully. A later heartbeat may supersede this checkpoint.
-- Copied richer-world compatibility: [draft PR #213](https://github.com/JeremyHennessy/AgentTest/pull/213),
-  head `b3da508f6ebadc778cdb3cca5b9903997685d023`, based on that production commit.
-  [Exact-head](https://github.com/JeremyHennessy/AgentTest/actions/runs/37543655594)
-  and [PR verification](https://github.com/JeremyHennessy/AgentTest/actions/runs/37543662592)
-  passed, including 422 tests. The ten additions are research scripts,
-  experiments and tests; no production source or live workflow is changed.
+- Production code: [`main` at `2af18427c42c80cb61391d802fa07b80f3513cf6`](https://github.com/JeremyHennessy/AgentTest/commit/2af18427c42c80cb61391d802fa07b80f3513cf6).
+- Live storage checkpoint: [growth run 37551846573](https://github.com/JeremyHennessy/AgentTest/actions/runs/37551846573),
+  cycle **5926**, persisted commit [`dcef1bed0881178f1b804cea806b0eb5c6b12963`](https://github.com/JeremyHennessy/AgentTest/commit/dcef1bed0881178f1b804cea806b0eb5c6b12963).
+  This first verified compact live snapshot was **63,171,268 bytes**; its journal
+  was **81,739,708 bytes**. Verification passed 426 tests and 30 preservation checks.
+  Later growth is not measured by these figures.
 - Historical archive: [Ora-Handoff offline kit v2](https://github.com/JeremyHennessy/Ora-Handoff/releases/tag/ora-offline-kit-v2-20261006),
   repository checkpoint `5c073f57e5cce21a6efcd8428a357f90b38a0e22`.
-  Its old production/candidate status is not the current deployment queue.
-- Recovery PRs #204–208 were intentionally closed unmerged. They are retained
-  investigation for a future persistent-local-service architecture, not an
-  outstanding merge queue. See the [closure rationale](https://github.com/JeremyHennessy/AgentTest/pull/208#issuecomment-6025625479).
-- A separate [draft Observer PR #196](https://github.com/JeremyHennessy/AgentTest/pull/196)
-  contains broader refresh/race and layout work. It retains its rendered-browser
-  review hold. This handoff/disclosure update does not claim those changes are
-  deployed or resolve that hold.
+  Keep it as history, not the current deployment queue.
 
-## What is live
+**New-world readiness is not established. New-world activation remains separately
+withheld.** The redesign is authorized; design review is pending and its
+implementation is not yet tested.
+This documentation update changes no production source, workflow or runtime flag.
 
-The current Bounded Action / Planning Lab, persistent state and journal,
-existing memory and agenda, deterministic evidence-linked interaction,
-protected diagnostics, and owner-authorized GitHub interaction transport are
-live. Growth and interaction share the same versioned concurrency group.
-The current workflows do not depend on an external model API.
+## Completed operations and remaining limits
 
-The public/native resolution dispatcher is present but disabled by default.
-No richer challenge world, copied challenge action capability or automatic
-native-inquiry activation has been granted to the live heartbeat. Do not add
-activation flags as part of maintenance or a copied experiment.
+The existing Bounded Action / Planning Lab, persistent state and journal, memory
+and agenda, protected diagnostics, and owner-authorized evidence-linked GitHub
+interaction are live. Current workflows do not depend on an external model API.
+The public/native resolution dispatcher is present but disabled by default. No
+richer world, copied action capability or automatic native-inquiry activation is
+part of ordinary maintenance.
 
-## What has only been tested on copies
+Three production repairs are merged and live-verified:
 
-The richer 5×5 object world, persisted public recorder, epistemic selector,
-single-use action capability and bounded closed-loop study are research.
-Earlier frozen-policy tests found 83.3% versus 40.0% inquiry falsification;
-30/30 mature copied cases resolved (25 falsified, 5 supported). Those figures
-are historical copied-study evidence, not live progress and not a new
-measurement at this checkpoint. PR #213 verifies current-code compatibility;
-it does not itself establish a causal later-choice benefit from retained
-memory or natural suspended-inquiry resumption.
+- [#214](https://github.com/JeremyHennessy/AgentTest/pull/214): current operational
+  handoff and deployed observer disclosure distinguish research from live abilities.
+- [#215](https://github.com/JeremyHennessy/AgentTest/pull/215): growth, interaction
+  and reconciliation share `agenttest-autonomous-growth-v2`, `queue: max` and
+  `cancel-in-progress: false`. Natural reconciliation and growth were verified.
+  The controller retains its separate lane. See [writer contract](state-writer-concurrency.md).
+- [#216](https://github.com/JeremyHennessy/AgentTest/pull/216): diagnostic writers
+  preserve compact snapshot serialization. Historical copied validation covered
+  15 cold-process stages, including two ordinary cycles, with full decoded-state
+  and journal parity and all 59,944,566 original journal-prefix bytes preserved.
+  See [format-preservation evidence](diagnostic-storage-reexpansion.md); its older
+  live-size section is superseded by the dated cycle-5926 checkpoint above.
 
-Any next study must identify its exact source commit, input-state commit/hash,
-seed list, horizon, observations and exclusions. A historical input tested on
-current code must remain labelled historical. A control that withholds a new
-outcome measures both that outcome and its normal completion consequences;
-it is not interchangeable with a pure association-memory ablation.
+Compact formatting does not bound history. The journal is still unbounded; no
+segmentation or new transactional persistence is installed. The
+[lossless storage design](journal-storage-design.md) remains prospective. Preserve
+every committed memory, journal event, ordering and replay meaning; do not truncate,
+summarize away history or restore an older state as rollback.
 
-## Current cautions
+Recovery PRs #204–208 were intentionally closed unmerged, not left in a merge
+queue; see the [closure rationale](https://github.com/JeremyHennessy/AgentTest/pull/208#issuecomment-6025625479).
+The broader [Observer PR #196](https://github.com/JeremyHennessy/AgentTest/pull/196)
+retains its separate rendered-browser review hold. Governance receipt/backfill
+changes are also separate and not installed. None is a scientific progress proxy.
 
-- Phase 42 remains an evidence question. Cycle 5909's retained telemetry has
-  127 qualified alternatives, all lower-priority, zero genuine resumptions
-  and zero handoff/selection mismatches. Zero resumptions alone is not a
-  routing defect. Do not force priority or manufacture a live milestone.
-- The state and journal are large: the pinned Git tree records 90,905,164
-  state bytes and 81,474,312 journal bytes (86.69 and 77.70 MiB). Compact
-  StateStore serialization is merged, but storage growth still needs writer-
-  sequence and lossless-preservation review. Formatting cannot bound an
-  indefinitely growing history. Never truncate or summarize away memory,
-  silently alter replay semantics, or roll state backwards.
-- Test-suite success is not evidence of consciousness, general autonomy or
-  new-world readiness. Report null and adverse copied-study results.
+## Frozen research: what the evidence actually says
 
-## Readiness gates and evidence needed
+- [Draft #213](https://github.com/JeremyHennessy/AgentTest/pull/213),
+  `b3da508f6ebadc778cdb3cca5b9903997685d023`: isolated richer-world compatibility
+  baseline. Earlier copied-world successes remain historical, not live learning.
+- [Draft #217](https://github.com/JeremyHennessy/AgentTest/pull/217),
+  `7d96cfa96901fd3f9d9c1893ff6fa0444c1847d1`: source/feature compatibility guard,
+  with 427 tests. It is not source authentication, ordinary-selection action
+  ownership or live activation.
+- [Draft #218](https://github.com/JeremyHennessy/AgentTest/pull/218),
+  `3ec6e83b0716ab07046564217ad6a361e4de75dd`: frozen negative study and qualified
+  report, with 438 tests. Read the [exact report](https://github.com/JeremyHennessy/AgentTest/blob/3ec6e83b0716ab07046564217ad6a361e4de75dd/docs/retained-evidence-study.md).
+  Input was historical cycle 4599, not the current organism.
+- [Draft #219](https://github.com/JeremyHennessy/AgentTest/pull/219),
+  `e28b186ab22c30b2415f7e9d98c0f3a578f4703a`: archived/paused context-study
+  protocol. Held-out execution never ran. That protocol is not a readiness
+  prerequisite and will not resume by default under this redesign.
 
-These are acceptance questions, not a count-based score. At this checkpoint
-**new-world readiness is not established and activation is withheld**.
+The frozen result establishes selector influence, not benefit: **32/32** selector
+choices changed, but next ordinary question/intention changed in **0/8 default-flag
+pairs** and **0/8 production-flag pairs**. All 32 challenge actions were scheduled
+by the harness; only **4/32** coincided with native foreground selection. In five
+eligible matched contexts, the retained selector repeated a disconfirmed
+expectation **5/5** times. Alternate commands were not executed, so their success
+is unknown. Eight raw returns to older questions were **zero genuine evidence-backed
+resumptions**. Raw reports remain unchanged; qualifications are not new trials.
 
-1. **Evidence-caused choices:** a predeclared copied study compares identical
-   later observations and candidate sets with relevant evidence retained or
-   withheld. Controls remain valid and preserve unrelated history. Report
-   choice changes and their direction; separate selector-only findings from
-   ordinary native/full-cycle outcomes. No reward or authored solution.
-2. **Revisits and contradicted expectations:** record whether an actually
-   suspended inquiry becomes relevant and is naturally revisited. Report
-   zero opportunities or zero revisits honestly. Distinguish a repeatedly
-   refuted objective, a failed action expectation, and useful repeated
-   falsification; they are not the same metric. A fabricated resumption is
-   never an acceptance shortcut or Phase 42 credit.
-3. **Authority and containment:** use exact source/evidence freshness checks,
-   bounded single-use capabilities, public observations, explicit action
-   budgets and restart/replay tests. Live flags remain off while assessing
-   these properties. Verify that copied files cannot become live authority.
-4. **Persistence and sustainability:** demonstrate full decoded state and
-   journal-event/order parity for any serializer change, including cold
-   restarts, diagnostic cache paths and historical byte-prefix preservation.
-   Document residual unbounded growth and a lossless long-term design; do not
-   substitute the closed recovery prototype for a current production fix.
-5. **Current baseline and operations:** validate the exact candidate against
-   current main, run the base-owned preservation gate, check the exact remote
-   commit and all required CI, and inspect interactions/heartbeat for races.
-   The observer and handoff must distinguish live abilities from experiments.
-6. **Bounded rollout proposal:** specify what becomes enabled, action budget,
-   data sources, stop conditions, monitoring and rollback. Rollback disables
-   new authority while preserving every committed memory and journal event;
-   it must not restore an older state snapshot. Keep the previous live lab
-   available. The proposal must state unresolved results and prerequisites.
-7. **Separate activation approval:** the owner reviews the bounded rollout
-   proposal and explicitly authorizes activation. Maintenance permission,
-   research success and a request to become ready do not grant this approval.
-   No new provider, credentials, infrastructure, spending or expanded access
-   is included in these gates.
+The native contrast includes an outcome's normal completion consequences. In the
+production action-8 pairs, retained priority was 0.15 with no active path versus
+0.35 withheld with an active path; new evidence references remained present.
+This is not lost evidence or a pure association-memory ablation.
 
-A natural Phase 42 milestone is evaluated on its own evidence. It must neither
-be asserted from copied-world activation nor replaced with an artificial
-resumption threshold solely to mark this checklist complete.
+## Why Phase 42 is being redesigned
 
-## Safe next operational step
+The original [Phase 42 PR #98](https://github.com/JeremyHennessy/AgentTest/pull/98)
+added persistent agenda ranking. Current source shows three distinct limits:
 
-Start from current main and the preserved research branch, recheck overlap,
-and retain separate reviewable changes for research, storage and observer
-work. Keep research default-off. Before any proposed activation, publish the
-exact tested commit and completed/unsatisfied gates so that the owner can
-make the separate activation decision without relying on archived advice.
+1. [Planning Lab acts before agenda selection](https://github.com/JeremyHennessy/AgentTest/blob/2af18427c42c80cb61391d802fa07b80f3513cf6/src/agenttest/core.py#L1337-L1464).
+   A selected question is therefore not proof that it owned that cycle's world action.
+2. [Legacy/frontier weighting dominates some comparisons](https://github.com/JeremyHennessy/AgentTest/blob/2af18427c42c80cb61391d802fa07b80f3513cf6/src/agenttest/agenda.py#L258-L318).
+   A saturated legacy frontier can receive 1.8 before actionability or new-evidence
+   additions; a nonlegacy, nonfrontier question has at most 0.65. These are
+   conditional policy values, not universal scores or a reason to tune them.
+3. [The causal resumption check](https://github.com/JeremyHennessy/AgentTest/blob/2af18427c42c80cb61391d802fa07b80f3513cf6/src/agenttest/core.py#L1464-L1619)
+   withholds current repository-prediction evaluation only. It is not a general
+   causal test of native learning. Synthetic resumption tests verify that mechanism,
+   not world control or beneficial learning.
+
+The historical **127 qualified alternatives** describe a retained-window,
+internal-policy comparison, not 127 optimal revisit opportunities. Preserve the
+old counter's definition and record; retire it as a mandatory new-world gate.
+Zero resumptions neither proves a routing failure nor settles whether learning
+is useful. No forced resumption, score tuning or renamed milestone can substitute
+for new evidence. Tests and activity do not establish life or consciousness.
+
+## Proposed ground-up architecture and next steps
+
+The unit of work is a **durable investigation**:
+
+**observation and context → question and alternative explanations → selected
+bounded action with pre-action predictions → actual outcome → versioned belief
+revision**.
+
+Observation provenance, context, alternatives, predictions, action ownership,
+receipts and belief versions must remain linked across persistence and restart.
+An observation adapter must expose semantically valid evidence, not route hints,
+an authored solution or a hidden reward target. Investigation selection must
+actually determine the eligible bounded action before execution.
+
+1. Review a small copied-only contract for action ownership and the durable
+   investigation record. Preserve the existing live lab and all historical data.
+2. Implement the first copied-only slice: ordinary selection owns one bounded,
+   single-use action; its prediction precedes execution; restart/replay preserves
+   ownership, receipt and belief lineage without granting another action. Explicitly
+   fail closed on stale authority and ambiguous recovery. This is a contract test,
+   not a learning milestone; the slice is not yet implemented.
+3. Separately define a source-general causal measure and a policy/science
+   evaluation. Measure which evidence changed prediction, selection or belief;
+   independently test whether those changes help. Do not reuse the old
+   repository-only resumption counter as either answer.
+4. Only after contract review, predeclare bounded copied evaluations with exact
+   source/input hashes, contexts, controls, budgets and stopping conditions. Design
+   new studies for the new question; do not inherit #219 as a required benchmark.
+5. Address the safety/operations gates below and publish an exact-commit rollout
+   proposal. Passing scientific tests does not grant deployment authority or
+   activate a world.
+
+## Science acceptance gates
+
+These evaluate the proposed behavior, separately from implementation safety:
+
+- **Selection controls action:** trace the actually selected investigation through
+  its pre-action prediction, authorized action and observed outcome. A harness
+  choosing an action or merely matching the foreground is insufficient.
+- **Predictive benefit and context adaptation:** use disjoint held-out contexts,
+  independent fixed scorers and measured outcomes. Test whether retained knowledge
+  improves predictions and decisions, recognizes changed context and permits a
+  justified retest. A changed choice alone is not improvement.
+- **Calibration, retention and transfer:** test noisy or contradictory outcomes,
+  uncertainty calibration, persistence across restart and delayed reuse/transfer.
+  Avoid conflating memorized contexts with generalization.
+- **Valid causal comparisons:** preserve unrelated history and match lifecycle
+  state/completion effects, or explicitly factor and report them. Separate evidence
+  acquisition, evidence attribution and policy quality. Neither the evaluator nor
+  its success criteria may be tuned to the candidate's observed results.
+- **Honest coverage:** report opportunities, exclusions, invalid/incomplete runs,
+  denominators, null and adverse results. Unsupported coverage stays unresolved;
+  no life, consciousness, general-autonomy or Phase 42/43 claim follows from a pass.
+
+## Safety and operational acceptance gates
+
+- **Authority:** verify provenance, source/feature compatibility, observation
+  freshness, exact selected ownership, one-use capabilities and explicit budgets.
+  Copied files must not become live authority. Keep live activation flags off.
+- **Persistence and replay:** test cold reload, interrupted/repeated paths and
+  duplicate or stale receipts. Preserve belief/evidence lineage, full decoded
+  state, journal event/order parity and historical bytes where promised. A restart
+  test is not a claim of operating-system crash or power-loss durability.
+- **Sustainable lossless history:** verify every reader and writer before any
+  storage migration. Demonstrate bounded operational storage without losing
+  committed evidence or changing replay semantics; compact JSON alone is insufficient.
+- **Baseline preservation:** validate the exact candidate against current main,
+  run the baseline-owned preservation gate, inspect exact remote CI and writer
+  behavior, and keep observer/handoff disclosures accurate. Historical green
+  checks are not checks of a future candidate.
+- **Reviewed rollout:** specify enabled capabilities, data sources, action budget,
+  monitoring, stop conditions and rollback. Rollback disables new authority while
+  preserving every committed memory and journal event. Retain the previous live lab.
+
+## Separate owner activation decision
+
+After the reviewed proposal identifies its exact tested commit, satisfied gates,
+unresolved results and limits, the owner must explicitly authorize new-world
+activation. Maintenance permission, research success and permission to prepare
+readiness do not grant that activation. No new provider, credentials,
+infrastructure, spending or expanded access is included.
