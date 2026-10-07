@@ -203,6 +203,20 @@ class HeartbeatTransportTests(unittest.TestCase):
         self.assertEqual(t._head(self.root), before)
         self.assertEqual(result["next_request_id"], self.request)
 
+    def test_unreadable_existing_record_is_not_reported_as_absent(self):
+        self.assertIsNone(t._commit_record(self.root, self.source))
+        claim_commit = self.claimed()
+        real_git = t._git
+        def failed_blob_fetch(root, *args, **kwargs):
+            if args[:2] == ("show", f"{claim_commit}:{t.OP_PATH}"):
+                if kwargs.get("check", True):
+                    raise t.TransportError("simulated_existing_blob_unavailable")
+                return subprocess.CompletedProcess(args, 128, b"", b"simulated lazy fetch failure")
+            return real_git(root, *args, **kwargs)
+        with patch.object(t, "_git", side_effect=failed_blob_fetch):
+            with self.assertRaisesRegex(t.TransportError, "existing_blob_unavailable"):
+                t.inspect(self.root, remote=True)
+
     def test_legacy_reconciliation_entry_defers_before_any_state_write(self):
         self.claimed()
         paths = [self.root / "state/organism.json", self.root / "state/journal.jsonl",

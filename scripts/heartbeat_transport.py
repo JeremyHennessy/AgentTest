@@ -114,8 +114,14 @@ def _write(root: Path, row: dict) -> None:
 
 
 def _commit_record(root: Path, commit: str) -> dict | None:
-    result = _git(root, "show", f"{commit}:{OP_PATH}", check=False)
-    return _record(result.stdout) if result.returncode == 0 else None
+    # In a partial clone, showing an existing blob can fail during a lazy fetch.
+    # Establish absence from the tree; an unreadable existing record is blocked.
+    entry = _git(root, "ls-tree", "-z", commit, "--", OP_PATH).stdout
+    if not entry:
+        return None
+    if len(entry.split(b"\0")) != 2 or not entry.startswith(b"100644 blob "):
+        raise TransportError("unsupported_transport_record_entry")
+    return _record(_git(root, "show", f"{commit}:{OP_PATH}").stdout)
 
 
 def _state_manifest(root: Path, commit: str | None = None) -> dict:
