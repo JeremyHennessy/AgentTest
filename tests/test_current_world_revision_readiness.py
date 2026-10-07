@@ -99,7 +99,7 @@ class CurrentWorldRevisionReadiness(unittest.TestCase):
                 self.assertEqual(report["parent_cohort_hash"], lane["cohort"]["cohort_digest"])
                 self.assertTrue(report["new_model_structures"])
                 self.assertLessEqual(report["checkpoint_bytes"], CHECKPOINT_BYTES)
-                self.assertLessEqual(report["maximum_serialized_rational_digits"], 256)
+                self.assertLessEqual(report["maximum_serialized_rational_digits"], report["bounds"]["rational_digits"])
 
     def test_already_revised_snapshot_does_not_claim_new_evaluation_or_revision(self):
         state = revision_fixture()

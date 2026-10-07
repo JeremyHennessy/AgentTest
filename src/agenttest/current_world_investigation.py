@@ -269,6 +269,16 @@ def _prepare_revision(lane: dict, view: dict, state: dict, request_id: str) -> d
     return revision
 
 
+def _verify_decision(discovery: list[dict], context: dict, evidence: list[dict], decision: dict) -> None:
+    contract = decision.get("numeric_contract")
+    if contract is None:
+        policy.verify_evaluation(discovery, context, evidence, decision)
+    elif contract == policy.EXACT_NUMERIC_CONTRACT:
+        policy.verify_bounded_exact_evaluation(discovery, context, evidence, decision)
+    else:
+        raise Conflict("unsupported_case_numeric_contract")
+
+
 def consume_prepared_case(state: dict, *, request_id: str) -> dict:
     """Consume only authority prepared in a prior persisted heartbeat."""
     lane = state.get("current_world_investigation")
@@ -304,7 +314,7 @@ def consume_prepared_case(state: dict, *, request_id: str) -> dict:
         if (authority.get("discovery_revision_id") != case.get("discovery_revision_id")
                 or authority.get("discovery_revision_hash") != case.get("discovery_revision_hash")):
             raise Conflict("authority_discovery_revision_mismatch")
-        policy.verify_evaluation(discovery, view["context"], evidence, case["decision"])
+        _verify_decision(discovery, view["context"], evidence, case["decision"])
         action = case["decision"]["selected_action"]
         if action is None or action != authority.get("action"):
             raise Conflict("null_or_unowned_selection")
@@ -335,8 +345,10 @@ def consume_prepared_case(state: dict, *, request_id: str) -> dict:
                "case_id": case["case_id"], "execution": deepcopy(execution)}
     after_view = current_view(state)
     _, _, after_evidence = discovery_partition(lane, after_view, case)
-    updated = policy.evaluate(cohort, case["decision"]["context"], after_evidence)
-    policy.verify_evaluation(discovery, case["decision"]["context"], after_evidence, updated)
+    evaluate = (policy.evaluate_bounded_exact if case["decision"].get("numeric_contract") == policy.EXACT_NUMERIC_CONTRACT
+                else policy.evaluate)
+    updated = evaluate(cohort, case["decision"]["context"], after_evidence)
+    _verify_decision(discovery, case["decision"]["context"], after_evidence, updated)
     belief = {"belief_id": belief_id, "case_id": case["case_id"], "outcome_id": outcome_id,
               "context": deepcopy(case["decision"]["context"]), "decision": updated,
               "evidence_hash": digest(_refs(after_evidence)), "learning_success": "not_established"}
@@ -386,8 +398,8 @@ def prepare_next_case(state: dict, *, request_id: str) -> dict:
                 return {"status": "null", "case_id": None, "reason": "no_structural_change",
                         "discovery_revision_id": revision["revision_id"]}
         discovery, cohort, evidence = discovery_partition(lane, view)
-        decision = policy.evaluate(cohort, view["context"], evidence)
-        policy.verify_evaluation(discovery, view["context"], evidence, decision)
+        decision = policy.evaluate_bounded_exact(cohort, view["context"], evidence)
+        _verify_decision(discovery, view["context"], evidence, decision)
         case = {"case_id": f"CWC{len(lane['cases']) + 1:06d}", "owner": OWNER,
                 "question": "Which permitted movement best distinguishes the observation-derived models here?",
                 "prepared_cycle": state["cycles"], "prepared_request_id": request_id,

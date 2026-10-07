@@ -130,17 +130,22 @@ class CurrentWorldReadiness(unittest.TestCase):
             self.assertEqual(source.read_bytes(), payload)
             self.assertEqual(journal.read_bytes(), b'{"event":"historical"}\n')
 
-    def test_exact_rational_overflow_stays_blocked_without_tuning_or_truncation(self):
+    def test_larger_exact_resource_contract_preserves_legacy_limit_without_truncation(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "organism.json"
             payload = canonical(capacity_fixture(332, exact_context=True))
             path.write_bytes(payload)
             report = inspect_full_state(path, hashlib.sha256(payload).hexdigest())
-            self.assertEqual(report["status"], "blocked")
-            self.assertEqual(report["reason"], "rational_component_overflow")
+            self.assertIn(report["status"], {"prepared", "null"})
             self.assertEqual(report["exact_context_evidence_counts"]["north"], 300)
-            self.assertFalse(report["complete_history_evaluated"])
+            self.assertTrue(report["complete_history_evaluated"])
+            self.assertGreater(report["maximum_serialized_rational_digits"], 256)
+            self.assertEqual(report["candidate_numeric_contract"], policy.EXACT_NUMERIC_CONTRACT)
             self.assertEqual(policy.RATIONAL_DIGITS, 256)
+            view = current_view(capacity_fixture(332, exact_context=True))
+            cohort = policy.build_cohort(view["rows"][:32])
+            with self.assertRaisesRegex(Conflict, "rational_component_overflow"):
+                policy.evaluate(cohort, view["context"], view["rows"][32:])
             self.assertEqual(path.read_bytes(), payload)
 
 

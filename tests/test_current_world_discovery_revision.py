@@ -68,7 +68,7 @@ class CurrentWorldDiscoveryRevision(unittest.TestCase):
             self.assertFalse(d_ids & u_ids)
             self.assertEqual(d_ids | u_ids, {row["event_id"] for row in investigation.current_view(state)["rows"]})
             self.assertEqual(case["evidence_refs"], investigation._refs(evidence))
-            self.assertEqual(case["decision"], policy.evaluate(cohort, case["decision"]["context"], evidence))
+            self.assertEqual(case["decision"], policy.evaluate_bounded_exact(cohort, case["decision"]["context"], evidence))
             old_d, old_cohort, old_u = investigation.discovery_partition(lane, investigation.current_view(state), old_case)
             self.assertEqual(len(old_d), 32)
             self.assertEqual(len(old_u), 5)
