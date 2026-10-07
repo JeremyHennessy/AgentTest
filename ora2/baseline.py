@@ -60,6 +60,7 @@ def project(snapshot: dict) -> dict:
         raise ProtocolError('missing or above-limit historical observations')
     seen, retained = {}, []
     duplicates = other = 0
+    unlocated = []
     last_cycle = -1
     separated = True
     for row in rows:
@@ -80,11 +81,29 @@ def project(snapshot: dict) -> dict:
         if type(cycle) is not int or not last_cycle <= cycle <= snapshot['cycles']:
             raise ProtocolError('historical observation time conflict')
         last_cycle = cycle
-        before, after = position(row.get('before')), position(row.get('after'))
         action = row.get('action')
         if action not in ACTIONS or type(row.get('blocked')) is not bool:
             raise ProtocolError('invalid observed control or blocked flag')
-        if row.get('delta') != [after[i] - before[i] for i in (0, 1)]:
+        delta = row.get('delta')
+        if (type(delta) is not list or len(delta) != 2 or
+                any(type(x) is not int or not -4 <= x <= 4 for x in delta)):
+            raise ProtocolError('invalid observed displacement')
+        if row['blocked'] and delta != [0, 0]:
+            raise ProtocolError('blocked record has a nonzero displacement')
+        # The pinned snapshot contains 54 early records with exactly this older
+        # shape. Retain their identities/bytes, but do not invent positions or
+        # assign a world. They cannot train a position-conditioned transition.
+        legacy_keys = {'source', 'source_id', 'cycle', 'action', 'delta', 'blocked'}
+        if set(row) == legacy_keys and source in {'action_lab', 'planning_lab'}:
+            unlocated.append({'source': source, 'source_id': sid, 'cycle': cycle,
+                              'record_sha256': hashlib.sha256(raw.encode()).hexdigest(),
+                              'reason': 'legacy_world_and_positions_not_recorded'})
+            separated = True
+            continue
+        if row.get('world_version') not in {WORLD, 'bounded-world-v1', 'bounded-transfer-world-v1'}:
+            raise ProtocolError('unidentified historical world')
+        before, after = position(row.get('before')), position(row.get('after'))
+        if delta != [after[i] - before[i] for i in (0, 1)]:
             raise ProtocolError('observed delta mismatch')
         if row['blocked'] and before != after:
             raise ProtocolError('blocked record changed position')
@@ -101,7 +120,8 @@ def project(snapshot: dict) -> dict:
         raise ProtocolError('no genuine same-world experience')
     return {'identity': identity, 'origin_cycle': snapshot['cycles'], 'position': current,
             'world': WORLD, 'rows': retained, 'delivered_rows': len(rows),
-            'duplicate_rows': duplicates, 'other_world_rows': other}
+            'duplicate_rows': duplicates, 'other_world_rows': other,
+            'unlocated_legacy_rows': len(unlocated), 'unlocated_legacy_refs': unlocated}
 
 
 def public_observation(where: list[int]) -> dict:

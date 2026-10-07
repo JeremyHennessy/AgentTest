@@ -52,6 +52,8 @@ class PinnedPhase41IntegrationTests(unittest.TestCase):
                        'origin_cycle': origin['origin_cycle'], 'identity': origin['identity'],
                        'delivered_rows': origin['delivered_rows'], 'inherited_rows': len(origin['rows']),
                        'other_world_rows': origin['other_world_rows'], 'duplicate_rows': origin['duplicate_rows'],
+                       'unlocated_legacy_rows': origin['unlocated_legacy_rows'],
+                       'unlocated_legacy_refs': origin['unlocated_legacy_refs'],
                        'free_choice_actions_in_copy': 8, 'live_actions': 0,
                        'final_position': final['position'], 'head': final['head'],
                        'records': records,

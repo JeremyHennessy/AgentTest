@@ -99,3 +99,29 @@ recovery or persistence after losing a hosted runner. The copy log and raw archi
 consume space; the current live journal's storage problem is not solved by this.
 A full semantic audit of every file/branch and independent external review remain
 unfinished. No positive trial is inferred from software test counts.
+
+
+## Historical compatibility corrections (before any real-copy action)
+
+The first hosted integration attempt rejected a null chosen name. That was an
+adapter assumption, not damaged identity: schema 24 uses a designation and permits
+`chosen_name=null`. The reader now preserves that exact identity.
+
+The second attempt rejected the first early movement record. A read-only audit
+at `45ddba545dfea1b348081eecf4cd564f1a622471`, verify run `37688492387`, established
+that the exact cycle-1771 snapshot has 1,662 transition records: 54 older records
+(20 Action Lab and 34 Planning Lab) omit world and before/after positions; 1,608
+have explicit same-world positions. Current position is `[2, 2]`. This audit ran
+zero world actions and did not change the original bytes.
+
+The adapter recognizes only that exact older shape from those two historical
+sources. It validates and records each old identity and body digest, leaves the
+full raw history archived, and reports `unlocated_legacy_rows` separately. It does
+not infer a world or position, train a position transition from missing values, or
+join a temporal sequence across such a gap. Unknown/partial shapes and malformed
+records claiming an identified world still reject. This is a representation
+compatibility correction, not a policy adjustment to make a desired choice.
+
+The original read-only characterization and both failed CI records remain visible.
+Neither failed integration attempt reached the actuator. The eight-action check
+and its seed, menu, budget and acceptance criteria are unchanged.

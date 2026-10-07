@@ -116,3 +116,46 @@ class InheritanceTests(unittest.TestCase):
         origin = project(data)
         self.assertEqual(origin['identity'], before)
         self.assertIsNone(origin['identity']['chosen_name'])
+
+    def test_actual_early_legacy_shape_is_archived_not_assigned_positions(self):
+        data = fixture()
+        early = {'action': 'north', 'blocked': False, 'cycle': 0,
+                 'delta': [1, 0], 'source': 'action_lab', 'source_id': 'LA000001'}
+        data['planning_lab']['transition_observations'].insert(0, early)
+        before = copy.deepcopy(data)
+        origin = project(data)
+        self.assertEqual(origin['delivered_rows'], 13)
+        self.assertEqual(len(origin['rows']), 12)
+        self.assertEqual(origin['unlocated_legacy_rows'], 1)
+        self.assertEqual(origin['unlocated_legacy_refs'][0]['source_id'], 'LA000001')
+        self.assertEqual(origin['other_world_rows'], 0)
+        self.assertEqual(data, before)
+        self.assertTrue(origin['rows'][0]['sequence_break'])
+
+    def test_legacy_gap_breaks_sequence_and_does_not_count_as_new_learning(self):
+        data = fixture()
+        early = {'action': 'north', 'blocked': False, 'cycle': 5,
+                 'delta': [1, 0], 'source': 'planning_lab', 'source_id': 'old'}
+        data['planning_lab']['transition_observations'].insert(5, early)
+        origin = project(data)
+        self.assertTrue(origin['rows'][5]['sequence_break'])
+        agent = seeded_agent(origin, seed=0, config=Config())
+        self.assertEqual(agent.steps, 12)
+        self.assertEqual(origin['unlocated_legacy_rows'], 1)
+
+    def test_unknown_or_partial_shape_is_not_silently_treated_as_legacy(self):
+        for changes in ({'world_version': None}, {'before': [0, 0]},
+                        {'source': 'unknown'}, {'blocked': True}, {'delta': [True, 0]}):
+            data = fixture()
+            early = {'action': 'north', 'blocked': False, 'cycle': 0,
+                     'delta': [1, 0], 'source': 'action_lab', 'source_id': 'LA000001'}
+            early.update(changes)
+            data['planning_lab']['transition_observations'].insert(0, early)
+            with self.assertRaises(ProtocolError):
+                project(data)
+
+    def test_malformed_position_in_identified_world_still_rejects(self):
+        data = fixture()
+        del data['planning_lab']['transition_observations'][0]['before']
+        with self.assertRaises(ProtocolError):
+            project(data)
