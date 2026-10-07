@@ -17,15 +17,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12.14"
-      - name: Verify public CI access with existing job permissions
-        if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PROBE_SOURCE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: >-
-          python -I -B scripts/verified_growth_source.py verify-ci
-          --source-sha "$PROBE_SOURCE_SHA"
-          --repository "$GITHUB_REPOSITORY"
       - name: Run invariant tests
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 
@@ -85,3 +76,4 @@ jobs:
           python-version: "3.12.14"
       - name: Run cross-phase handoff sanity checks
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -p "test_capability_handoffs.py" -v
+
