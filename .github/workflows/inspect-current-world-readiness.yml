@@ -1,0 +1,59 @@
+name: Inspect current-world readiness (read only)
+
+on:
+  push:
+    branches: [inspect/current-world-readiness-20261007]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: inspector
+          fetch-depth: 2
+          sparse-checkout: |
+            scripts/inspect_current_runtime.py
+            .github/workflows/inspect-current-world-readiness.yml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Verify inspector commit and two-file scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C inspector rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C inspector rev-parse HEAD^)" = "c7c7234c6e50919c53fb9f16c629da2e3086fc8c"
+          diff <(printf '%s\n' '.github/workflows/inspect-current-world-readiness.yml' 'scripts/inspect_current_runtime.py') <(git -C inspector diff --name-only HEAD^ HEAD)
+
+      - uses: actions/checkout@v4
+        with:
+          ref: 3449926e336cda1194a98a509990b03bfea2151b
+          path: source
+          fetch-depth: 1
+          sparse-checkout: state/organism.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify source and export bounded projection
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -I inspector/scripts/inspect_current_runtime.py --source source --output runtime-projection
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: current-world-readiness-${{ github.sha }}
+          path: |
+            runtime-projection/current-runtime-projection.json
+            runtime-projection/provenance-receipt.json
+          retention-days: 1
+          if-no-files-found: error
