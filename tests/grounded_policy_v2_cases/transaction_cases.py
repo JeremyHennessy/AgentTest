@@ -243,6 +243,73 @@ class Transactions(unittest.TestCase):
             s=strict_json(original);mutate(s);s['identity_hash']=digest(s['identity']);self.path.write_bytes(encoded(s))
             with self.assertRaises(ValueError):self.reopen()
             self.path.write_bytes(original)
+    def object_sources(self,*,target='O002',observation_hash=None,name='object-input'):
+        """Authored ownership fixture, never natural-learning evidence."""
+        paths=self.sources(name,commands=())
+        observation=json.loads(paths['observations'].read_text())[-1]['observation']
+        paths['ora'].write_bytes(canonical({'owned_object_selection':{
+            'provenance':'authored_ownership_check','command':{'action':'take','target':target},
+            'source_observation_hash':digest(observation) if observation_hash is None else observation_hash}}))
+        return paths
+    def object_create(self,**kwargs):
+        paths=self.object_sources(**kwargs)
+        return self.create(paths=paths,discovery_count=0,selection_backend=module.object_adapter.BACKEND)
+    def test_authored_object_owned_take_restart_and_no_duplicate(self):
+        e=self.object_create();d=e.select_next(0);before=e.read()
+        self.assertEqual(d['body']['provenance'],'authored_ownership_check')
+        self.assertEqual(d['cases'][0]['hypotheses'],[])
+        self.assertEqual(d['command'],{'action':'take','target':'O002'})
+        a=before['attempts'][0]['id'];calls=STATS['owned_transition_invocations']
+        e=self.reopen();o=e.execute(a,1);STATS['durable_outcomes']+=1
+        self.assertEqual(STATS['owned_transition_invocations'],calls+1)
+        self.assertEqual(o['after_observation']['inventory_ids'],['O002'])
+        self.assertIsNone(o['world_snapshot']['entities']['O002']['position'])
+        self.assertNotIn('world_snapshot',d['body'])
+        self.assertNotIn('history',o['world_snapshot'])
+        with patch.object(module,'transition',side_effect=AssertionError('duplicate object actuation')):
+            e=self.reopen();self.assertEqual(e.execute(a,2),o)
+            b=e.interpret(o['id'],2);self.assertEqual(b['reason'],'authored_ownership_outcome_only')
+            self.assertEqual(b['evaluations'],[])
+            e=self.reopen();self.assertEqual(e.execute(a,3),o);self.assertEqual(e.interpret(o['id'],3),b)
+            self.assertEqual(len(e.read()['outcomes']),1)
+            d2=e.select_next(3);self.assertEqual(d2['status'],'policy_null')
+            self.assertEqual(d2['body']['reason'],'stale_public_context')
+            self.assertEqual(len(e.read()['attempts']),1)
+    def test_authored_object_stale_or_unobservable_request_has_no_authority(self):
+        for index,kwargs in enumerate(({'observation_hash':'0'*64},{'target':'O001'})):
+            self.path=self.research/f'object-{index}.json'
+            e=self.object_create(name=f'object-input-{index}',**kwargs)
+            before=e.read()['world']
+            with patch.object(module,'transition',side_effect=AssertionError('ineligible object actuation')):
+                d=e.select_next(0)
+                self.assertEqual(d['status'],'policy_null');self.assertIsNone(d['owner_id'])
+                self.assertEqual(e.read()['attempts'],[]);self.assertEqual(e.read()['world'],before)
+    def test_authored_object_snapshot_and_receipt_tampering_rejected(self):
+        e=self.object_create();e.select_next(0);s=e.read()
+        e.execute(s['attempts'][0]['id'],1);STATS['durable_outcomes']+=1
+        original=self.path.read_bytes()
+        mutations=(
+            (lambda o:o['world_snapshot']['entities']['M002'].update(_latched=True),'object snapshot'),
+            (lambda o:o['receipt'].update(target='O001'),'receipt differs'),
+            (lambda o:o['receipt'].update(success=False),'take receipt'),
+        )
+        for mutate,reason in mutations:
+            s=strict_json(original);o=s['outcomes'][0];mutate(o);o['hash']=module._hash(o)
+            self.path.write_bytes(encoded(s))
+            with patch.object(module,'transition',side_effect=AssertionError('restart replay')):
+                with self.assertRaisesRegex(Conflict,reason):self.reopen()
+            self.path.write_bytes(original)
+    def test_authored_object_default_off_and_stale_ownership_rejected(self):
+        paths=self.object_sources()
+        with self.assertRaises(Conflict):
+            GroundedExecutive.create(self.path,research_dir=self.research,source_paths=paths,
+                discovery_count=0,selection_backend=module.object_adapter.BACKEND)
+        e=self.create(paths=paths,discovery_count=0,selection_backend=module.object_adapter.BACKEND)
+        e.select_next(0);a=e.read()['attempts'][0]['id']
+        with patch.object(module,'transition',side_effect=AssertionError('stale object actuation')):
+            self.unchanged(e,lambda:e.execute(a,0));self.unchanged(e,lambda:e.execute('foreign',1))
+            self.unchanged(e,lambda:e.select_next(1,command={'action':'take','target':'O001'}))
+            e.cancel(a,1);self.unchanged(e,lambda:e.execute(a,2))
     def tearDown(self):
         self.assertLessEqual(self.calls,16,'fixture setup bound')
 

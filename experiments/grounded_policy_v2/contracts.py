@@ -24,9 +24,12 @@ INTERPRETATION_RESERVE = 65_536
 # T2 adds before/after/receipt full outcome <=3*64KiB+8KiB metadata,
 # duplicate receipt in world history <=64KiB, one event/status <=8KiB.
 T2_GROWTH_BOUND = 4*RECORD_CAP+16_384
+# An object outcome also persists one bounded authority-only world snapshot.
+OBJECT_T2_GROWTH_BOUND = T2_GROWTH_BOUND + 8_192
 # T3 has at most seven case verdicts plus hashes and one event.
 T3_GROWTH_BOUND = 16_384
 assert T2_GROWTH_BOUND + INTERPRETATION_RESERVE < COMPLETION_RESERVE
+assert OBJECT_T2_GROWTH_BOUND + INTERPRETATION_RESERVE < COMPLETION_RESERVE
 assert T3_GROWTH_BOUND < INTERPRETATION_RESERVE
 ROOT=Path(__file__).resolve().parents[2]
 LABEL=re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
