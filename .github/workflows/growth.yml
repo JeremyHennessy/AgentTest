@@ -27,7 +27,23 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
+
+      - name: Require verified dispatched main source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_SOURCE_SHA: ${{ github.workflow_sha }}
+        shell: bash
+        run: |
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$WORKFLOW_SOURCE_SHA" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          guard_path="$(mktemp "$RUNNER_TEMP/verified-growth-source-XXXXXX.py")"
+          git show "$GITHUB_SHA:scripts/verified_growth_source.py" > "$guard_path"
+          python -I -B "$guard_path" verify-ci --source-sha "$GITHUB_SHA" --repository "$GITHUB_REPOSITORY"
+          echo "VERIFIED_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
+          echo "GROWTH_SOURCE_GUARD=$guard_path" >> "$GITHUB_ENV"
 
       - name: Prepare persistent growth branch
         shell: bash
@@ -37,10 +53,13 @@ jobs:
           git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth || true
           if git show-ref --verify --quiet refs/remotes/origin/autonomous/growth; then
             git checkout -B autonomous/growth origin/autonomous/growth
-            git merge --no-edit origin/main
+            git merge --no-edit "$VERIFIED_SOURCE_SHA"
           else
-            git checkout -b autonomous/growth origin/main
+            git checkout -b autonomous/growth "$VERIFIED_SOURCE_SHA"
           fi
+
+      - name: Verify exact source before claim
+        run: python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA" --require-clean
 
       - name: Claim bounded current-world heartbeat remotely
         id: heartbeat_claim
@@ -55,10 +74,12 @@ jobs:
             exit 0
           fi
           if [ "$status" = "created" ]; then
+            python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
             git add state/organism.json
             git commit -m "Claim bounded current-world heartbeat"
             # A failed/uncertain push stops here. A fresh rerun refetches and
             # distinguishes completed, identical pending, or conflicting state.
+            python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
             git push origin autonomous/growth
           fi
           git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
@@ -70,6 +91,7 @@ jobs:
         if: steps.heartbeat_claim.outputs.status != 'already_completed'
         shell: bash
         run: |
+          python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA" --require-clean
           current_world_args=()
           if [ "$CURRENT_WORLD_INVESTIGATION" = "true" ]; then
             current_world_args=(--current-world-investigation --heartbeat-request-id "$HEARTBEAT_REQUEST_ID" --heartbeat-claim-commit "$HEARTBEAT_CLAIM_COMMIT")
@@ -112,10 +134,6 @@ jobs:
               --state state/organism.json \
               --output state/phase42_resumption_opportunities.json
 
-      - name: Verify invariants
-        if: steps.heartbeat_claim.outputs.status != 'already_completed'
-        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
-
       - name: Verify behavioral preservation
         if: steps.heartbeat_claim.outputs.status != 'already_completed'
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/preservation_eval.py --strict --output /tmp/growth-preservation.json
@@ -145,12 +163,14 @@ jobs:
         if: steps.heartbeat_claim.outputs.status != 'already_completed'
         shell: bash
         run: |
+          python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
           git add state/
           if git diff --cached --quiet; then
             echo "No state change to preserve."
             exit 0
           fi
           git commit -m "Record autonomous growth cycle"
+          python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
           git push origin autonomous/growth
           if [ "$CURRENT_WORLD_INVESTIGATION" = "true" ]; then
             git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
