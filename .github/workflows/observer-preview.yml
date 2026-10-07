@@ -17,7 +17,6 @@ jobs:
     timeout-minutes: 10
     env:
       PYTHONDONTWRITEBYTECODE: '1'
-      OBSERVER_EVIDENCE: ${{ runner.temp }}/observer-evidence
     steps:
       - uses: actions/checkout@v6
         with:
@@ -30,6 +29,8 @@ jobs:
           python -m pip install playwright==1.57.0
           python -m playwright install --with-deps chromium
       - name: Exercise the served Observer against read-only fixtures
+        env:
+          OBSERVER_EVIDENCE: ${{ runner.temp }}/observer-evidence
         run: |
           python -m unittest discover -s tests -p test_observer_overview.py -v
           python tests/observer_browser_check.py
