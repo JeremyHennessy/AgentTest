@@ -207,6 +207,8 @@ def verify_completed(path: Path, request_id: str, *, require_current: bool = Fal
         if (len(prepared) != 1 or prepared[0].get("case_hash") != preparation.get("case_hash")
                 or prepared[0]["case_hash"] != digest({k: v for k, v in prepared[0].items() if k != "case_hash"})):
             raise Conflict("heartbeat_prepared_case_content_changed")
+        from .current_world_investigation import verify_case_revision
+        verify_case_revision(state["current_world_investigation"], prepared[0])
     action = record["action"] or {}
     if action.get("action") is not None:
         lane = state.get("current_world_investigation") or {}
@@ -246,8 +248,9 @@ def abandon_heartbeat(path: Path, request_id: str, reason: str) -> dict:
     ledger["pending"] = None
     lane = state.get("current_world_investigation")
     if lane:
-        lane["rollback"] = {"cycle": state["cycles"], "reason": reason,
-                            "retired_authority": deepcopy(lane.get("pending_authority"))}
+        key = "revision_rollback" if lane.get("revision_attempt") else "rollback"
+        lane.setdefault(key, {"cycle": state["cycles"], "reason": reason,
+                              "retired_authority": deepcopy(lane.get("pending_authority"))})
         lane["pending_authority"] = None
         lane["status"] = "disabled"
     _write(path, state)

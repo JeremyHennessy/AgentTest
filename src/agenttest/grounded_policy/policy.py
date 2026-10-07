@@ -10,12 +10,13 @@ This module does not execute an action, issue a capability, or run a study.
 from __future__ import annotations
 
 from copy import deepcopy
+from contextvars import ContextVar
 from decimal import Decimal, ROUND_HALF_EVEN, localcontext
 from fractions import Fraction
 import re
 from typing import Any
 
-from .primitives import Conflict, canonical, digest
+from .primitives import Conflict, bounded, canonical, digest
 
 VERSION = "grounded-policy-v2.1"
 ACTIONS = ("north", "east", "south", "west")
@@ -24,6 +25,18 @@ OUTCOMES = ("zero", "displacement", "other")
 MAX_CONDITIONALS = 128
 MAX_RETAINED_CONDITIONALS = 5
 RATIONAL_DIGITS = 256
+# Legacy APIs retain their original numeric contract. Only the named bounded
+# exact entrypoints below opt into this separately identified resource envelope.
+EXACT_NUMERIC_CONTRACT = "bounded-exact-fractions-8192-v1"
+EXACT_RATIONAL_DIGITS = 17_000
+EXACT_MAX_EVIDENCE_ROWS = 8192
+EXACT_MAX_DISCOVERY_ROWS = 64
+EXACT_MAX_MODELS = 8
+EXACT_INPUT_BYTES = 8 * 1024 * 1024
+EXACT_DECISION_BYTES = 2 * 1024 * 1024
+_ACTIVE_RATIONAL_DIGITS = ContextVar("grounded_policy_rational_digits", default=RATIONAL_DIGITS)
+_RATIONAL_MAGNITUDES = {RATIONAL_DIGITS: 10 ** RATIONAL_DIGITS,
+                        EXACT_RATIONAL_DIGITS: 10 ** EXACT_RATIONAL_DIGITS}
 THRESHOLD = Decimal("0.010000000000000000")
 TIE_TOLERANCE = Decimal("0.000000000001000000")
 QUANTUM = Decimal("0.000000000000000001")
@@ -240,23 +253,48 @@ def build_cohort(discovery_rows: list[dict]) -> dict:
 
 def _checked(value: Fraction) -> Fraction:
     _require(isinstance(value, Fraction), "nonrational_numeric_value")
-    _require(len(str(abs(value.numerator))) <= RATIONAL_DIGITS
-             and len(str(value.denominator)) <= RATIONAL_DIGITS, "rational_component_overflow")
+    magnitude = _RATIONAL_MAGNITUDES[_ACTIVE_RATIONAL_DIGITS.get()]
+    _require(abs(value.numerator) < magnitude and value.denominator < magnitude,
+             "rational_component_overflow")
     return value
+
+
+def _integer_text(value: int) -> str:
+    """Exact canonical decimal encoding without changing Python's global limit."""
+    if abs(value) < _RATIONAL_MAGNITUDES[RATIONAL_DIGITS]:
+        return str(value)
+    sign, remaining = ("-", -value) if value < 0 else ("", value)
+    chunks = []
+    while remaining:
+        remaining, chunk = divmod(remaining, 1_000_000_000)
+        chunks.append(chunk)
+    return sign + str(chunks[-1]) + "".join(f"{chunk:09d}" for chunk in reversed(chunks[:-1]))
+
+
+def _integer_value(text: str) -> int:
+    """Inverse of the exact decimal codec; input syntax/bounds are checked first."""
+    negative = text.startswith("-")
+    digits = text[1:] if negative else text
+    value = 0
+    for start in range(0, len(digits), 9):
+        chunk = digits[start:start + 9]
+        value = value * 10 ** len(chunk) + int(chunk)
+    return -value if negative else value
 
 
 def fraction_pair(value: Fraction) -> list[str]:
     value = _checked(value)
-    return [str(value.numerator), str(value.denominator)]
+    return [_integer_text(value.numerator), _integer_text(value.denominator)]
 
 
 def parse_pair(pair: Any) -> Fraction:
     _require(type(pair) is list and len(pair) == 2 and all(type(x) is str for x in pair), "invalid_rational_pair")
     _require(bool(re.fullmatch(r"-?(?:0|[1-9][0-9]*)", pair[0])) and pair[0] != "-0"
              and bool(re.fullmatch(r"[1-9][0-9]*", pair[1])), "noncanonical_rational_pair")
-    _require(len(pair[0].lstrip("-")) <= RATIONAL_DIGITS and len(pair[1]) <= RATIONAL_DIGITS,
+    limit = _ACTIVE_RATIONAL_DIGITS.get()
+    _require(len(pair[0].lstrip("-")) <= limit and len(pair[1]) <= limit,
              "rational_component_overflow")
-    value = _checked(Fraction(int(pair[0]), int(pair[1])))
+    value = _checked(Fraction(_integer_value(pair[0]), _integer_value(pair[1])))
     _require(fraction_pair(value) == pair, "unreduced_rational_pair")
     return value
 
@@ -639,3 +677,50 @@ def verify_evaluation(discovery_rows: list[dict], context: dict, evidence_rows: 
                      "context_digest": digest(current), "menu": expected_menu, "selected_action": selected}
     _require(canonical(submitted_body) == canonical(expected_body), "selection_receipt_policy_mismatch")
     return True
+
+
+def _exact_inputs(context: dict, evidence_rows: list[dict], *, cohort: dict | None = None,
+                  discovery_rows: list[dict] | None = None) -> None:
+    """Finite arithmetic work; this is a resource contract, not evidence sampling."""
+    _require(type(evidence_rows) is list and len(evidence_rows) <= EXACT_MAX_EVIDENCE_ROWS,
+             "exact_evidence_capacity_exhausted")
+    if cohort is not None:
+        _require(type(cohort) is dict and type(cohort.get("actions")) is list
+                 and len(cohort["actions"]) == len(ACTIONS)
+                 and type(cohort.get("discovery_events")) is list
+                 and len(cohort["discovery_events"]) <= EXACT_MAX_DISCOVERY_ROWS,
+                 "exact_cohort_capacity_exhausted")
+        _require(all(type(item.get("models")) is list and len(item["models"]) <= EXACT_MAX_MODELS
+                     for item in cohort["actions"]), "exact_model_capacity_exhausted")
+    if discovery_rows is not None:
+        _require(type(discovery_rows) is list and len(discovery_rows) <= EXACT_MAX_DISCOVERY_ROWS,
+                 "exact_discovery_capacity_exhausted")
+    bounded({"context": context, "evidence": evidence_rows, "cohort": cohort,
+             "discovery": discovery_rows}, EXACT_INPUT_BYTES, "exact policy input")
+
+
+def evaluate_bounded_exact(cohort: dict, context: dict, evidence_rows: list[dict]) -> dict:
+    """Same Fraction/Decimal calculation, with an explicit larger exact envelope."""
+    _exact_inputs(context, evidence_rows, cohort=cohort)
+    token = _ACTIVE_RATIONAL_DIGITS.set(EXACT_RATIONAL_DIGITS)
+    try:
+        result = evaluate(cohort, context, evidence_rows)
+        result["numeric_contract"] = EXACT_NUMERIC_CONTRACT
+        return bounded(result, EXACT_DECISION_BYTES, "exact policy decision")
+    finally:
+        _ACTIVE_RATIONAL_DIGITS.reset(token)
+
+
+def verify_bounded_exact_evaluation(discovery_rows: list[dict], context: dict,
+                                    evidence_rows: list[dict], submitted_body: dict) -> bool:
+    """Independent existing proof checker under the same named exact envelope."""
+    _require(type(submitted_body) is dict and submitted_body.get("numeric_contract") == EXACT_NUMERIC_CONTRACT,
+             "exact_numeric_contract_mismatch")
+    _exact_inputs(context, evidence_rows, discovery_rows=discovery_rows)
+    bounded(submitted_body, EXACT_DECISION_BYTES, "exact policy decision")
+    body = {key: value for key, value in submitted_body.items() if key != "numeric_contract"}
+    token = _ACTIVE_RATIONAL_DIGITS.set(EXACT_RATIONAL_DIGITS)
+    try:
+        return verify_evaluation(discovery_rows, context, evidence_rows, body)
+    finally:
+        _ACTIVE_RATIONAL_DIGITS.reset(token)
