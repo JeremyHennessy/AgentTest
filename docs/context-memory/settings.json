@@ -1,0 +1,206 @@
+{
+  "schema": "ora-copied-context-study-design-v1",
+  "status": "design_only_not_implemented_or_executed",
+  "date": "2026-10-07",
+  "runtime_revision": "b3da508f6ebadc778cdb3cca5b9903997685d023",
+  "frozen_negative_result_revision": "3ec6e83b0716ab07046564217ad6a361e4de75dd",
+  "independent_guarded_executor_revision": "7d96cfa96901fd3f9d9c1893ff6fa0444c1847d1",
+  "source_sha256": {
+    "experiments/challenge_shadow_epistemic_selector.py": "8571f3b6d203166bc3017ef7a9833f686fb0f1ddac534a68356ba55c861a66fd",
+    "experiments/challenge_shadow_recorder.py": "697728550b5a0ef93026ee2e07899f13d250dbd02da02a301751ca3a38e7f5d0",
+    "experiments/open_object_world_challenge_explorer.py": "ef5584fbedda2e617d030bff419dbb4f8c03688d6e487a56d694cdd9be49fbd9",
+    "experiments/open_object_world_challenge.py": "98716e807f652174f8a10dcc30c268364c7b8d9b4c8b9fc71b19a566ce5ab849",
+    "experiments/normalized_inquiry_objectives.py": "8416636b65c7d88eef63c7b9d4b3a5c891dc8fda3775514c93b10646cceb6d81",
+    "experiments/native_observe_inquire_integration.py": "bbcdc7d10f799d125045072757db6ecc6f11a751158cb68f69166fe047ce976e"
+  },
+  "selector": {
+    "policy": "public-falsification-oriented-v1",
+    "minimum_effect_samples": 2,
+    "source_formula_rounding_ties_commands_unchanged": true,
+    "objective": "unchanged_global_temporal_publication_information_gain",
+    "candidate": "coherent_exact_public_context_row_projection_else_global",
+    "local_present_minimum": 1,
+    "local_absent_minimum": 1,
+    "row_population_unchanged": true,
+    "special_directions_blacklists_or_reward_hints": false
+  },
+  "context": {
+    "canonical_json": {
+      "encoding": "UTF-8",
+      "ensure_ascii": false,
+      "sort_keys": true,
+      "separators": [
+        ",",
+        ":"
+      ],
+      "allow_nan": false
+    },
+    "fields": [
+      "world_version",
+      "position",
+      "inventory_ids_sorted",
+      "visible_entities_sorted_by_id"
+    ],
+    "visible_entity_fields": [
+      "id",
+      "position",
+      "appearance",
+      "observable_state_if_present"
+    ],
+    "key_excludes": [
+      "cycle",
+      "observation_id",
+      "receipt_id",
+      "clock",
+      "layout_id",
+      "seed",
+      "objective",
+      "action",
+      "outcome"
+    ],
+    "action_key": "unchanged_action_label",
+    "group": "lexicographic_minimum_canonical_json_over_four_coordinate_sign_flips",
+    "split_hash_prefix": "ora-context-holdout-v1|",
+    "development_first_digest_byte": [
+      0,
+      127
+    ],
+    "heldout_first_digest_byte": [
+      128,
+      255
+    ],
+    "legacy_groups_forced_development": true,
+    "heldout_online_support": "strictly_earlier_neutral_transitions_only",
+    "cross_stream_memory": false,
+    "probe_outcome_feedback": false
+  },
+  "legacy_exclusion": {
+    "layouts": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "original_neutral_transitions_per_layout": 600,
+    "include_observation_cycles": [
+      0,
+      600
+    ],
+    "archived_selector_context_files": 64,
+    "require_original_archive_member_hashes": true,
+    "generate_only_after_implementation_authorization": true
+  },
+  "development": {
+    "synthetic_fixtures": 32,
+    "categories": 8,
+    "variants_per_category": 4,
+    "archived_parity_inputs": 64,
+    "selector_calls_per_input": 2,
+    "total_selector_calls": 192,
+    "new_world_transitions": 0
+  },
+  "corpus": {
+    "layout_seeds": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "exploration_seeds": [
+      1009,
+      2003,
+      3001,
+      4001
+    ],
+    "neutral_transitions_per_stream": 1024,
+    "neutral_policy": "least_tried_exact_public_context_command_then_seeded_sha256_tie",
+    "neutral_tie_payload_prefix": "ora-context-neutral-v1",
+    "neutral_tie_context_value": "context_object_not_serialized_string",
+    "anchor_start": 128,
+    "anchor_stop_inclusive": 1016,
+    "anchor_stride": 8,
+    "slots_per_stream": 112,
+    "maximum_slots": 448,
+    "eligibility": [
+      "heldout_group_not_in_legacy",
+      "unchanged_eligible_temporal_publication",
+      "queried_feature_currently_visible"
+    ],
+    "replacement_slots": false,
+    "actual_transitions_per_included_anchor": 2
+  },
+  "coverage": {
+    "minimum_paired_anchors": 96,
+    "minimum_groups": 16,
+    "minimum_anchors_each_layout": 16,
+    "minimum_groups_each_layout": 4,
+    "minimum_common_evaluable_pairs": 64,
+    "minimum_repeat_risk_anchors": 24,
+    "minimum_repeat_risk_groups": 8,
+    "minimum_repeat_risk_layouts": 3,
+    "minimum_local_projection_anchors": 24,
+    "minimum_local_projection_groups": 8,
+    "minimum_local_projection_layouts": 3,
+    "local_projection_must_match_currently_available_command": true
+  },
+  "endpoints": {
+    "primary": "group_balanced_actual_one_step_refutation_yield",
+    "non_evaluable_yield": 0,
+    "minimum_yield_improvement": 0.1,
+    "minimum_group_balanced_repeat_rate_reduction": 0.2,
+    "repeat_risk": "available_action_last_two_evaluable_same_exact_context_feature_outcomes_both_nonrefuting_current_relation",
+    "minimum_candidate_minus_control_refutation_micro_total": 0,
+    "maximum_per_layout_micro_yield_regression": 0.05,
+    "maximum_overall_non_evaluable_rate_increase": 0.02,
+    "maximum_per_layout_non_evaluable_rate_increase": 0.05,
+    "maximum_common_evaluable_brier_increase": 0.02,
+    "brier_measure": "mean_squared_selected_action_falsification_probability_error_on_same_common_evaluable_anchor_set",
+    "zero_required_denominator": "unavailable_and_inconclusive_unless_invalid_or_observed_adverse",
+    "iid_significance_or_population_claim": false
+  },
+  "budget": {
+    "maximum_legacy_replay_transitions": 2400,
+    "confirmatory_neutral_transitions": 4096,
+    "maximum_confirmatory_branch_transitions": 896,
+    "maximum_total_simulator_transitions": 7392,
+    "maximum_development_scientific_selector_calls": 1088,
+    "maximum_audit_selector_calls": 1088,
+    "maximum_total_selector_calls": 2176,
+    "audit_passes": 1,
+    "core_or_native_cycles": 0,
+    "estimated_wall_minutes": [
+      1,
+      5
+    ],
+    "hard_cpu_seconds": 600,
+    "hard_wall_seconds": 900,
+    "hard_peak_rss_mib": 512,
+    "hard_new_output_mib": 64,
+    "llm_calls": 0,
+    "paid_services": false,
+    "outcome_driven_retries": 0
+  },
+  "authorization_gates": [
+    "design_review_before_implementation",
+    "independent_source_review_and_hash_lock_before_heldout_execution",
+    "separate_bounded_run_authorization"
+  ],
+  "native_agenda_choice_is_endpoint": false,
+  "production_changes": false,
+  "live_activation": false,
+  "native_capability_executor_invoked": false,
+  "offline_disposable_simulator_evaluation_only": true,
+  "artifact_storage": {
+    "format": "deterministic_gzip_canonical_json_content_addressed_v1",
+    "gzip_mtime": 0,
+    "gzip_filename_header": "",
+    "address": "sha256_of_uncompressed_canonical_bytes",
+    "raw_and_compressed_hashes_and_lengths_required": true,
+    "shared_identical_inputs": true,
+    "full_selector_inputs_retained": true,
+    "per_anchor_full_world_snapshot": false,
+    "neutral_command_log_and_world_digests_retained": true,
+    "hard_persisted_new_artifact_mib": 64,
+    "encoding_changes_after_outcomes": false
+  }
+}
