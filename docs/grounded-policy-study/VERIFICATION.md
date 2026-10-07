@@ -55,3 +55,46 @@ separate recovery directory and checked against their previously computed Git
 blob IDs. All 59 executed snapshot files also match the original SHA-256 manifest.
 Only current-status documentation changed to disclose recovery limits. The prior
 150-check result was not rerun during recovery; see [RECOVERY.md](RECOVERY.md).
+
+## Publication CI compiler portability fix
+
+PR #224 at `e18365c6cad75c85ee90dd5d4095571f02ca79f9` reached 482 top-level
+unit tests. Its only failing test was the publication wrapper: 22 native-launcher
+subcase errors reported `Native binary/source exceeds the frozen build bound`
+in run `37588053600`, unit job `112682698182`. The GitHub toolchain produced a
+static binary above the original 1 MiB ceiling. The other preservation,
+no-regression and capability-handoff jobs passed.
+
+Only the publication runner and current documentation are changed by the fix.
+In its disposable test workspace, the runner resolves the already installed
+compiler, installs a `cc` wrapper which passes `-s` at link time, and records the
+wrapper source/hash, real compiler path/hash and added flag in its JSON summary.
+The frozen builder then records the hash of the actual stripped output. Its
+source bytes, build verification, 1 MiB binary ceiling, scientific guards and
+profiles remain unchanged. Stripping happens before hashing; the fix neither
+patches receipts nor widens bounds, and a toolchain still producing an oversized
+binary must fail.
+
+A packaging regression builds unstripped and stripped authored launchers without
+executing them, checks that stripping does not increase size, verifies the
+stripped binary with the original build verifier, and confirms that a
+hash-matched 1,048,577-byte negative fixture is rejected by the original bound.
+The existing 150 authored tests then run unchanged through the wrapped compiler.
+
+The focused wrapper was run once after this fix on 2026-10-07. All 150 authored
+tests passed in 7.869 seconds, with no failures, errors or skips; the outer wrapper
+including the packaging regression took 9.555 seconds. On the local Debian GCC
+14.2 toolchain, the compiled authored binary shrank from 1,035,936 to 930,280 bytes
+(105,656 bytes removed). The local unstripped binary was already below 1 MiB;
+this measurement demonstrates the effect of the flag and does not reproduce or
+claim validation of GitHub's distinct compiler/libc combination. The next GitHub
+CI run must verify that environment.
+
+The compiled stripped binary's SHA-256 was
+`320e76c9800767952ba83235837be7c1d74c74dc5088af46f42010fbaa2f0e74`, matching
+its frozen builder receipt. This is an ephemeral authored-test build fingerprint,
+not a replacement scientific-runtime freeze. No real Ora/API/world modules were
+loaded or attempted. No baseline/full repository suite, real native fixture or
+scientific comparison was run locally for this repair. All 59 executed payload
+files and the original manifest remain unchanged. Historical verification
+receipts and the recovery/loss disclosure are preserved.

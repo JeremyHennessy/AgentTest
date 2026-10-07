@@ -26,8 +26,12 @@ python -I -S -B -W error::ResourceWarning experiments/grounded_policy_study/run_
 ```
 
 These checks require Linux, Python 3.11+ and an installed C compiler with static
-linking support. The wrapper copies only the frozen snapshot into a temporary
-workspace to reproduce historical test paths. It runs authored scalar functions,
+linking support and the usual `-s` link-time stripping flag. The wrapper creates
+a disposable test-only `cc` shim that adds `-s` before the frozen builder hashes
+the compiled binary. It verifies the compiled size and hash, and confirms that
+a binary above the unchanged 1 MiB bound is still rejected. No frozen source,
+limit or build receipt is patched. The wrapper copies only the frozen snapshot
+into a temporary workspace to reproduce historical test paths. It runs authored scalar functions,
 JSON fixtures, fake executives, and native resource stubs. It does not stage the
 real API, completed run, operational approval receipt, or reviewed native binary.
 The real fixture is not a discoverable test or CI target.
