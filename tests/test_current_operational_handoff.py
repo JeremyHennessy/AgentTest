@@ -60,8 +60,8 @@ class CurrentOperationalHandoffTests(unittest.TestCase):
         parsed.feed(page.split("<script>", 1)[0])
         visible = "".join(parsed.uncollapsed_text)
         for required in (
-            "Phase 42 redesign:", "copied-only foundation implemented",
-            "the new policy is not live", "new-world readiness are not established",
+            "Phase 42 redesign:", "current-world heartbeat adapter and durable receipt path",
+            "first enabled tick prepared a null case", "new-world readiness are not established",
             "Existing agenda and resumption counters remain legacy diagnostics",
             "not redesign acceptance gates",
             "Phase 42 agenda status describes the legacy mechanism",
