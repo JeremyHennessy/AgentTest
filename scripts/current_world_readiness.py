@@ -14,7 +14,7 @@ from pathlib import Path
 import re
 
 from agenttest.current_world_investigation import (
-    ACTION_ALLOWANCE, CHECKPOINT_BYTES, DISCOVERY_LIMIT, MAX_CASES,
+    ACTION_ALLOWANCE, CHECKPOINT_BYTES, DISCOVERY_LIMIT, MAX_CASES, VERSION, REVISION_VERSION,
     MAX_DISCOVERY_ADDITIONS, MAX_DISCOVERY_REVISIONS, MAX_OBSERVATIONS,
     MAX_REVISED_DISCOVERY, current_view, discovery_partition, execution_hash,
     model_structure_changes, prepare_next_case,
@@ -104,6 +104,7 @@ def inspect_full_state(path: Path, expected_sha256: str) -> dict:
     report = {"format": "current-world-full-history-readiness-v1",
               "state_sha256": before_hash, "state_bytes": len(payload),
               "candidate_execution_hash": execution_hash(), "policy_version": policy.VERSION,
+              "candidate_investigation_version": VERSION, "candidate_revision_recipe": REVISION_VERSION,
               "readiness_script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               "cycle": state["cycles"], "schema_version": state["schema_version"],
               "world_version": lab.get("world_version"), "position": lab.get("position"),
@@ -177,6 +178,7 @@ def inspect_full_state(path: Path, expected_sha256: str) -> dict:
             revision = next(record for record in lane["discovery_revisions"] if record["revision_id"] == revision_id)
             changes = model_structure_changes(original_lane["cohort"], cohort)
             report.update(discovery_revision_id=revision["revision_id"],
+                          discovery_revision_recipe=revision["version"],
                           discovery_revision_hash=revision["revision_hash"],
                           revision_source_row_count=revision["source_row_count"],
                           revision_source_rows_hash=revision["source_rows_hash"],

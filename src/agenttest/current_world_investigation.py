@@ -18,8 +18,9 @@ from .grounded_policy.primitives import Conflict, bounded, canonical, digest, la
 from .planning_lab import execute_investigation_action
 
 LEGACY_VERSION = "current-world-investigation-v1"
-VERSION = "current-world-investigation-v2"
-REVISION_VERSION = "observed-transition-revision-v1"
+VERSION = "current-world-investigation-v3"
+CONTEXT_REVISION_VERSION = "observed-transition-revision-v1"
+REVISION_VERSION = "observed-effect-revision-v1"
 MAX_DISCOVERY_ADDITIONS = 32
 MAX_REVISED_DISCOVERY = 64
 MAX_DISCOVERY_REVISIONS = 1
@@ -122,15 +123,22 @@ def _base_discovery(lane: dict, view: dict) -> tuple[list[dict], dict]:
     return discovery, lane["cohort"]
 
 
-def _signature(row: dict) -> str:
-    return digest({key: row[key] for key in ("before_context", "action", "after_position")})
+def _signature(row: dict, recipe: str) -> str:
+    if recipe == CONTEXT_REVISION_VERSION:
+        # Historical reader only: never relabel or reinterpret a saved revision.
+        return digest({key: row[key] for key in ("before_context", "action", "after_position")})
+    if recipe != REVISION_VERSION:
+        raise Conflict("unsupported_discovery_revision_recipe")
+    before, after = row["before_context"]["position"], row["after_position"]
+    return digest({"action": row["action"],
+                   "displacement": [after[index] - before[index] for index in (0, 1)]})
 
 
-def _promotions(discovery: list[dict], rows: list[dict]) -> list[dict]:
-    seen = {_signature(row) for row in discovery}
+def _promotions(discovery: list[dict], rows: list[dict], *, recipe: str = REVISION_VERSION) -> list[dict]:
+    seen = {_signature(row, recipe) for row in discovery}
     additions = []
     for row in rows[len(discovery):]:
-        signature = _signature(row)
+        signature = _signature(row, recipe)
         if signature in seen:
             continue
         seen.add(signature)
@@ -161,7 +169,7 @@ def _revision(lane: dict, revision_id: str) -> dict:
     if len(revisions) > MAX_DISCOVERY_REVISIONS or len(matches) != 1:
         raise Conflict("missing_or_ambiguous_discovery_revision")
     revision = matches[0]
-    if (revision.get("version") != REVISION_VERSION
+    if (revision.get("version") not in {CONTEXT_REVISION_VERSION, REVISION_VERSION}
             or revision.get("revision_hash") != digest({key: value for key, value in revision.items() if key != "revision_hash"})
             or revision.get("parent_discovery_hash") != digest(lane["discovery"])
             or revision.get("parent_cohort_hash") != lane["cohort"]["cohort_digest"]
@@ -203,7 +211,7 @@ def discovery_partition(lane: dict, view: dict, case: dict | None = None) -> tup
         source = view["rows"][:count]
         if digest(_refs(source)) != revision["source_rows_hash"]:
             raise Conflict("revision_source_history_changed")
-        additions = _promotions(discovery, source)
+        additions = _promotions(discovery, source, recipe=revision["version"])
         if (revision["promoted_refs"] != _refs(additions)
                 or canonical(revision["discovery"]) != canonical(discovery + additions)):
             raise Conflict("revision_promotion_recipe_mismatch")

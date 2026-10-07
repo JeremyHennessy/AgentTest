@@ -3,6 +3,7 @@ name: Current-world admission (read only)
 on:
   push:
     branches: [phase42/observed-discovery-revision-20261007]
+    paths: ["src/**", "scripts/current_world_readiness.py"]
 
 permissions:
   contents: read
@@ -27,7 +28,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.12.14'
       - name: Check pinned source and inspect without action or state writes
         shell: bash
         env:
@@ -41,6 +42,7 @@ jobs:
           mkdir -p admission
           test "$(git -C source hash-object state/organism.json)" = "5392490470aed95339d0ca63ffdd17f6ff6b8bf7"
           read -r readiness_state_sha _ < <(sha256sum source/state/organism.json)
+          test "$readiness_state_sha" = "5efeed6d72824ef6b5e463854b2217b1a383eb5f3db35fce7f0571ea02b286b6"
           admission_status=0
           python -B candidate/scripts/current_world_readiness.py --state source/state/organism.json --expected-sha256 "$readiness_state_sha" --output admission/current-world-readiness.json 2>&1 | tee admission/readiness.log || admission_status=$?
           test "$(git -C source hash-object state/organism.json)" = "5392490470aed95339d0ca63ffdd17f6ff6b8bf7"

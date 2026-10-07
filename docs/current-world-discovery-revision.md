@@ -1,4 +1,10 @@
-# One append-only discovery revision
+# Historical context-novelty revision at b189d656
+
+This is the preserved context-signature recipe tested at `b189d656`. Its full-state
+preflight found no structural change and created no new case. It was never enabled
+live. The [original read-only run and attached artifact](https://github.com/JeremyHennessy/AgentTest/actions/runs/37641510899) retain that
+negative result. The separately versioned [observed-effect follow-on](current-world-effect-revision.md)
+changes the admission unit while keeping this recipe's historical reader.
 
 This is an explicit finite representation improvement, not a correction of the
 original null result. The earlier lane correctly abstained with its frozen first

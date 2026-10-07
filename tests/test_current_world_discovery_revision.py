@@ -62,7 +62,7 @@ class CurrentWorldDiscoveryRevision(unittest.TestCase):
             self.assertEqual(case["discovery_revision_hash"], revision["revision_hash"])
             self.assertTrue(revision["structural_changes"])
             self.assertEqual([ref["event_id"] for ref in revision["promoted_refs"]],
-                             ["investigation_action:PX000034", "investigation_action:PX000035", "investigation_action:PX000036"])
+                             ["investigation_action:PX000035"])
             discovery, cohort, evidence = investigation.discovery_partition(lane, investigation.current_view(state), case)
             d_ids, u_ids = {row["event_id"] for row in discovery}, {row["event_id"] for row in evidence}
             self.assertFalse(d_ids & u_ids)
@@ -94,7 +94,7 @@ class CurrentWorldDiscoveryRevision(unittest.TestCase):
             verify_completed(store.path, "legacy:heartbeat")
 
     def test_later_novel_rows_without_structural_change_do_not_create_case(self):
-        state, _ = preserved_null_fixture(later=("north", "north"))
+        state, _ = preserved_null_fixture(later=("east",))
         state["cycles"] += 1
         original_case = canonical(state["current_world_investigation"]["cases"][0])
         result = investigation.prepare_next_case(state, request_id="revision:no-structure")
@@ -157,7 +157,7 @@ class CurrentWorldDiscoveryRevision(unittest.TestCase):
         with patch.object(policy, "build_cohort", side_effect=AssertionError("blocked revision retried")):
             investigation.prepare_next_case(state, request_id="revision:retry-blocked")
 
-    def test_promotion_limit_is_first32_new_signatures_not_identifier_order(self):
+    def test_historical_context_promotion_limit_remains_source_ordered(self):
         seed = {"event_id": "seed", "before_context": {"position": [0, 0], "inventory_ids": None, "visible_ids": None},
                 "action": "north", "after_position": [1, 0], "refs": {"before": "a" * 64, "receipt": "b" * 64, "after": "c" * 64}}
         rows = [seed]
@@ -167,7 +167,7 @@ class CurrentWorldDiscoveryRevision(unittest.TestCase):
                        before_context={"position": [index % 5 - 2, (index // 5) % 5 - 2], "inventory_ids": None, "visible_ids": None},
                        after_position=[0, 0])
             rows.append(row)
-        promoted = investigation._promotions([seed], rows)
+        promoted = investigation._promotions([seed], rows, recipe=investigation.CONTEXT_REVISION_VERSION)
         self.assertEqual([row["event_id"] for row in promoted], [row["event_id"] for row in rows[1:33]])
         self.assertEqual(len(promoted), 32)
 
