@@ -2,13 +2,14 @@
 
 ## Authority and checkpoint
 
-Updated **2026-10-07 02:05 UTC**. This is the maintained operational handoff and
+Updated **2026-10-07 11:45 UTC**. This is the maintained operational handoff and
 forward plan. It supersedes earlier benchmark and roadmap requirements for the
 Phase 42 redesign; historical documents, results and counter meanings remain
 preserved. A dated checkpoint is not a claim about a moving branch's latest cycle.
 Recheck exact commits and required CI before publication, merge or rollout.
 
-- Production code: [`main` at `2af18427c42c80cb61391d802fa07b80f3513cf6`](https://github.com/JeremyHennessy/AgentTest/commit/2af18427c42c80cb61391d802fa07b80f3513cf6).
+- Integration baseline: [`main` at `6aac9b8b7d1a785ce78d5045db5ade922ed2b6b7`](https://github.com/JeremyHennessy/AgentTest/commit/6aac9b8b7d1a785ce78d5045db5ade922ed2b6b7). The current consolidation adds the disabled foundation without replacing existing production source or writer workflows.
+- Historical production checkpoint, **2026-10-07 02:05 UTC**: [`2af18427c42c80cb61391d802fa07b80f3513cf6`](https://github.com/JeremyHennessy/AgentTest/commit/2af18427c42c80cb61391d802fa07b80f3513cf6).
 - Live storage checkpoint: [growth run 37551846573](https://github.com/JeremyHennessy/AgentTest/actions/runs/37551846573),
   cycle **5926**, persisted commit [`dcef1bed0881178f1b804cea806b0eb5c6b12963`](https://github.com/JeremyHennessy/AgentTest/commit/dcef1bed0881178f1b804cea806b0eb5c6b12963).
   This first verified compact live snapshot was **63,171,268 bytes**; its journal
@@ -19,9 +20,11 @@ Recheck exact commits and required CI before publication, merge or rollout.
   Keep it as history, not the current deployment queue.
 
 **New-world readiness is not established. New-world activation remains separately
-withheld.** The redesign is authorized; design review is pending and its
-implementation is not yet tested.
-This documentation update changes no production source, workflow or runtime flag.
+withheld.** The copied-only ownership executive and grounded-policy foundation
+are implemented and included in this integration. Their authored software tests
+cover ownership, persistence and rejection behavior; they do not prove natural
+learning. Ordinary live cognition and activation flags have not switched to the
+new architecture.
 
 ## Completed operations and remaining limits
 
@@ -114,7 +117,7 @@ Zero resumptions neither proves a routing failure nor settles whether learning
 is useful. No forced resumption, score tuning or renamed milestone can substitute
 for new evidence. Tests and activity do not establish life or consciousness.
 
-## Proposed ground-up architecture and next steps
+## Implemented foundation and next integration step
 
 The unit of work is a **durable investigation**:
 
@@ -123,28 +126,50 @@ bounded action with pre-action predictions → actual outcome → versioned beli
 revision**.
 
 Observation provenance, context, alternatives, predictions, action ownership,
-receipts and belief versions must remain linked across persistence and restart.
-An observation adapter must expose semantically valid evidence, not route hints,
-an authored solution or a hidden reward target. Investigation selection must
-actually determine the eligible bounded action before execution.
+receipts and belief versions remain linked across persistence and restart. The
+observation adapter must expose semantically valid evidence, not route hints,
+an authored solution or a hidden reward target.
 
-1. Review a small copied-only contract for action ownership and the durable
-   investigation record. Preserve the existing live lab and all historical data.
-2. Implement the first copied-only slice: ordinary selection owns one bounded,
-   single-use action; its prediction precedes execution; restart/replay preserves
-   ownership, receipt and belief lineage without granting another action. Explicitly
-   fail closed on stale authority and ambiguous recovery. This is a contract test,
-   not a learning milestone; the slice is not yet implemented.
-3. Separately define a source-general causal measure and a policy/science
-   evaluation. Measure which evidence changed prediction, selection or belief;
-   independently test whether those changes help. Do not reuse the old
-   repository-only resumption counter as either answer.
-4. Only after contract review, predeclare bounded copied evaluations with exact
-   source/input hashes, contexts, controls, budgets and stopping conditions. Design
-   new studies for the new question; do not inherit #219 as a required benchmark.
-5. Address the safety/operations gates below and publish an exact-commit rollout
-   proposal. Passing scientific tests does not grant deployment authority or
-   activate a world.
+The included copied-only implementation has two explicit layers:
+
+- [Inquiry-owned transactions](inquiry-executive/IMPLEMENTATION.md), developed in
+  [#222](https://github.com/JeremyHennessy/AgentTest/pull/222): selected ownership
+  precedes a bounded single-use action; outcome and belief records retain that
+  ownership. Revision checks, restart/replay handling and stale-authority rejection
+  protect the transaction. The compatibility bridge preserves the historical
+  selector as a baseline; it is not the replacement policy.
+- [Grounded policy and executive](grounded-policy-v2/IMPLEMENTATION.md), developed
+  in [#223](https://github.com/JeremyHennessy/AgentTest/pull/223): an independent
+  policy derives movement hypotheses from public observation features, chooses
+  among eligible tests, and connects its own selection to the same durable
+  action/outcome contract. Retained evidence conditions later predictions.
+  This is a finite authored representation of movement, not unrestricted question
+  generation, representation growth or a complete open-ended Phase 42.
+
+Both modules require explicit copied-research enablement and reject default-off
+use. They are not invoked by ordinary Core growth or interaction. The existing
+live lab and all historical state remain in place. Source and compatibility
+dependencies from #213/#217 are included; no new source priority bonus or live
+agenda score is introduced.
+
+The first full paired comparison ended **invalid** at its resource cutoff, with
+final scientific call counts unknown. Its [frozen report and evidence
+record](https://github.com/JeremyHennessy/AgentTest/pull/226) remain authoritative.
+Partial coverage supplies no learning-benefit conclusion. The study runner in
+#224/#225 and further benchmark expansion are deferred; successful science is
+not a prerequisite for merging this inactive foundation.
+
+The shortest next integration step is to connect one ordinary, explicitly
+enabled copied investigation path to this owned transaction contract and verify
+that the selected investigation determines its action and receives its outcome.
+Keep source-general causal measure and policy/science evaluation separate from
+that implementation check. Broader prediction, retention and transfer studies
+remain research work, not an open-ended software release gate.
+
+Before any live or new-world rollout, resolve the applicable authority,
+persistence, lossless storage and rollout gates below and obtain the separate
+owner activation decision. Passing software tests does not establish beneficial
+natural learning or activate a world.
 
 ## Science acceptance gates
 

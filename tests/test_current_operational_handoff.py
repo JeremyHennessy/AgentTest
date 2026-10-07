@@ -60,8 +60,8 @@ class CurrentOperationalHandoffTests(unittest.TestCase):
         parsed.feed(page.split("<script>", 1)[0])
         visible = "".join(parsed.uncollapsed_text)
         for required in (
-            "Phase 42 redesign:", "copied-only work in progress",
-            "not yet tested or live", "new-world readiness are not established",
+            "Phase 42 redesign:", "copied-only foundation implemented",
+            "the new policy is not live", "new-world readiness are not established",
             "Existing agenda and resumption counters remain legacy diagnostics",
             "not redesign acceptance gates",
             "Phase 42 agenda status describes the legacy mechanism",
@@ -152,11 +152,11 @@ class CurrentOperationsTests(unittest.TestCase):
         self.assertIn("withholds current repository-prediction evaluation only", audit)
         self.assertIn("No forced resumption, score tuning", audit)
 
-    def test_proposed_slice_and_science_are_separate_from_safety(self) -> None:
-        plan = self.section("Proposed ground-up architecture and next steps")
+    def test_implemented_foundation_and_science_are_separate_from_safety(self) -> None:
+        plan = self.section("Implemented foundation and next integration step")
         for expected in (
             "durable investigation", "pre-action predictions", "versioned belief",
-            "copied-only", "single-use action", "slice is not yet implemented",
+            "copied-only", "single-use action", "not invoked by ordinary Core",
             "source-general causal measure", "policy/science",
         ):
             self.assertIn(expected, plan)

@@ -8,6 +8,10 @@ The project asks whether persistent perception, memory, prediction, evidence rev
 
 [Current operations, evidence boundaries and new-world readiness gates](docs/CURRENT_OPERATIONS.md). This is the maintained operational entry point. The older Ora-Handoff offline release is a frozen historical archive.
 
+## Phase 42 rebuild
+
+The [implemented Phase 42 foundation and next integration step](docs/CURRENT_OPERATIONS.md#implemented-foundation-and-next-integration-step) link selected investigations to bounded copied actions, durable outcomes and belief records. The new grounded policy derives a finite set of movement hypotheses from observations. These modules are disabled by default; ordinary live cognition has not switched to them. Broader autonomous discovery and learning benefit remain unproven.
+
 ## Current capabilities
 
 - persistent episodic and semantic memory;
