@@ -3,6 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
+
+from heartbeat_transport import state_writer_check
 
 from agenttest.intervention import record_verified_intervention
 from agenttest.state import StateStore, utc_now
@@ -23,6 +26,11 @@ def main() -> None:
     parser.add_argument("--attribution-text", required=True)
     parser.add_argument("--output")
     args = parser.parse_args()
+
+    transport = state_writer_check(Path(args.state))
+    if transport["status"] == "deferred":
+        print(json.dumps(transport, sort_keys=True), file=sys.stderr)
+        raise SystemExit(75)
 
     store = StateStore(args.state)
     state = store.load()

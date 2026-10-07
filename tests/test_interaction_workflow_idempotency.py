@@ -24,7 +24,8 @@ class InteractionWorkflowIdempotencyTests(unittest.TestCase):
         self.assertIn("Claim interaction request remotely", workflow)
         self.assertIn("scripts/interaction_request_claim.py", workflow)
         self.assertIn('git commit -m "Claim human interaction request"', workflow)
-        self.assertIn("git push origin autonomous/growth", workflow)
+        self.assertIn('"$WRITER_TRANSPORT" publish', workflow)
+        self.assertIn('"$WRITER_REMOTE_BASE"', workflow)
 
     def test_workflow_reuses_history_and_deduplicates_reply(self):
         workflow = (ROOT / ".github/workflows/interact.yml").read_text(encoding="utf-8")

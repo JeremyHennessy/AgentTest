@@ -1,0 +1,35 @@
+name: autonomous-heartbeat-watchdog
+
+on:
+  schedule:
+    - cron: "7,17,27,37,47,57 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  # Independent of the controller and all state-writer locks: a dead controller
+  # must not prevent the recovery check from running.
+  group: agenttest-heartbeat-watchdog-v1
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+      - name: Inspect receipts and recover only a stopped chain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -B scripts/heartbeat_controller.py watchdog --run-id "$GITHUB_RUN_ID"
+
+# At most 144 scheduled checks/day, one job each, 3-minute timeout: the configured
+# upper bound is 432 runner-minutes/day; healthy checks normally finish in seconds.
+# No Core, tests, artifacts, paid services, or additional token permissions.
+# GitHub can delay or drop scheduled runs; this is recovery, not an outage SLA.
