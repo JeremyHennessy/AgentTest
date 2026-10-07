@@ -73,22 +73,30 @@ class Actions:
     def runs(self, workflow: str, **filters) -> list[dict]:
         # GitHub caps filtered run searches at 1,000 results. Do not interpret a
         # truncated search as absence. Current tickets normally span minutes.
-        rows = []
-        for page in range(1, 11):
-            query = urlencode({"per_page": 100, "page": page, **filters})
-            data = self.api(f"actions/workflows/{workflow}/runs?{query}")
-            if not isinstance(data, dict) or not isinstance(data.get("workflow_runs"), list):
-                raise Blocked("invalid_workflow_run_listing")
-            total = data.get("total_count")
-            if not isinstance(total, int) or total < 0 or total > 1000:
-                raise Blocked("workflow_run_search_truncated_or_unknown")
-            batch = [validate_run(run) for run in data["workflow_runs"]]
-            rows.extend(batch)
-            if len(batch) < 100:
-                if len(rows) < total:
-                    raise Blocked("workflow_run_search_incomplete")
-                return rows
-        raise Blocked("workflow_run_search_truncated")
+        for snapshot_attempt in range(3):
+            rows = []
+            for page in range(1, 11):
+                query = urlencode({"per_page": 100, "page": page, **filters})
+                data = self.api(f"actions/workflows/{workflow}/runs?{query}")
+                if not isinstance(data, dict) or not isinstance(data.get("workflow_runs"), list):
+                    raise Blocked("invalid_workflow_run_listing")
+                total = data.get("total_count")
+                if not isinstance(total, int) or total < 0 or total > 1000:
+                    raise Blocked("workflow_run_search_truncated_or_unknown")
+                batch = [validate_run(run) for run in data["workflow_runs"]]
+                rows.extend(batch)
+                if len(batch) < 100:
+                    if len(rows) < total:
+                        break
+                    return rows
+            else:
+                raise Blocked("workflow_run_search_truncated")
+            # Counts and pages can briefly reflect different Actions snapshots.
+            # Discard the incomplete snapshot and repeat the same read from page
+            # one; never infer absence from it or retry a malformed response.
+            if snapshot_attempt < 2:
+                time.sleep(snapshot_attempt + 1)
+        raise Blocked("workflow_run_search_incomplete")
 
     def active(self, workflow: str, exclude: int = 0) -> list[dict]:
         rows = []
