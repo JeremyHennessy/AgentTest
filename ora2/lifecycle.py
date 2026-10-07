@@ -1,7 +1,7 @@
-"""Copy-only Phase 41 lifecycle with passive, prospective Ora 2 predictions.
+"""Copied Phase 41 lifecycle with one explicit action owner per cycle.
 
-The unchanged planner alone selects and executes actions. The temporal learner
-observes their consequences; it never chooses, vetoes, or receives goal credit.
+The default planner-owned mode learns passively. Explicit learner-owned turns
+use a separate child-process action hook; both modes preserve accurate credit.
 Every original writer runs against one disposable directory, not live state.
 """
 from __future__ import annotations
@@ -71,7 +71,7 @@ def command_plan(work: Path, root: Path) -> list[tuple[str, list[str]]]:
     ]
 
 
-def execute_phase41(raw: bytes, root: Path) -> dict:
+def execute_phase41(raw: bytes, root: Path, *, decision: dict | None = None) -> dict:
     """Return staged results. Nothing is published and no caller input is written."""
     if not isinstance(raw, bytes) or len(raw) > MAX_SNAPSHOT:
         raise CapacityError('bounded snapshot bytes required')
@@ -84,7 +84,16 @@ def execute_phase41(raw: bytes, root: Path) -> dict:
         env.pop('OPENAI_API_KEY', None)
         env.pop('AGENTTEST_MODEL', None)
         outputs = {}
-        for name, command in command_plan(work, root.resolve()):
+        commands = command_plan(work, root.resolve())
+        if decision is not None:
+            # Replace only the action-bearing Core stage, in a fresh child process.
+            payload = {**decision, 'snapshot_sha256': sha(raw)}
+            (work / 'decision.json').write_text(json.dumps(payload, sort_keys=True))
+            env['PYTHONPATH'] = os.pathsep.join((str(root.resolve() / 'src'), str(root.resolve())))
+            commands[0] = ('cycle', [sys.executable, '-B', '-s', '-m', 'ora2.control_worker',
+                '--snapshot', str(work / 'organism.json'), '--decision', str(work / 'decision.json'),
+                '--receipt', str(work / 'control.json'), '--root', str(root.resolve())])
+        for name, command in commands:
             completed = subprocess.run(command, cwd=root, env=env, capture_output=True,
                                        check=False, timeout=90)
             if completed.returncode:
@@ -98,7 +107,10 @@ def execute_phase41(raw: bytes, root: Path) -> dict:
         if not journal.endswith(b'\n') or not events:
             raise ProtocolError('complete staged journal required')
         sidecars = {p.name: p.read_text() for p in sorted(work.glob('next_*.json'))}
-        return {'snapshot': snapshot, 'journal': journal, 'outputs': outputs, 'sidecars': sidecars}
+        result = {'snapshot': snapshot, 'journal': journal, 'outputs': outputs, 'sidecars': sidecars}
+        if decision is not None:
+            result['control'] = strict_json((work / 'control.json').read_bytes())
+        return result
 
 
 def forecast_menu(agent) -> dict:
@@ -150,10 +162,10 @@ def learn_cycle(agent, before: dict, after: dict, predictions: dict) -> dict:
     return report
 
 
-def run_cycle(raw: bytes, agent, root: Path, *, enabled: bool = False) -> dict:
-    """Stage one full old lifecycle plus passive learning, with rollback on failure."""
-    if enabled is not True:
-        raise ProtocolError('explicit isolated-copy enablement required')
+def run_cycle(raw: bytes, agent, root: Path, *, enabled: bool = False, owner: str = 'phase41') -> dict:
+    """Stage one full lifecycle with one explicit action owner; rollback on failure."""
+    if enabled is not True or owner not in ('phase41', 'ora2'):
+        raise ProtocolError('explicit isolated-copy enablement and supported owner required')
     import copy
     candidate = copy.deepcopy(agent)
     before = strict_json(raw)
@@ -162,7 +174,10 @@ def run_cycle(raw: bytes, agent, root: Path, *, enabled: bool = False) -> dict:
         raise ProtocolError('learner is not at the current public location')
     source = source_identity(root)
     predictions = forecast_menu(candidate)  # before any Core or actuator call
-    staged = execute_phase41(raw, root)
+    choice = candidate.choose(ACTIONS) if owner == 'ora2' else None
+    payload = ({'before': public_observation(before['planning_lab']['position']),
+                'choice': choice.public(), 'choice_record': choice.record()} if choice else None)
+    staged = execute_phase41(raw, root, decision=payload) if choice else execute_phase41(raw, root)
     after = strict_json(staged['snapshot'])
     project(after)
     if after.get('cycles') != before['cycles'] + 1 or after.get('identity') != before['identity']:
@@ -173,7 +188,12 @@ def run_cycle(raw: bytes, agent, root: Path, *, enabled: bool = False) -> dict:
     cycles = [e for e in events if e.get('event') == 'cycle']
     if len(cycles) != 1 or cycles[0].get('cycle') != after['cycles']:
         raise ProtocolError('one matching completed cycle journal event required')
-    report = learn_cycle(candidate, before, after, predictions)
+    if choice is not None:
+        from .control import learn_selected, validate_effects
+        validate_effects(before, after, payload, staged['control'])
+        report = learn_selected(candidate, before, after, predictions, choice)
+    else:
+        report = learn_cycle(candidate, before, after, predictions)
     if source_identity(root) != source:
         raise ProtocolError('source changed during the cycle')
     staged.update(mode=MODE, temporal=report, forecasts=predictions,
