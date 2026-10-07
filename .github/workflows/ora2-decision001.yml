@@ -1,0 +1,44 @@
+name: Ora 2 Decision Study 001
+on:
+  push:
+    branches: ["ora2/decision-study-001-20261007"]
+    paths:
+      - "studies/decision001/**"
+      - ".github/workflows/ora2-decision001.yml"
+permissions:
+  contents: read
+concurrency:
+  group: ora2-decision-study-001
+  cancel-in-progress: false
+jobs:
+  study:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: src:.
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONNOUSERSITE: "1"
+      PYTHONHASHSEED: "0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check independent evaluator using authored fixtures
+        run: python -m unittest discover -s studies/decision001 -p test_study.py -v
+      - name: Run the single registered comparison on the complete pinned origin
+        run: python -m studies.decision001.run "${{ runner.temp }}/ora2-decision001-output"
+      - name: Preserve complete results including invalid partial runs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ora2-decision001-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/ora2-decision001-output/
+            studies/decision001/
+          if-no-files-found: error
+          retention-days: 90
