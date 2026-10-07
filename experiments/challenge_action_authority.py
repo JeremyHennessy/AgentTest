@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from agenttest.state import StateStore
+from agenttest.native_evidence import NATIVE_EVIDENCE_V2_VERSION
+from agenttest.native_inquiry import NATIVE_INQUIRY_SOURCE, NATIVE_INQUIRY_VERSION
 from challenge_shadow_epistemic_selector import (
     POLICY,
     select_epistemic_command,
@@ -24,6 +26,14 @@ from challenge_shadow_recorder import (
     SOURCE_DESCRIPTOR_HASH,
     SOURCE_ID,
     STATE_KEY as RECORDER_STATE_KEY,
+    public_features,
+    source_manifest,
+)
+from native_observe_inquire_integration import (
+    _candidate_id,
+    observe_and_inquire_policy,
+    source_manifest_hash,
+    validate_publication,
 )
 from open_object_world_challenge import (
     WORLD_VERSION,
@@ -143,16 +153,13 @@ def _find_experiment(
     ora_state: dict[str, Any],
     experiment_id: str,
 ) -> dict[str, Any]:
-    experiment = next(
-        (
-            row
-            for row in ora_state.get("experiments", [])
-            if isinstance(row, dict) and str(row.get("id")) == str(experiment_id)
-        ),
-        None,
-    )
-    if experiment is None:
-        raise ValueError("native experiment was not found in copied Ora state")
+    matches = [
+        row for row in ora_state.get("experiments", [])
+        if isinstance(row, dict) and str(row.get("id")) == str(experiment_id)
+    ]
+    if len(matches) != 1:
+        raise ValueError("native experiment source contract requires unique identity")
+    experiment = matches[0]
     if experiment.get("status") != "proposed":
         raise ValueError("native experiment is not proposed")
     if experiment.get("readiness") != "awaiting_native_evidence":
@@ -169,6 +176,86 @@ def _find_experiment(
     }:
         raise ValueError("bounded challenge action requires temporal native inquiry")
     return experiment
+
+
+def _validate_inquiry_source(
+    ora_state: dict[str, Any],
+    experiment: dict[str, Any],
+    recorder: ChallengeShadowRecorder,
+    cursor: dict[str, Any],
+    observation: dict[str, Any],
+) -> None:
+    """Pure current-publication compatibility gate, never source authentication.
+
+    The research adapter stages the recorder's exact current publication. Old
+    inquiries that cannot be reconstructed from it remain pending but cannot
+    acquire authority here. No evidence is staged, repaired, or resealed.
+    """
+    native = experiment["native_inquiry"]
+    feature = native["relation"].get("feature")
+    if not isinstance(feature, str) or feature not in cursor.get("totals", {}):
+        raise ValueError("native inquiry has an unknown feature for this challenge source")
+    if feature not in public_features(observation):
+        raise ValueError("native inquiry feature is temporarily unavailable in public observation")
+
+    manifest = source_manifest()
+    publication = validate_publication(
+        recorder.publication(), manifest, observe_and_inquire_policy(),
+    )
+    candidate = publication["selected_temporal_candidate"]
+    expected_id = _candidate_id(
+        SOURCE_ID, source_manifest_hash(manifest), publication,
+    )
+    expected_relation = {
+        "kind": candidate["relation"], "feature": candidate["feature"],
+        "action": None, "comparison_status": "not_applicable",
+    }
+    if (
+        native.get("version") != NATIVE_INQUIRY_VERSION
+        or native.get("candidate_id") != expected_id
+        or experiment.get("native_inquiry_candidate_id") != expected_id
+        or native.get("relation") != expected_relation
+        or native.get("objective") != candidate["objective"]
+        or native.get("objective_score") != candidate["objective_score"]
+    ):
+        raise ValueError("native inquiry does not match current challenge source contract")
+
+    refs = native.get("evidence_refs")
+    if (not isinstance(refs, list) or len(refs) != 1
+            or not isinstance(refs[0], str) or not refs[0]):
+        raise ValueError("native inquiry source contract requires one grounding episode")
+    episodes = [
+        row for row in ora_state.get("episodes", [])
+        if isinstance(row, dict) and row.get("id") == refs[0]
+    ]
+    questions = [
+        row for row in ora_state.get("questions", [])
+        if isinstance(row, dict) and row.get("id") == experiment.get("question_id")
+    ]
+    if len(episodes) != 1 or len(questions) != 1:
+        raise ValueError("native inquiry source contract identity is ambiguous or missing")
+    question = questions[0]
+    if (question.get("source") != NATIVE_INQUIRY_SOURCE
+            or question.get("native_inquiry_candidate_id") != expected_id
+            or question.get("native_relation") != expected_relation
+            or question.get("source_evidence_refs") != refs):
+        raise ValueError("native inquiry question does not match source contract")
+    expected_evidence = {
+        "version": NATIVE_EVIDENCE_V2_VERSION,
+        "relation": expected_relation,
+        "observation_refs": publication["observation_refs"],
+        "measurement_kind": "binary_transition_outcomes",
+        "measurement": {
+            "evaluable": candidate["evaluable"],
+            "confirmations": candidate["confirmations"],
+            "refutations": candidate["refutations"],
+        },
+    }
+    # The staging API emits canonical JSON. Exact bytes also reject duplicate
+    # keys and incidental alternative JSON shapes without reinterpreting them.
+    if (episodes[0].get("kind") != "native_inquiry_evidence"
+            or episodes[0].get("content") != json.dumps(expected_evidence, sort_keys=True)):
+        raise ValueError("native inquiry grounding does not match source contract")
 
 
 class ChallengeActionExecutor:
@@ -256,6 +343,7 @@ class ChallengeActionExecutor:
         if cursor.get("source_descriptor_hash") != SOURCE_DESCRIPTOR_HASH:
             raise ValueError("challenge recorder descriptor mismatch")
 
+        _validate_inquiry_source(ora_state, experiment, recorder, cursor, current_observation)
         associations = recorder.action_associations()
         selection = select_epistemic_command(
             current_observation,
@@ -414,6 +502,7 @@ class ChallengeActionExecutor:
             or token.get("recorder_checkpoint_hash") != _digest(cursor)
         ):
             raise ValueError("challenge capability recorder checkpoint is stale")
+        _validate_inquiry_source(ora_state, experiment, recorder, cursor, observation)
         associations = recorder.action_associations()
         relation = experiment["native_inquiry"]["relation"]
         selection = select_epistemic_command(
