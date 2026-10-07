@@ -1,11 +1,12 @@
-# Current-world heartbeat integration (default off)
+# Current-world heartbeat integration and bounded rollout
 
 This is a bounded software rollout lane for the existing stateful planning world.
 It is not activation of a new world, an external actuator, a provider, or a claim
-of successful autonomous science. The ordinary heartbeat remains unchanged unless
-`CURRENT_WORLD_INVESTIGATION` in `growth.yml` is explicitly changed from its
-literal `false` to `true` by a separately reviewed activation commit. No repository
-variable or external setting can enable the dormant path.
+of successful autonomous science. The CLI remains default off. The approved October 7 rollout enables
+`CURRENT_WORLD_INVESTIGATION` in `growth.yml` for at most two owned actions in
+the existing world. No repository variable or external setting enables this path.
+After a terminal null, rejection or the two-action limit, the source-controlled
+gate is returned to `false`; the checkpoint, history and current position remain.
 
 ## Ownership and evidence
 
@@ -161,3 +162,24 @@ raising the observation ceiling does not relax arithmetic or selection semantics
 A sampled first32/last64 export cannot establish full-history admission. A new
 snapshot needs its own raw SHA256 and full check; no enablement follows from a
 synthetic capacity test or corpus row count alone.
+
+## October 7 rollout admission
+
+The full-history read-only check passed at candidate
+`f2d22b6f4918731ee6f5063ca0bbf8b6836d8bf1` against the pinned cycle-6,500
+state above. All 6,329 unique same-world rows were evaluated (32 discovery and
+6,297 later evidence rows), and the raw source SHA256 was unchanged. The
+checkpoint used 767,653 bytes of its 4 MiB limit; the largest serialized rational
+used 244 of the allowed 256 digits.
+
+The result was **null**, with no action executed. Only the south command had
+sufficient explanatory diversity in the frozen discovery prefix, and its
+information score was zero at the observed position `[1, -2]`. This is an honest
+abstention, not evidence of learning benefit. The next natural heartbeat uses
+its fresh actual state and may likewise abstain or reject a changed context. No
+choice, discovery prefix, score or threshold is altered to produce activity.
+
+The exact report is [current-world-readiness-20261007.json](current-world-readiness-20261007.json).
+The [read-only admission run](https://github.com/JeremyHennessy/AgentTest/actions/runs/37631489016)
+used zero world actions. Live receipts will be reported after the bounded rollout;
+this preflight alone does not establish a live action or a durable outcome.
