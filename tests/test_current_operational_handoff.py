@@ -11,6 +11,8 @@ class Links(HTMLParser):
         super().__init__()
         self.links = []
         self.ids = []
+        self.details_depth = 0
+        self.uncollapsed_text = []
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
@@ -18,6 +20,16 @@ class Links(HTMLParser):
             self.links.append(attrs.get("href"))
         if "id" in attrs:
             self.ids.append(attrs["id"])
+        if tag == "details":
+            self.details_depth += 1
+
+    def handle_endtag(self, tag):
+        if tag == "details":
+            self.details_depth -= 1
+
+    def handle_data(self, data):
+        if self.details_depth == 0:
+            self.uncollapsed_text.append(data)
 
 
 class CurrentOperationalHandoffTests(unittest.TestCase):
@@ -25,17 +37,67 @@ class CurrentOperationalHandoffTests(unittest.TestCase):
         page = (ROOT / "index.html").read_text(encoding="utf-8")
         section = page.split('<details id="worldReadiness">', 1)[1].split("</details>", 1)[0]
         for required in (
-            "Live:", "Current-code compatibility:", "Before a new world:",
+            "Live:", "Historical compatibility:", "Before a new world:",
             "Activation:", "separately withheld", "Null results stay visible",
             "separate owner approval", "historical archive",
             "not current live achievements", "422-test compatibility check",
+            "not a test of the new investigation architecture",
+            "Old benchmark plans and the legacy resumption counter are not mandatory gates",
+            "October 7, 2026, 02:05 UTC", "not the latest live cycle",
         ):
             self.assertIn(required, section)
         parsed = Links()
         parsed.feed(page)
         self.assertEqual(len(parsed.ids), len(set(parsed.ids)))
         self.assertIn("https://github.com/JeremyHennessy/AgentTest/pull/213", parsed.links)
+        self.assertIn("https://github.com/JeremyHennessy/AgentTest/blob/3ec6e83b0716ab07046564217ad6a361e4de75dd/docs/retained-evidence-study.md", parsed.links)
         self.assertIn("https://github.com/JeremyHennessy/AgentTest/blob/main/docs/CURRENT_OPERATIONS.md", parsed.links)
+        self.assertNotIn("October 6, 2026, 23:55 UTC", section)
+
+    def test_redesign_limits_and_legacy_diagnostics_are_visible_when_collapsed(self):
+        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        parsed = Links()
+        parsed.feed(page.split("<script>", 1)[0])
+        visible = "".join(parsed.uncollapsed_text)
+        for required in (
+            "Phase 42 redesign:", "copied-only work in progress",
+            "not yet tested or live", "new-world readiness are not established",
+            "Existing agenda and resumption counters remain legacy diagnostics",
+            "not redesign acceptance gates",
+            "Phase 42 agenda status describes the legacy mechanism",
+        ):
+            self.assertIn(required, visible)
+
+    def test_frozen_copied_study_does_not_claim_benefit_or_native_action_ownership(self):
+        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        section = page.split('<details id="worldReadiness">', 1)[1].split("</details>", 1)[0]
+        for required in (
+            "Frozen negative study:", "historical cycle 4599", "32/32",
+            "0/8 default-flag pairs", "0/8 production-flag pairs",
+            "All 32 challenge actions were harness-scheduled", "4/32",
+            "5/5 eligible matched contexts", "alternate commands were not executed",
+            "zero genuine evidence-backed resumptions", "selector influence, not benefit",
+            "source-general causal influence separately from predictive benefit",
+        ):
+            self.assertIn(required, section)
+
+    def test_dynamic_phase42_labels_identify_the_historical_gate(self):
+        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        agenda_card = page.split("<h2>Phase 42 · persistent inquiry agenda", 1)[1].split("</article>", 1)[0]
+        for required in ("legacy diagnostics", "counters retain their historical definitions", "not evidence of beneficial learning"):
+            self.assertIn(required, agenda_card)
+        for identifier in ("inquiryFocusStatus", "agendaStatus"):
+            status = re.search(r'el\("' + identifier + r'"\)\.textContent=([^;]+);', page).group(1)
+            labels = re.findall(r'"([^"]*)"', status)
+            self.assertTrue(labels)
+            self.assertTrue(all("legacy" in label for label in labels))
+            self.assertNotIn("natural gate", status)
+        milestone = page.split('if(currentPhase>=42){', 1)[1].split('}else if(currentPhase>=41', 1)[0]
+        self.assertIn("historical gate", milestone)
+        self.assertIn("not a new-world readiness requirement", milestone)
+        self.assertIn("does not establish beneficial learning", milestone)
+        self.assertNotIn("Phase 42 remains open", milestone)
+        self.assertNotIn("natural gate", milestone)
 
     def test_handoff_carries_dated_evidence_and_unmet_gates(self):
         handoff = (ROOT / "docs/CURRENT_OPERATIONS.md").read_text(encoding="utf-8")
