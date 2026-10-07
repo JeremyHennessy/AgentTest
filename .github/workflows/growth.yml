@@ -1,7 +1,13 @@
 name: autonomous-growth-cycle
+run-name: heartbeat ${{ inputs.request_id }}
 
 on:
   workflow_dispatch:
+    inputs:
+      request_id:
+        description: "Stable transport ticket from the heartbeat controller"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -18,7 +24,7 @@ jobs:
     env:
       # Bounded rollout ended in a preserved null; ordinary planning resumes.
       CURRENT_WORLD_INVESTIGATION: 'false'
-      HEARTBEAT_REQUEST_ID: heartbeat:${{ github.run_id }}
+      HEARTBEAT_REQUEST_ID: ${{ inputs.request_id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,43 +50,54 @@ jobs:
           python -I -B "$guard_path" verify-ci --source-sha "$GITHUB_SHA" --repository "$GITHUB_REPOSITORY"
           echo "VERIFIED_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
           echo "GROWTH_SOURCE_GUARD=$guard_path" >> "$GITHUB_ENV"
+          transport_path="$(mktemp "$RUNNER_TEMP/heartbeat-transport-XXXXXX.py")"
+          git show "$GITHUB_SHA:scripts/heartbeat_transport.py" > "$transport_path"
+          echo "GROWTH_TRANSPORT=$transport_path" >> "$GITHUB_ENV"
 
-      - name: Prepare persistent growth branch
+      - name: Fetch durable state before choosing source
         shell: bash
         run: |
           git config user.name "agenttest-growth"
           git config user.email "agenttest-growth@users.noreply.github.com"
-          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth || true
-          if git show-ref --verify --quiet refs/remotes/origin/autonomous/growth; then
-            git checkout -B autonomous/growth origin/autonomous/growth
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          git checkout -B autonomous/growth origin/autonomous/growth
+          echo "HEARTBEAT_REMOTE_BASE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          result="$(python -I -B "$GROWTH_TRANSPORT" inspect --root "$GITHUB_WORKSPACE" --request-id "$HEARTBEAT_REQUEST_ID")"
+          disposition="$(python -c 'import json,sys; r=json.load(sys.stdin); q=r["request_status"]; p=r["status"] == "pending"; assert q != "abandoned", "abandoned ticket"; assert not p or q in ("pending", "completed"), "different heartbeat pending"; print("completed" if q == "completed" else "pending" if p else "new")' <<< "$result")"
+          echo "HEARTBEAT_PRECHECK=$disposition" >> "$GITHUB_ENV"
+          if [ "$disposition" = "new" ]; then
             git merge --no-edit "$VERIFIED_SOURCE_SHA"
-          else
-            git checkout -b autonomous/growth "$VERIFIED_SOURCE_SHA"
           fi
 
       - name: Verify exact source before claim
+        if: env.HEARTBEAT_PRECHECK != 'completed'
         run: python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA" --require-clean
 
-      - name: Claim bounded current-world heartbeat remotely
+      - name: Claim heartbeat remotely before computation
         id: heartbeat_claim
-        if: env.CURRENT_WORLD_INVESTIGATION == 'true'
         shell: bash
         run: |
-          result="$(PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B scripts/heartbeat_request_claim.py claim --request-id "$HEARTBEAT_REQUEST_ID")"
+          if [ "$HEARTBEAT_PRECHECK" = "completed" ]; then
+            echo "status=already_completed" >> "$GITHUB_OUTPUT"
+            echo "This ticket already has a verified durable receipt; Core will not run."
+            exit 0
+          fi
+          mode=ordinary
+          if [ "$CURRENT_WORLD_INVESTIGATION" = "true" ]; then
+            mode=current-world-investigation
+          fi
+          result="$(python -I -B "$GROWTH_TRANSPORT" claim --root "$GITHUB_WORKSPACE" --request-id "$HEARTBEAT_REQUEST_ID" --source-sha "$VERIFIED_SOURCE_SHA" --run-id "$GITHUB_RUN_ID" --mode "$mode")"
           status="$(python -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<< "$result")"
           echo "status=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" = "already_completed" ]; then
-            echo "This request already has one preserved result; no Core cycle will run."
             exit 0
           fi
           if [ "$status" = "created" ]; then
             python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
-            git add state/organism.json
-            git commit -m "Claim bounded current-world heartbeat"
-            # A failed/uncertain push stops here. A fresh rerun refetches and
-            # distinguishes completed, identical pending, or conflicting state.
+            git add state/heartbeat_operation.json state/organism.json
+            git commit -m "Claim autonomous heartbeat request" -m "Heartbeat-Request: $HEARTBEAT_REQUEST_ID"
             python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
-            git push origin autonomous/growth
+            python -I -B "$GROWTH_TRANSPORT" publish --root "$GITHUB_WORKSPACE" --candidate "$(git rev-parse HEAD)" --expected-parent "$HEARTBEAT_REMOTE_BASE"
           fi
           git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
           claim_commit="$(git rev-parse HEAD)"
@@ -92,11 +109,7 @@ jobs:
         shell: bash
         run: |
           python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA" --require-clean
-          current_world_args=()
-          if [ "$CURRENT_WORLD_INVESTIGATION" = "true" ]; then
-            current_world_args=(--current-world-investigation --heartbeat-request-id "$HEARTBEAT_REQUEST_ID" --heartbeat-claim-commit "$HEARTBEAT_CLAIM_COMMIT")
-          fi
-          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B -m agenttest cycle --self-observe --grounded-experiments-only --planning-lab --stimulus "autonomous heartbeat" "${current_world_args[@]}"
+          python -I -B "$GROWTH_TRANSPORT" cycle --root "$GITHUB_WORKSPACE" --request-id "$HEARTBEAT_REQUEST_ID" --source-sha "$VERIFIED_SOURCE_SHA" --claim-commit "$HEARTBEAT_CLAIM_COMMIT"
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose-change
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
@@ -159,24 +172,16 @@ jobs:
         if: env.CURRENT_WORLD_INVESTIGATION == 'true' && steps.heartbeat_claim.outputs.status != 'already_completed'
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B scripts/heartbeat_request_claim.py verify --request-id "$HEARTBEAT_REQUEST_ID"
 
-      - name: Preserve cycle
+      - name: Preserve the computed cycle by exact commit identity
         if: steps.heartbeat_claim.outputs.status != 'already_completed'
         shell: bash
         run: |
           python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
+          python -I -B "$GROWTH_TRANSPORT" complete --root "$GITHUB_WORKSPACE" --request-id "$HEARTBEAT_REQUEST_ID" --source-sha "$VERIFIED_SOURCE_SHA" --claim-commit "$HEARTBEAT_CLAIM_COMMIT"
           git add state/
-          if git diff --cached --quiet; then
-            echo "No state change to preserve."
-            exit 0
-          fi
-          git commit -m "Record autonomous growth cycle"
+          git commit -m "Record autonomous growth cycle" -m "Heartbeat-Request: $HEARTBEAT_REQUEST_ID"
           python -I -B "$GROWTH_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
-          git push origin autonomous/growth
-          if [ "$CURRENT_WORLD_INVESTIGATION" = "true" ]; then
-            git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
-            test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/autonomous/growth)"
-            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B scripts/heartbeat_request_claim.py verify --request-id "$HEARTBEAT_REQUEST_ID"
-          fi
+          python -I -B "$GROWTH_TRANSPORT" publish --root "$GITHUB_WORKSPACE" --candidate "$(git rev-parse HEAD)" --expected-parent "$HEARTBEAT_CLAIM_COMMIT"
 
       - name: Open inspection PR if needed
         if: steps.heartbeat_claim.outputs.status != 'already_completed'
@@ -190,3 +195,4 @@ jobs:
           else
             echo "Growth PR #$EXISTING already open."
           fi
+

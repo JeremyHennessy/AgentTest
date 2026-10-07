@@ -19,7 +19,9 @@ class StateWriterConcurrencyTests(unittest.TestCase):
         writers = {}
         for path in WORKFLOWS.glob('*.yml'):
             text = path.read_text(encoding='utf-8')
-            if re.search(r'git\s+push\s+origin\s+autonomous/growth(?:\s|$)', text):
+            if (re.search(r'git\s+push\s+origin\s+autonomous/growth(?:\s|$)', text)
+                    or '"$GROWTH_TRANSPORT" publish' in text
+                    or '"$WRITER_TRANSPORT" publish' in text):
                 writers[path.name] = text
         self.assertEqual(set(writers), {'growth.yml', 'interact.yml', 'reconcile.yml'})
         for name, text in writers.items():
@@ -40,7 +42,8 @@ class StateWriterConcurrencyTests(unittest.TestCase):
         self.assertEqual(concurrency(text)['group'], 'agenttest-heartbeat-controller-v2')
         self.assertNotEqual(concurrency(text)['group'], 'agenttest-autonomous-growth-v2')
         self.assertIn('Wait for reconciliation lane', text)
-        self.assertIn('gh run watch', text)
+        self.assertIn('scripts/heartbeat_controller.py controller', text)
+        self.assertNotIn('gh run watch', text)
         self.assertNotIn('git push origin autonomous/growth', text)
 
     def test_reconciliation_keeps_verified_main_event_guard(self):
