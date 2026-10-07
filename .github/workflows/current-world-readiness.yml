@@ -2,7 +2,7 @@ name: Current-world admission (read only)
 
 on:
   push:
-    branches: [phase42/current-world-executive-20261007]
+    branches: [phase42/observed-discovery-revision-20261007]
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
-          ref: 3449926e336cda1194a98a509990b03bfea2151b
+          ref: 72c234c2aeef546e25689a86bbf8c0911595ab02
           path: source
           fetch-depth: 1
           sparse-checkout: state/organism.json
@@ -36,10 +36,30 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C candidate rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git -C source rev-parse HEAD)" = "3449926e336cda1194a98a509990b03bfea2151b"
-          test "$(git -C source rev-parse HEAD:state/organism.json)" = "f91515038ddf5b7479152147457af6e21828da92"
+          test "$(git -C source rev-parse HEAD)" = "72c234c2aeef546e25689a86bbf8c0911595ab02"
+          test "$(git -C source rev-parse HEAD:state/organism.json)" = "5392490470aed95339d0ca63ffdd17f6ff6b8bf7"
           mkdir -p admission
-          python -B candidate/scripts/current_world_readiness.py --state source/state/organism.json --expected-sha256 4f65c06cf6df61edb2d2a1aaa65a6dab14da2de8d2c1075580fb931bf37039e2 --output admission/current-world-readiness.json 2>&1 | tee admission/readiness.log
+          test "$(git -C source hash-object state/organism.json)" = "5392490470aed95339d0ca63ffdd17f6ff6b8bf7"
+          read -r readiness_state_sha _ < <(sha256sum source/state/organism.json)
+          admission_status=0
+          python -B candidate/scripts/current_world_readiness.py --state source/state/organism.json --expected-sha256 "$readiness_state_sha" --output admission/current-world-readiness.json 2>&1 | tee admission/readiness.log || admission_status=$?
+          test "$(git -C source hash-object state/organism.json)" = "5392490470aed95339d0ca63ffdd17f6ff6b8bf7"
+          python -B - <<'PYMETA'
+          import json, os
+          from pathlib import Path
+          report = json.loads(Path('admission/current-world-readiness.json').read_text())
+          assert report['source_unchanged'] is True
+          assert report['state_bytes'] == 70071058
+          original = report['old_case_preservation'][0]
+          assert original['case_hash_before'] == 'b5801fba818f40ede1f811ec75dc20bd881a031cb64336abb566c777b5e88612'
+          assert original['canonical_body_unchanged'] is True
+          metadata = {'source_commit': '72c234c2aeef546e25689a86bbf8c0911595ab02',
+                      'source_git_blob': '5392490470aed95339d0ca63ffdd17f6ff6b8bf7',
+                      'source_sha256': report['state_sha256'], 'candidate_commit': os.environ['GITHUB_SHA'],
+                      'raw_git_blob_verified_before_and_after': True, 'original_null_case_preserved': True}
+          Path('admission/source-provenance.json').write_text(json.dumps(metadata, indent=2, sort_keys=True) + '\n')
+          PYMETA
+          exit "$admission_status"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
