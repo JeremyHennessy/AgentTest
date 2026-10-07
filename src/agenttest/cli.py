@@ -67,6 +67,10 @@ def main() -> None:
             "This grants no filesystem, network, shell, or external authority."
         ),
     )
+    cycle.add_argument("--current-world-investigation", action="store_true",
+                       help="Default off: replace planning with a bounded owned investigation; requires a remote heartbeat claim.")
+    cycle.add_argument("--heartbeat-request-id", default=None)
+    cycle.add_argument("--heartbeat-claim-commit", default=None)
     cycle.add_argument("--root", default=".", help="Repository root for self-observation.")
     cycle.add_argument(
         "--copy-public-observations", default=None,
@@ -144,6 +148,9 @@ def main() -> None:
                 strict_experiment_admission=args.grounded_experiments_only,
                 action_lab=args.action_lab,
                 planning_lab=args.planning_lab,
+                current_world_investigation=args.current_world_investigation,
+                heartbeat_request_id=args.heartbeat_request_id,
+                heartbeat_claim_commit=args.heartbeat_claim_commit,
                 copy_public_observations=args.copy_public_observations,
                 copy_early_public_admission=args.copy_early_public_admission,
                 copy_frontier_grounded_handoff=args.copy_frontier_grounded_handoff,

@@ -19,7 +19,7 @@ RECIPE = json.loads(Path(sys.argv[3]).read_bytes())
 RESULTS = {}
 COUNTS = {}
 WORLD_FILE = str(API / "experiments/open_object_world_challenge.py")
-POLICY_FILE = str(API / "experiments/grounded_policy_v2/policy.py")
+POLICY_FILE = str(API / "src/agenttest/grounded_policy/policy.py")
 EXEC_FILE = str(API / "experiments/grounded_policy_v2/executive.py")
 
 

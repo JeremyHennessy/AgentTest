@@ -15,6 +15,10 @@ concurrency:
 jobs:
   grow:
     runs-on: ubuntu-latest
+    env:
+      # Source-controlled dormant gate. A separate reviewed commit enables it.
+      CURRENT_WORLD_INVESTIGATION: 'false'
+      HEARTBEAT_REQUEST_ID: heartbeat:${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,10 +42,39 @@ jobs:
             git checkout -b autonomous/growth origin/main
           fi
 
-      - name: Observe and run one autonomous cycle
+      - name: Claim bounded current-world heartbeat remotely
+        id: heartbeat_claim
+        if: env.CURRENT_WORLD_INVESTIGATION == 'true'
         shell: bash
         run: |
-          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest cycle --self-observe --grounded-experiments-only --planning-lab --stimulus "autonomous heartbeat"
+          result="$(PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B scripts/heartbeat_request_claim.py claim --request-id "$HEARTBEAT_REQUEST_ID")"
+          status="$(python -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<< "$result")"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" = "already_completed" ]; then
+            echo "This request already has one preserved result; no Core cycle will run."
+            exit 0
+          fi
+          if [ "$status" = "created" ]; then
+            git add state/organism.json
+            git commit -m "Claim bounded current-world heartbeat"
+            # A failed/uncertain push stops here. A fresh rerun refetches and
+            # distinguishes completed, identical pending, or conflicting state.
+            git push origin autonomous/growth
+          fi
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          claim_commit="$(git rev-parse HEAD)"
+          test "$claim_commit" = "$(git rev-parse refs/remotes/origin/autonomous/growth)"
+          echo "HEARTBEAT_CLAIM_COMMIT=$claim_commit" >> "$GITHUB_ENV"
+
+      - name: Observe and run one autonomous cycle
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
+        shell: bash
+        run: |
+          current_world_args=()
+          if [ "$CURRENT_WORLD_INVESTIGATION" = "true" ]; then
+            current_world_args=(--current-world-investigation --heartbeat-request-id "$HEARTBEAT_REQUEST_ID" --heartbeat-claim-commit "$HEARTBEAT_CLAIM_COMMIT")
+          fi
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B -m agenttest cycle --self-observe --grounded-experiments-only --planning-lab --stimulus "autonomous heartbeat" "${current_world_args[@]}"
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest propose-change
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
@@ -49,6 +82,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m agenttest review-change
 
       - name: Measure experiment design health
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
         shell: bash
         run: |
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
@@ -57,6 +91,7 @@ jobs:
               --output state/experiment_design_diagnostic.json
 
       - name: Measure blocked attention health
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
         shell: bash
         run: |
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
@@ -65,9 +100,11 @@ jobs:
               --output state/blocked_attention_diagnostic.json
 
       - name: Verify Phase 42 live-state integrity
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/phase42_integrity_eval.py --state state/organism.json
 
       - name: Measure Phase 42 resumption opportunities
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
         shell: bash
         run: |
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
@@ -76,12 +113,15 @@ jobs:
               --output state/phase42_resumption_opportunities.json
 
       - name: Verify invariants
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 
       - name: Verify behavioral preservation
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
         run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/preservation_eval.py --strict --output /tmp/growth-preservation.json
 
       - name: Enforce journal branch scope
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
         shell: bash
         run: |
           unexpected="$(
@@ -97,7 +137,12 @@ jobs:
             exit 1
           fi
 
+      - name: Verify bounded heartbeat commit coherence
+        if: env.CURRENT_WORLD_INVESTIGATION == 'true' && steps.heartbeat_claim.outputs.status != 'already_completed'
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B scripts/heartbeat_request_claim.py verify --request-id "$HEARTBEAT_REQUEST_ID"
+
       - name: Preserve cycle
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
         shell: bash
         run: |
           git add state/
@@ -107,8 +152,14 @@ jobs:
           fi
           git commit -m "Record autonomous growth cycle"
           git push origin autonomous/growth
+          if [ "$CURRENT_WORLD_INVESTIGATION" = "true" ]; then
+            git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+            test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/autonomous/growth)"
+            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B scripts/heartbeat_request_claim.py verify --request-id "$HEARTBEAT_REQUEST_ID"
+          fi
 
       - name: Open inspection PR if needed
+        if: steps.heartbeat_claim.outputs.status != 'already_completed'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash

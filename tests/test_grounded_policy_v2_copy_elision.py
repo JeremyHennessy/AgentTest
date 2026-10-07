@@ -33,7 +33,7 @@ class CopyElisionProof(unittest.TestCase):
         text=executive.read_text()
         assert text.count('        prefix=dict(state)\n')==1
         executive.write_text(text.replace('        prefix=dict(state)\n','        prefix=deepcopy(state)\n'))
-        primitives=cls.root/'baseline/experiments/grounded_policy_v2/primitives.py'
+        primitives=cls.root/'baseline/src/agenttest/grounded_policy/primitives.py'
         text=primitives.read_text()
         optimized='def encoded(value):\n    envelope = {k: v for k, v in value.items() if k != "seal"}\n    envelope["seal"] = digest(envelope)\n    return canonical(envelope) + b"\\n"\n'
         assert text.count(optimized)==1
@@ -57,9 +57,10 @@ class CopyElisionProof(unittest.TestCase):
         for path in (self.root/'baseline').rglob('*.py'):
             relative=path.relative_to(self.root/'baseline')
             if path.read_bytes()!=(self.root/'candidate'/relative).read_bytes():changed.append(str(relative))
-        self.assertEqual(sorted(changed),['experiments/grounded_policy_v2/executive.py','experiments/grounded_policy_v2/primitives.py'])
+        self.assertEqual(sorted(changed),['experiments/grounded_policy_v2/executive.py','src/agenttest/grounded_policy/primitives.py'])
         def function(variant,file,name):
-            module=ast.parse((self.root/variant/'experiments/grounded_policy_v2'/file).read_text())
+            package = 'src/agenttest/grounded_policy' if file == 'primitives.py' else 'experiments/grounded_policy_v2'
+            module=ast.parse((self.root/variant/package/file).read_text())
             return ast.dump(next(node for node in module.body if isinstance(node,ast.FunctionDef) and node.name==name))
         for file,name in (('primitives.py','seal'),('executive.py','_stage_selection')):
             self.assertEqual(function('baseline',file,name),function('candidate',file,name))
