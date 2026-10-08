@@ -1,0 +1,82 @@
+name: ora2-matched-inherited-continuity-study001
+
+# One prospectively registered matched inherited-goal comparison.
+# Never touches original live state, and does not enable persistent pilot.
+on:
+  push:
+    branches:
+      - ora2/continuity-matched-study001-20261008
+    paths:
+      - '.github/workflows/ora2-matched-inherited-continuity-study001.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ora2-matched-inherited-continuity-study001-once
+  cancel-in-progress: false
+
+jobs:
+  genuine-goal-pairs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONPATH: src:.
+      PYTHONDONTWRITEBYTECODE: '1'
+      AGENTTEST_MODEL: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Check frozen protocol and original source
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/ora2/continuity-matched-study001-20261008'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git hash-object docs/ORA2_MATCHED_INHERITED_CONTINUITY_STUDY001.md)" = '0a9054274a25a4eeb0f472c86684d43285393b1b'
+          test "$(git rev-parse HEAD:src)" = '9b0f880af84a0b1b69fd6aa9009ab738acd7dfad'
+          git diff --exit-code HEAD -- src/ state/
+      - name: Synthetic-only continuity preflight
+        run: |
+          python -B -m unittest discover -s tests -p 'test_matched_continuity_study001.py' -v
+          python -B -m unittest discover -s tests -p 'test_ora2_inherited_origin.py' -v
+      - name: Retrieve sealed authentic cycle-1803 copied origin
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/11521061953/zip" > "$RUNNER_TEMP/phase41-planner-only.zip"
+          echo "859df0d4b24abf4b856b1c66eb19782361e980dc749b5a3fc5878e9dd65ab3b4  $RUNNER_TEMP/phase41-planner-only.zip" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/cycle1803" "$RUNNER_TEMP/matched-databases"
+          python -B -m ora2.reconstruct_inherited_checkpoint \
+            --artifact "$RUNNER_TEMP/phase41-planner-only.zip" \
+            --output-directory "$RUNNER_TEMP/cycle1803"
+      - name: Execute ONE registered matched inherited-goal comparison
+        shell: bash
+        run: |
+          python -B -m ora2.matched_continuity_study001 \
+            --root "$GITHUB_WORKSPACE" \
+            --snapshot "$RUNNER_TEMP/cycle1803/study002_snapshot.json" \
+            --journal "$RUNNER_TEMP/cycle1803/study002_journal.jsonl" \
+            --database-dir "$RUNNER_TEMP/matched-databases" \
+            --report "$RUNNER_TEMP/matched-continuity-study001.json" \
+            --enable-registered-study > "$RUNNER_TEMP/matched-continuity-summary.json"
+          python -B -c "import json,os,pathlib; d=json.loads(pathlib.Path(os.environ['RUNNER_TEMP'],'matched-continuity-study001.json').read_text()); assert d['copied_cycles']==32 and len(d['pairs'])==4 and len(d['arms'])==8 and d['original_live_ora_actions']==0 and d['status'] in ('VALID_CONTINUITY_POSITIVE','VALID_CONTINUITY_NEGATIVE')"
+          git diff --exit-code HEAD -- src/ state/
+      - name: Archive exact study receipts and copied session databases
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ora2-matched-inherited-continuity-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/matched-continuity-study001.json
+            ${{ runner.temp }}/matched-continuity-summary.json
+            ${{ runner.temp }}/matched-databases/*.sqlite
+          retention-days: 90
