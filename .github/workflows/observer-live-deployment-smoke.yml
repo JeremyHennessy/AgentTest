@@ -63,7 +63,9 @@ jobs:
                   page.on('pageerror',lambda e:errors.append(str(e)))
                   response=page.goto('https://jeremyhennessy.github.io/AgentTest/',wait_until='domcontentloaded',timeout=60000)
                   page.locator('#tab-overview').wait_for(timeout=30000)
+                  page.wait_for_function("document.getElementById('sync-indicator').textContent.includes('Sources checked') || document.getElementById('sync-indicator').textContent.includes('unavailable')",timeout=30000)
                   assert response.status==200
+                  assert page.locator('#overview-heartbeat').inner_text() not in ('—','Unavailable')
                   assert 'Question the evidence.' in page.locator('h1').first.inner_text()
                   assert page.locator('[role=tab]').count()==3
                   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
