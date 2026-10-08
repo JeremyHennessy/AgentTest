@@ -65,9 +65,8 @@ def reconstruct(artifact: Path, directory: Path) -> dict:
         raise ProtocolError("original Phase41 inheritance differs")
     journal = bytearray(initial_journal)
     prior_checksum = None
-    for number, request, body, prior, checksum in records:
-        if (number != len(journal.splitlines()) - len(initial_journal.splitlines()) + 1
-                and number < 1):
+    for expected, (number, request, body, prior, checksum) in enumerate(records, 1):
+        if number != expected:
             raise ProtocolError("invalid event counter")
         if (prior_checksum is not None and prior != prior_checksum or
                 sha((prior + "\n" + body).encode()) != checksum):
