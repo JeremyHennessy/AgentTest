@@ -75,6 +75,25 @@ class AdaptiveChoiceTests(unittest.TestCase):
                          [expected[pos] for pos in sorted(expected)])
         self.assertGreater(p(f['distributions']['exact_context'],(0,0)),0)
 
+    def test_existing_hierarchical_predictor_agrees_on_each_location_probability(self):
+        from ora2.exception_memory import propose_from_history
+        events=[
+            example((0,0),'opaque',(1,0),1),
+            example((1,0),'opaque',(2,0),2),
+            example((-1,0),'opaque',(-1,0),3,True),
+            example((-1,0),'opaque',(-1,0),4,True),
+        ]
+        s=AdaptiveModel()
+        for row in events:
+            s.preview(row['before'], row['action'])
+            s.observe(row)
+        incremental=s.preview((-1,0),'opaque')['distributions']['local_exception']
+        frozen=propose_from_history(events,(-1,0),'opaque')['probabilities']
+        self.assertEqual([x['after'] for x in incremental],
+                         [x['after'] for x in frozen])
+        for actual, expected in zip(incremental, frozen):
+            self.assertAlmostEqual(actual['p'],expected['probability'],places=12)
+
     def test_local_exception_hierarchy_retains_certain_global_prior(self):
         s=AdaptiveModel()
         events=[example((0,0),'a',(1,0),1),example((1,0),'a',(2,0),2),
