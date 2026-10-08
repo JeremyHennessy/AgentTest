@@ -44,8 +44,16 @@ class ObserverOverviewTests(unittest.TestCase):
         for phrase in ['Recorded copied experiment · not a live pilot','Learner-selected actions',
                        'Planner-selected transitions','Live actions in this test',
                        'The test scheduled the opportunity. The learner chose the command.',
-                       'A passing old test does not verify the correction.']:
+                       'The goal-arrival correction was verified and merged into Ora 2.']:
             self.assertIn(phrase,self.source)
+    def test_completed_timing_result_does_not_inherit_selector_success(self):
+        for phrase in ('id="timing-result"', 'Pilot screen not met.', '1 / 4',
+                       '0.0021 bits per case worse', 'no initially active goals',
+                       '6049907122', '13 / 16', 'goal-arrival correction was verified'):
+            self.assertIn(phrase, self.source)
+        self.assertNotIn('Fixed comparison still to run.', self.source)
+        self.assertNotIn('Proposed, not implemented.', self.source)
+
     def test_negative_results_and_real_source_links_remain_visible(self):
         for phrase in ['Three comparisons favored random exploration.','Longer recent history added no measurable benefit.',
                        '38.9 versus 23.8']:
