@@ -18,6 +18,9 @@ from .baseline import (STATE_BLOB, JOURNAL_BLOB, WORLD, blob_id, read_origin,
 from .learner import Config, ProtocolError, CapacityError, canonical
 from .lifecycle import MODE, source_identity, forecast_menu, run_cycle, learn_cycle, sha, MAX_SNAPSHOT
 from .storage import encode
+from .inherited_origin import (PROFILE as STUDY002_PROFILE, PINS as STUDY002_PINS,
+                               read as read_study002_origin, validate as validate_study002_origin,
+                               verify_metadata as verify_study002_metadata)
 
 OWNED_MODE = 'ora2-phase41-owned-cycle-v1'
 TIMED_MODE = 'ora2-phase41-timed-cycle-v1'
@@ -44,7 +47,7 @@ class LifecycleSession:
             raise ProtocolError('lifecycle database is corrupt')
 
     @classmethod
-    def create(cls, path, root, snapshot, journal, *, enabled=False, seed=0, cycle_limit=8, allow_ora2=False, timing_policy='manual'):
+    def create(cls, path, root, snapshot, journal, *, enabled=False, seed=0, cycle_limit=8, allow_ora2=False, timing_policy='manual', origin_profile=None):
         if enabled is not True or type(cycle_limit) is not int or not 1 <= cycle_limit <= 64:
             raise ProtocolError('explicit isolated-copy enablement and 1..64 cycles required')
         if type(allow_ora2) is not bool:
@@ -59,7 +62,12 @@ class LifecycleSession:
         # No database anywhere inside the source checkout, including its live state.
         if target.is_relative_to(root) or target in {Path(snapshot).resolve(), Path(journal).resolve()}:
             raise ProtocolError('lifecycle database must be outside the source checkout and inputs')
-        raw, history, origin = read_origin(Path(snapshot), Path(journal))
+        if origin_profile is None:
+            raw, history, origin = read_origin(Path(snapshot), Path(journal))
+        elif origin_profile == STUDY002_PROFILE and allow_ora2 is True and timing_policy == 'manual':
+            raw, history, origin = read_study002_origin(Path(snapshot), Path(journal))
+        else:
+            raise ProtocolError('unapproved copied origin profile or owner policy')
         code = source_identity(root)
         config = Config(max_steps=len(origin['rows']) + cycle_limit)
         seeded_agent(origin, seed=seed, config=config)
@@ -68,6 +76,10 @@ class LifecycleSession:
         if allow_ora2:
             meta['allow_ora2'] = True
             meta['mode'] = OWNED_MODE
+        if origin_profile == STUDY002_PROFILE:
+            meta.update(STUDY002_PINS)
+            meta['state_blob'] = STUDY002_PINS['origin_snapshot_git_blob']
+            meta['journal_blob'] = STUDY002_PINS['origin_journal_git_blob']
         if timing_policy != 'manual':
             meta.update(mode=TIMED_MODE, timing_policy=timing_policy)
         text = encode(meta)
@@ -106,9 +118,22 @@ class LifecycleSession:
             raise ProtocolError('missing original archive')
         text, raw, journal = saved
         meta = strict_json(text)
-        if (meta.get('mode') not in (MODE, OWNED_MODE, TIMED_MODE) or meta.get('code') != source_identity(self.root) or
-                meta.get('state_blob') != STATE_BLOB or meta.get('journal_blob') != JOURNAL_BLOB or
-                blob_id(raw) != STATE_BLOB or blob_id(journal) != JOURNAL_BLOB):
+        if meta.get('origin_profile') is None:
+            pinned_origin = (meta.get('state_blob') == STATE_BLOB and
+                             meta.get('journal_blob') == JOURNAL_BLOB and
+                             blob_id(raw) == STATE_BLOB and blob_id(journal) == JOURNAL_BLOB)
+        elif meta.get('origin_profile') == STUDY002_PROFILE:
+            verify_study002_metadata(meta)
+            validate_study002_origin(raw, journal)
+            pinned_origin = (meta.get('state_blob') == STUDY002_PINS['origin_snapshot_git_blob'] and
+                             meta.get('journal_blob') == STUDY002_PINS['origin_journal_git_blob'] and
+                             meta.get('mode') == OWNED_MODE and
+                             meta.get('allow_ora2') is True and
+                             meta.get('timing_policy', 'manual') == 'manual')
+        else:
+            raise ProtocolError('unknown retained origin profile')
+        if (meta.get('mode') not in (MODE, OWNED_MODE, TIMED_MODE) or
+                meta.get('code') != source_identity(self.root) or not pinned_origin):
             raise ProtocolError('lifecycle origin or source mismatch')
         if type(meta.get('allow_ora2', False)) is not bool:
             raise ProtocolError('invalid action ownership authority')
@@ -224,6 +249,8 @@ class LifecycleSession:
                       'ora2_choices': len(state['planning_lab'].get('ora2_executions', [])),
                       'allow_ora2': meta.get('allow_ora2', False),
                       'logical_bytes': logical + len(raw), 'head': previous, 'live_actions': 0}
+            if meta.get('origin_profile') is not None:
+                report['origin_profile'] = meta['origin_profile']
             if meta['mode'] == TIMED_MODE:
                 report.update(action_owner='state_based_boundary_rule', timing_policy=meta['timing_policy'])
             self.db.execute('COMMIT')
@@ -298,11 +325,18 @@ def main():
     parser.add_argument('--allow-ora2', action='store_true')
     parser.add_argument('--owner', choices=('phase41', 'ora2', 'auto'), default='phase41')
     parser.add_argument('--timing-policy', choices=('manual', 'progress', 'random', 'planner'), default='manual')
+    parser.add_argument('--origin-profile', choices=(STUDY002_PROFILE,))
+    parser.add_argument('--snapshot')
+    parser.add_argument('--journal')
     args = parser.parse_args()
     root = Path(args.root).resolve()
     if args.command == 'init':
-        with LifecycleSession.create(args.database, root, root / 'state/organism.json', root / 'state/journal.jsonl',
-                                     enabled=args.isolated_copy, seed=args.seed, cycle_limit=args.cycle_limit, allow_ora2=args.allow_ora2, timing_policy=args.timing_policy) as session:
+        snapshot = Path(args.snapshot) if args.snapshot else root / 'state/organism.json'
+        journal = Path(args.journal) if args.journal else root / 'state/journal.jsonl'
+        with LifecycleSession.create(args.database, root, snapshot, journal,
+                                     enabled=args.isolated_copy, seed=args.seed, cycle_limit=args.cycle_limit,
+                                     allow_ora2=args.allow_ora2, timing_policy=args.timing_policy,
+                                     origin_profile=args.origin_profile) as session:
             print(json.dumps(session.status(), sort_keys=True))
     else:
         with LifecycleSession(args.database, root) as session:
