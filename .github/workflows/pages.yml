@@ -7,6 +7,7 @@ on:
     paths:
       - index.html
       - observer.html
+      - legacy.html
       - observer.css
       - observer.js
       - .github/workflows/pages.yml
@@ -36,11 +37,16 @@ jobs:
         shell: bash
         run: |
           mkdir -p _site
-          cp observer.html _site/index.html
+          # Branch-source Pages and Actions Pages must serve the same homepage.
+          test "$(git rev-parse HEAD:legacy.html)" = 'f72df3ce6ec3e5be24eadb24764ba1864acc4e03'
+          cmp index.html observer.html
+          cp index.html _site/index.html
+          cp observer.html _site/observer.html
           cp observer.css observer.js _site/
-          cp index.html _site/legacy.html
-          cmp observer.html _site/index.html
-          cmp index.html _site/legacy.html
+          cp legacy.html _site/legacy.html
+          cmp index.html _site/index.html
+          cmp observer.html _site/observer.html
+          cmp legacy.html _site/legacy.html
           cmp observer.css _site/observer.css
           cmp observer.js _site/observer.js
           sha256sum _site/index.html _site/observer.css _site/observer.js _site/legacy.html
