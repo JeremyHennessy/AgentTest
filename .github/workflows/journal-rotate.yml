@@ -1,8 +1,13 @@
 name: lossless-original-journal-rotation
 
-# DRAFT ONLY. Never run until the entire source candidate passes the main CI,
-# and integration with exact heartbeat semantics is independently reviewed.
+# A completed, reviewed, exact-head merge to main may trigger this one-time
+# guarded rotation. The job fails closed on in-flight or ambiguous receipts.
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/journal-rotate.yml'
   workflow_dispatch:
 
 permissions:
@@ -34,7 +39,7 @@ jobs:
           WORKFLOW_SHA: ${{ github.workflow_sha }}
         shell: bash
         run: |
-          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch" -o "$GITHUB_EVENT_NAME" = "push"
           test "$GITHUB_REF" = "refs/heads/main"
           test "$WORKFLOW_SHA" = "$SOURCE_SHA"
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
