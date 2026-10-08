@@ -196,6 +196,40 @@ class CurrentWorldRemoteCommit(unittest.TestCase):
         with self.assertRaisesRegex(Conflict, "already_completed"):
             self.cycle("heartbeat:2", self.git("rev-parse", "HEAD"))
 
+    def test_completed_claim_remains_verifiable_across_lossless_archive(self):
+        # Actual local-Git claim and recorded event, not a synthetic fixture.
+        import hashlib
+        from agenttest.journal_tail_rotation import logical_digest, rotate, verify
+
+        first_commit = self.claim("heartbeat:1")
+        self.cycle("heartbeat:1", first_commit)
+        verify_completed(self.path, "heartbeat:1", require_current=True)
+        self.publish()
+        original = self.store.journal_path.read_bytes()
+        original_hash = hashlib.sha256(original).hexdigest()
+        state_cycle = self.store.load()["cycles"]
+        (self.path.parent / "heartbeat_operation.json").write_text(json.dumps({
+            "status": "completed", "result_cycle": state_cycle,
+        }))
+        self.publish()
+
+        rotate(self.path.parent,
+               expected_active_sha256=verify(self.path.parent)["active_sha256"],
+               expected_cycle=state_cycle, min_bytes=1)
+        self.publish()
+        self.assertEqual(self.store.journal_path.read_bytes(), b"")
+        self.assertEqual((self.path.parent / "journal-sealed-000001.jsonl").read_bytes(), original)
+        self.assertEqual(logical_digest(self.path.parent), (len(original), original_hash))
+        self.assertEqual(verify_completed(self.path, "heartbeat:1")["status"], "verified")
+        self.assertEqual(claim_heartbeat(self.path, "heartbeat:1", payload=PAYLOAD)["status"], "already_completed")
+
+        second_commit = self.claim("heartbeat:2")
+        self.cycle("heartbeat:2", second_commit)
+        verify_completed(self.path, "heartbeat:2", require_current=True)
+        self.publish()
+        self.assertEqual(verify_completed(self.path, "heartbeat:1")["status"], "verified")
+        self.assertEqual(verify_completed(self.path, "heartbeat:2")["status"], "verified")
+
     def test_exact_pending_fresh_process_resume_but_dirty_local_save_fails(self):
         commit = self.claim("heartbeat:1")
         pending = self.path.read_bytes()
