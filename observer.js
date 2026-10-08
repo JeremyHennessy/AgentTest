@@ -63,5 +63,81 @@ function renderDevelopment(value){
  set('overview-dev',short(value.object.sha));set('overview-dev-label','GitHub branch head, not pilot status');
  set('research-head',short(value.object.sha));set('research-head-note','Current Ora 2 development branch · verified GitHub ref');
 }
-// INSERT SECOND HALF
+function drawWorld(positions,current,goal){
+ const board=$('world-board'),svg=$('world-trail'),visited=positions.filter(pos);board.replaceChildren();svg.replaceChildren();
+ for(let y=2;y>=-2;y--)for(let x=-2;x<=2;x++){
+  const cell=document.createElement('button'),p=[x,y],count=visited.filter(v=>same(v,p)).length;
+  cell.type='button';cell.className='cell'+(count?' visited':'')+(same(p,current)?' active':'')+(same(p,goal)?' goal':'');
+  const coord=document.createElement('span');coord.className='coord';coord.textContent=x+', '+y;cell.append(coord);
+  cell.setAttribute('aria-label',vec(p)+(same(p,current)?', recorded position':'')+(same(p,goal)?', active goal':'')+', '+count+' appearances in pinned trail');
+  cell.addEventListener('click',()=>set('world-cell-note',vec(p)+' · '+count+' appearances in this displayed pinned trail; not a lifetime count.'));
+  board.append(cell);
+ }
+ if(visited.length>1){const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');line.setAttribute('points',visited.map(p=>((p[0]+2)*100+50)+','+((2-p[1])*100+50)).join(' '));line.setAttribute('fill','none');line.setAttribute('stroke','currentColor');line.setAttribute('stroke-width','3');line.setAttribute('stroke-opacity','.8');svg.append(line);}
+}
+async function loadWorld(){
+ if(mapLoading)return;mapLoading=true;$('load-world').disabled=true;
+ try{
+  set('world-status','Resolving one exact original-Ora state commit…');
+  const ref=await getJson(API+'/git/ref/heads/autonomous/growth'),pinned=ref?.object?.sha;
+  if(!isSha(pinned))throw new Error('Original state ref did not resolve to a commit.');
+  const state=normalizeSnapshot(await getJson(RAW+'/'+pinned+'/state/organism.json',{large:true,onProgress:n=>set('world-status','Reading pinned state: '+(n/1048576).toFixed(1)+' MiB…')}));
+  const lab=state.planning_lab,rows=lab.transition_observations.filter(r=>r?.world_version===lab.world_version&&pos(r.before)&&pos(r.after)).slice(-24);
+  let trail=[];for(const row of rows){if(trail.length&&!same(trail[trail.length-1],row.before))trail=[];if(!trail.length)trail.push(row.before);trail.push(row.after);}
+  if(!trail.length||!same(trail[trail.length-1],lab.position))trail=[lab.position];
+  const goal=lab.goals.find(g=>g.id===lab.active_goal_id&&g.status==='active'&&pos(g.target));
+  drawWorld(trail,lab.position,goal?.target);
+  set('world-cycle',state.cycles.toLocaleString());set('world-position',vec(lab.position));set('world-goal',goal?vec(goal.target):'No active goal');set('world-sha',short(pinned));
+  set('world-cell-note','Recorded position and '+trail.length+' displayed trail points. Select a cell to inspect.');
+  snapshotCycle=state.cycles;$('world-content').hidden=false;
+  set('world-status','Loaded cycle '+state.cycles+' from exact commit '+short(pinned)+'. This snapshot will not auto-refresh.');
+  $('load-world').textContent='Load a fresh snapshot ↻';renderReceipt();
+ }catch(e){set('world-status',errorMessage(e)+(snapshotCycle!==null?' Earlier pinned map retained; it is not current.':''));}
+ finally{mapLoading=false;$('load-world').disabled=false;}
+}
+async function refresh({force=false}={}){
+ if(refreshing||document.hidden)return;refreshing=true;$('refresh').disabled=true;
+ let errors=0;const jobs=[(async()=>{
+  try{receipt=normalizeReceipt(await getJson(RAW+'/autonomous/growth/state/heartbeat_operation.json'));receiptError=null;}
+  catch(e){receiptError=errorMessage(e);errors++;}
+  renderReceipt();
+ })()];
+ const now=Date.now(),apiAllowed=!lastApi||now-lastApi>=300000||(force&&now-lastApi>=30000);
+ if(apiAllowed){
+  lastApi=now;apiError=false;
+  const calls=[
+   [API+'/git/ref/heads/ora2/temporal-phase42-20261007',renderDevelopment,()=>{set('overview-dev','—');set('overview-dev-label','Branch read unavailable');set('research-head-note','Current branch read unavailable');}],
+   [API+'/pulls/258',v=>renderPR(258,v),()=>set('pr258-status','Current PR status unavailable; consult source.')],
+   [API+'/pulls/259',v=>renderPR(259,v),()=>set('pr259-status','Current PR status unavailable; consult source.')],
+   [API+'/actions/runs?branch=main&per_page=6',renderWorkflow,()=>{const p=document.createElement('p');p.className='muted';p.textContent='Workflow feed unavailable; open GitHub Actions for evidence.';$('workflow-list').replaceChildren(p);}]
+  ];
+  for(const [url,render,fallback] of calls)jobs.push((async()=>{try{render(await getJson(url));}catch(e){apiError=true;errors++;fallback();}})());
+ }
+ try{await Promise.all(jobs);set('sync-indicator',(errors||apiError||receiptError?'Some reads unavailable · ':'Sources checked · ')+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+(force&&!apiAllowed?' · API throttled':''));}
+ finally{refreshing=false;$('refresh').disabled=false;}
+}
+const tabs=['overview','live','research'];
+function selectTab(name,{focus=false}={}){
+ if(!tabs.includes(name))return;
+ for(const tab of tabs){const selected=tab===name;$('tab-'+tab).setAttribute('aria-selected',String(selected));$('tab-'+tab).tabIndex=selected?0:-1;$('panel-'+tab).hidden=!selected;}
+ set('current-section',name==='overview'?'Overview':name==='live'?'Original Ora':'Ora 2 Research');
+ if(focus)$('tab-'+name).focus();
+}
+for(const name of tabs){
+ $('tab-'+name).addEventListener('click',()=>selectTab(name));
+ $('tab-'+name).addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;
+  e.preventDefault();const i=tabs.indexOf(name),next=e.key==='Home'?tabs[0]:e.key==='End'?tabs[2]:tabs[(i+(e.key==='ArrowLeft'||e.key==='ArrowUp'?2:1))%3];selectTab(next,{focus:true});
+ });
+}
+for(const button of document.querySelectorAll('[data-go]'))button.addEventListener('click',()=>{selectTab(button.dataset.go);window.scrollTo({top:0,behavior:'auto'});});
+for(const button of document.querySelectorAll('[data-filter]'))button.addEventListener('click',()=>{
+ const filter=button.dataset.filter;
+ for(const item of document.querySelectorAll('[data-filter]')){const selected=item===button;item.classList.toggle('selected',selected);item.setAttribute('aria-pressed',String(selected));}
+ for(const item of document.querySelectorAll('.study[data-result]'))item.hidden=filter!=='all'&&item.dataset.result!==filter;
+});
+$('refresh').addEventListener('click',()=>refresh({force:true}));$('load-world').addEventListener('click',loadWorld);
+refresh();setInterval(()=>refresh(),60000);setInterval(()=>{if(!document.hidden&&receipt)renderReceipt();},15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
+window.OraObservatory=Object.freeze({normalizeReceipt,normalizeSnapshot,renderReceipt,renderDevelopment,renderPR,selectTab,age,pos});
+
 })();
