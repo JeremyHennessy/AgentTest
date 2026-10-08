@@ -34,7 +34,7 @@ class Links(HTMLParser):
 
 class CurrentOperationalHandoffTests(unittest.TestCase):
     def test_observer_separates_live_copied_and_activation(self):
-        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        page = (ROOT / "legacy.html").read_text(encoding="utf-8")
         section = page.split('<details id="worldReadiness">', 1)[1].split("</details>", 1)[0]
         for required in (
             "Live:", "Historical compatibility:", "Before a new world:",
@@ -55,7 +55,7 @@ class CurrentOperationalHandoffTests(unittest.TestCase):
         self.assertNotIn("October 6, 2026, 23:55 UTC", section)
 
     def test_redesign_limits_and_legacy_diagnostics_are_visible_when_collapsed(self):
-        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        page = (ROOT / "legacy.html").read_text(encoding="utf-8")
         parsed = Links()
         parsed.feed(page.split("<script>", 1)[0])
         visible = "".join(parsed.uncollapsed_text)
@@ -69,7 +69,7 @@ class CurrentOperationalHandoffTests(unittest.TestCase):
             self.assertIn(required, visible)
 
     def test_frozen_copied_study_does_not_claim_benefit_or_native_action_ownership(self):
-        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        page = (ROOT / "legacy.html").read_text(encoding="utf-8")
         section = page.split('<details id="worldReadiness">', 1)[1].split("</details>", 1)[0]
         for required in (
             "Frozen negative study:", "historical cycle 4599", "32/32",
@@ -82,7 +82,7 @@ class CurrentOperationalHandoffTests(unittest.TestCase):
             self.assertIn(required, section)
 
     def test_dynamic_phase42_labels_identify_the_historical_gate(self):
-        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        page = (ROOT / "legacy.html").read_text(encoding="utf-8")
         agenda_card = page.split("<h2>Phase 42 · persistent inquiry agenda", 1)[1].split("</article>", 1)[0]
         for required in ("legacy diagnostics", "counters retain their historical definitions", "not evidence of beneficial learning"):
             self.assertIn(required, agenda_card)

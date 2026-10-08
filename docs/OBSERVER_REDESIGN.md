@@ -25,3 +25,16 @@ Local Chromium/Playwright checks cover the rendered page at widths 320, 390, 620
 The live public page and raw-file download were not reachable from this execution environment. The old page was reviewed through its actual source; no fresh old-page screenshot is claimed. The new screenshots are local renders of the implemented page. A successful Pages deployment must be established separately before calling the redesign published.
 
 No growth, interaction, reconciliation, controller, learner, original state or world file changes belong to this presentation increment. Conservative exploration timing and the persistent Ora 2 pilot remain blocked behind the corrected owned-cycle integration. The broader repository semantic audit remains incomplete.
+
+
+## October 8, 2026 — dual Pages deployment correction (supersedes routing above)
+
+The original routing contract above was insufficient for the repository's actual GitHub Pages configuration. The custom Actions workflow deployed `observer.html` as the root, but GitHub's separate branch-source `pages build and deployment` ran afterward and served the repository-root `index.html` (old console). The independent hosted read-only check `37839662583` proved the mismatch: the public root served the old 109,346-byte console, the new CSS and JS were available, and `legacy.html` returned HTTP 404. Both deployment workflows reported success; deployment success alone did not verify the intended homepage.
+
+Corrected contract:
+- `legacy.html` is an **exact Git blob copy** of the original approved `index.html`, SHA `f72df3ce6ec3e5be24eadb24764ba1864acc4e03`. Original history, UI and interaction behavior remain preserved.
+- `index.html` and `observer.html` are **byte-identical** new Observer entry points, Git blob `ff469ade0628d4565b073a3ed0758b8665fed865`, enforced by `cmp index.html observer.html` in CI.
+- `pages.yml` copies canonical `index.html` to `_site/index.html`, `observer.html` to `_site/observer.html`, and `legacy.html` to `_site/legacy.html`. Both Pages deployment paths therefore publish the same homepage and preserve the same legacy console.
+- Original growth-console tests now read `legacy.html`; new Observer tests read `observer.html` and verify `index.html` parity. No `src/`, `state/`, heartbeat, history or Ora2 runtime changes are involved.
+
+Rollback: original console blob `f72df3ce6ec3e5be24eadb24764ba1864acc4e03`; new Observer source from PR #260 merge `dc73eb02b026d9eca79be390247c97d454e0890e`. After merging this routing repair, verify actual public HTTP bytes for root, CSS, JS and legacy page; do not infer live correctness from Pages green alone.
