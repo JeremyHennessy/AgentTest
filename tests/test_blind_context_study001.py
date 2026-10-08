@@ -44,7 +44,7 @@ class BlindContextStudyPreflight(unittest.TestCase):
         self.assertEqual([c["index"] for c in result["cases"]], list(range(17, 65)))
         for case in result["cases"]:
             self.assertEqual(case["action"], schedule(99, case["index"]))
-            self.assertEqual(case["receipt"]["after"], case["actual_after"])
+            self.assertEqual(list(case["receipt"]["after"]), case["actual_after"])
             self.assertEqual(case["receipt"]["digest"], case["evidence"]["source_id"])
             self.assertTrue(math.isfinite(case["advantage_bits"]))
 
