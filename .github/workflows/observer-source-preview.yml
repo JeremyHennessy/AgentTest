@@ -1,0 +1,41 @@
+name: Observer source preview
+on:
+  push:
+    branches:
+      - ui/observer-total-rebuild-20261008
+    paths:
+      - observer.html
+      - observer.css
+      - observer.js
+      - tests/observer_browser_check.py
+      - tests/test_observer_overview.py
+      - .github/workflows/observer-source-preview.yml
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate new Observer source
+        run: |
+          node --check observer.js
+          python -B -m unittest discover -s tests -p test_observer_overview.py -v
+      - name: Package exact candidate for independent visual inspection
+        shell: bash
+        run: |
+          mkdir -p _observer_source/tests
+          cp observer.html observer.css observer.js _observer_source/
+          cp tests/observer_browser_check.py _observer_source/tests/
+          cp index.html _observer_source/legacy.html
+          sha256sum _observer_source/observer.html _observer_source/observer.css _observer_source/observer.js
+      - name: Retain candidate source
+        uses: actions/upload-artifact@v4
+        with:
+          name: observer-source-${{ github.run_id }}
+          path: _observer_source/
+          retention-days: 30
