@@ -76,7 +76,7 @@ def make(seed: int, stream_id: str, budget: int = 16):
         raise ValueError('bounded copied-pilot budget required')
     BlindContextWorld(seed=seed, stream_id=stream_id, budget=budget)
     return {'version': VERSION, 'world_sha256': digest(files()[0]),
-            'worker_sha256': digest(files()[1]), 'seed': seed,
+            'worker_sha256': digest(files()[1]), 'runner_sha256': digest(__file__), 'seed': seed,
             'stream_id': stream_id, 'budget': budget, 'records': [],
             'live_original_actions': 0, 'original_state_changed': False}
 
@@ -105,10 +105,10 @@ def worker(view, history):
 
 
 def restore(data):
-    if (set(data) != {'version', 'world_sha256', 'worker_sha256', 'seed', 'stream_id',
+    if (set(data) != {'version', 'world_sha256', 'worker_sha256', 'runner_sha256', 'seed', 'stream_id',
                      'budget', 'records', 'live_original_actions', 'original_state_changed'} or
             data['version'] != VERSION or data['world_sha256'] != digest(files()[0]) or
-            data['worker_sha256'] != digest(files()[1]) or
+            data['worker_sha256'] != digest(files()[1]) or data['runner_sha256'] != digest(__file__) or
             data['live_original_actions'] != 0 or data['original_state_changed'] is not False or
             type(data['records']) is not list or len(data['records']) > data['budget']):
         raise ValueError('pilot source/identity mismatch or unsafe ledger')
@@ -184,7 +184,7 @@ def _advance_locked(path, *, resume, seed, stream_id, budget, steps):
             'completed_actions': len(history), 'action_limit': data['budget'],
             'position': world.public_view()['position'], 'head': head,
             'mean_forecast_log_loss_bits': sum(r['log_loss_bits'] for r in data['records']) / len(history),
-            'learner_actions': len(history), 'original_live_ora_actions': 0,
+            'authored_policy_actions': len(history), 'original_live_ora_actions': 0,
             'persistent_original_ora2_enabled': False,
             'scientific_benefit_gate': 'NOT_TESTED'}
 
