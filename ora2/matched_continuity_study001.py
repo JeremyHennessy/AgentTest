@@ -19,7 +19,7 @@ from .lifecycle_store import LifecycleSession
 from .opportunity import propose
 
 VERSION = "ora2-matched-inherited-continuity-study001-v1"
-PROTOCOL_BLOB = None  # Set to the frozen protocol Git blob before execution.
+PROTOCOL_BLOB = "0a9054274a25a4eeb0f472c86684d43285393b1b"
 SEEDS = (0, 1, 2, 3)
 ARMS = ("control", "candidate")
 CYCLES = 4
