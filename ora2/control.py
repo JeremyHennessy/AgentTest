@@ -79,7 +79,7 @@ def apply_selected(state: dict, payload: dict, execute: Callable, rebuild: Calla
         precommit.update(status='cancelled_ora2_action', cancelled_cycle=cycle,
                          cancellation_reason='ora2_selected_action', ora2_execution_id=eid)
         lab['active_objective_realization_id'] = None
-    arrival = goal is not None and after == list(goal.get('target', []))
+    arrival = goal is not None and before != list(goal.get('target', [])) and after == list(goal.get('target', []))
     if arrival:
         # Actual arrival is retained, but it is NOT an executed/completed old plan.
         goal.update(status='completed', completed_cycle=cycle,

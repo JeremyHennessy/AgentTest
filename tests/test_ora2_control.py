@@ -105,6 +105,19 @@ class OwnedActionTests(unittest.TestCase):
         self.assertEqual(after['planning_lab']['plans'][0]['status'], 'invalidated')
         self.assertEqual(after['planning_lab']['plans'][0]['next_step_index'], 1)
 
+    def test_already_occupied_goal_is_not_new_arrival_credit(self):
+        state = fixture()
+        state['planning_lab']['goals'][0]['target'] = [0, 0]
+        _, _, _, payload = make_choice(state)
+        state['cycles'] += 1
+        event = apply_selected(state, payload,
+            lambda before, action, **k: dict(before=before, after=before, action=action,
+                                             delta=[0, 0], blocked=True), lambda lab: None)
+        self.assertFalse(event['goal_reached'])
+        self.assertEqual(state['planning_lab']['goals'][0]['status'], 'active')
+        self.assertNotIn('completion_source', state['planning_lab']['goals'][0])
+        self.assertEqual(state['planning_lab']['plans'][0]['next_step_index'], 1)
+
     def test_pending_precommit_is_cancelled_not_realized(self):
         before = fixture();lab = before['planning_lab']
         lab['active_objective_realization_id'] = 'OR1'
