@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = Path(os.environ.get('OBSERVER_EVIDENCE', str(ROOT / 'evidence')))
 OUT.mkdir(exist_ok=True)
 TEST_HEAD = '58e79e4a15566d4e20c807f78e67e7709fdca192'
-DEV = '0e0fa11ea21f0605381a5c861b0ba22df9abc0eb'
+DEV = '7652ce2439a90d6c4f01e6f0b3537b3f13875905'
 GROWTH = '6d943636c4b524dfe626db5769d2b8c8a2361624'
 # Captured fields from the immutable real receipt read via the GitHub connector.
 RECEIPT = {
@@ -47,7 +47,7 @@ with sync_playwright() as p:
    name=url.rsplit('/',1)[-1]
    r.fulfill(status=200,content_type='text/css' if name.endswith('.css') else 'text/javascript',body=(ROOT/name).read_text(),headers={'access-control-allow-origin':'*'});return
   if url.endswith('heartbeat_operation.json'): value=RECEIPT
-  elif url.endswith('/pulls/245'): value={'number':245,'merged':False,'draft':True,'state':'open','head':{'sha':TEST_HEAD}}
+  elif url.endswith('/pulls/245'): value={'number':245,'merged':True,'draft':False,'state':'closed','head':{'sha':'273fd9edf7daf0cdf9809267e6de4e574e5fdecf'}}
   elif 'ref/heads/ora2' in url: value={'object':{'sha':DEV}}
   elif 'ref/heads/autonomous' in url: value={'object':{'sha':GROWTH}}
   elif url.endswith('/state/organism.json'): value=SNAPSHOT
@@ -58,7 +58,10 @@ with sync_playwright() as p:
  page.set_content((ROOT/'observer.html').read_text().replace('<head>','<head><base href="https://observer.test/">'))
  page.wait_for_function("document.getElementById('checked').textContent.includes('Sources checked')")
  check('25 copied-world cell buttons',page.locator('#lab-board button').count()==25)
- check('historical hold not overwritten by green tests',page.locator('#hold-title').inner_text()=='Integration is on hold.')
+ check('resolved code hold distinct from pilot status',page.locator('#hold-title').inner_text()=='Repository status has advanced.')
+ check('negative timing result remains visible after code merge','Pilot screen not met.' in page.locator('#timing-result').inner_text())
+ check('one-of-four timing result is separate from selector result','1 / 4' in page.locator('#timing-result').inner_text() and '13 / 16' in page.locator('#panel-lab').inner_text())
+ check('empty shared commitment cohort not hidden','no initially active goals' in page.locator('#timing-result').inner_text())
  check('two selected copied actions not described as live',page.locator('#panel-lab').inner_text().count('not a live')>=1)
  check('no large snapshot automatically requested',not any(r['url'].endswith('organism.json') for r in requests))
  check('all automatic reads are GET',all(r['method']=='GET' for r in requests))
