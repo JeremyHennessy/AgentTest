@@ -63,7 +63,7 @@ class ObserverOverviewTests(unittest.TestCase):
     def test_scientific_truth_and_original_separation(self):
         for phrase in ('Original Ora and Ora 2 are deliberately separate.',
                        '12 / 12', '13 / 16', '1 / 4', '0 / 4',
-                       'Unproven', 'Not verified',
+                       '4 / 4', 'Not verified',
                        'Actions were evaluator-scripted',
                        '−0.002088', '−0.002784',
                        'Passive prediction is not autonomous control'):
