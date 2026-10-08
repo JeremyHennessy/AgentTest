@@ -95,7 +95,7 @@ with sync_playwright() as p:
     page.wait_for_function("document.getElementById('sync-indicator').textContent.includes('Sources checked')")
     check('fresh landing heading', 'Question the evidence.' in page.locator('h1').first.inner_text())
     check('real completed cycle', page.locator('#overview-cycle').inner_text() == '7,315')
-    check('original receipt status separate', page.locator('#overview-heartbeat').inner_text() == 'Completed')
+    check('original receipt status separate', page.locator('#live-status').inner_text() == 'completed')
     check('development branch SHA', page.locator('#overview-dev').inner_text() == 'aaaaaaaa')
     check('no heavy snapshot on automatic load', not any(x['url'].endswith('organism.json') for x in requests))
     check('all remote reads GET', all(x['method'] == 'GET' for x in requests))
@@ -138,7 +138,7 @@ with sync_playwright() as p:
     }"""))
     pending[0] = True
     page.locator('#refresh').click()
-    page.wait_for_function("document.getElementById('overview-heartbeat').textContent.includes('pending')")
+    page.wait_for_function("document.getElementById('live-status').textContent==='pending'")
     check('pending receipt never presented as completed', page.locator('#overview-cycle').inner_text() == '—')
     failure[0] = True
     page.locator('#refresh').click()
