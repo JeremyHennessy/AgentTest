@@ -31,7 +31,7 @@ class CopiedPilotTests(unittest.TestCase):
         self.assertEqual(first['completed_actions'], 3)
         second = advance(self.path, enabled=True, resume=True, steps=5)
         self.assertEqual(second['completed_actions'], 8)
-        self.assertEqual(second['learner_actions'], 8)
+        self.assertEqual(second['authored_policy_actions'], 8)
         self.assertEqual(second['original_live_ora_actions'], 0)
         self.assertFalse(second['persistent_original_ora2_enabled'])
         world, history, head = restore(json.loads(self.path.read_bytes()))
@@ -57,6 +57,16 @@ class CopiedPilotTests(unittest.TestCase):
             self.assertEqual(self.path.read_bytes(), raw)
         self.path.write_bytes(canonical(saved))
         self.assertEqual(restore(saved)[1][-1], saved['records'][-1]['evidence'])
+
+
+    def test_runner_source_identity_is_pinned_and_checked(self):
+        advance(self.path, enabled=True, seed=4, stream_id=STREAM, budget=8, steps=1)
+        data = json.loads(self.path.read_bytes())
+        self.assertEqual(data['runner_sha256'], digest(Path(__file__).resolve().parents[1] / 'ora2/copied_pilot.py'))
+        data['runner_sha256'] = '0' * 64
+        self.path.write_bytes(canonical(data))
+        with self.assertRaisesRegex(ValueError, 'source/identity'):
+            advance(self.path, enabled=True, resume=True, steps=1)
 
     def test_worker_sees_only_public_fields_and_no_hidden_rules(self):
         world = BlindContextWorld(seed=42, stream_id=STREAM, budget=8)
