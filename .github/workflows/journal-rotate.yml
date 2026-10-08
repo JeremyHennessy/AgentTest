@@ -61,7 +61,23 @@ jobs:
           git show "$SOURCE_SHA:scripts/heartbeat_transport.py" > "$transport_path"
           echo "JOURNAL_TRANSPORT=$transport_path" >> "$GITHUB_ENV"
 
+      - name: Check whether journal has crossed the archive floor
+        id: rotation_floor
+        shell: bash
+        run: |
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          bytes="$(git cat-file -s refs/remotes/origin/autonomous/growth:state/journal.jsonl)"
+          test "$bytes" -lt 104857600
+          if [ "$bytes" -lt 83886080 ]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "No rotation due; journal tail is $bytes bytes."
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "Rotation eligible; journal tail is $bytes bytes."
+          fi
+
       - name: Acquire current growth head and merge verified source only
+        if: steps.rotation_floor.outputs.needed == 'true'
         shell: bash
         run: |
           git config user.name "agenttest-growth"
@@ -73,6 +89,7 @@ jobs:
           python -I -B "$JOURNAL_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA" --require-clean
 
       - name: Rotate inactive journal into immutable verified archive
+        if: steps.rotation_floor.outputs.needed == 'true'
         shell: bash
         run: |
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
@@ -105,6 +122,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/rotate_live_journal.py verify --root "$GITHUB_WORKSPACE"
 
       - name: Publish exact growth extension and confirm remotely
+        if: steps.rotation_floor.outputs.needed == 'true'
         shell: bash
         run: |
           python -I -B "$JOURNAL_TRANSPORT" publish \
