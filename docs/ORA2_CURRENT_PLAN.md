@@ -138,3 +138,32 @@ This is the newest **executed** status record. The earlier Timing Study 001 nega
 3. Design a prospective finite successor experiment that *separately* tests inherited commitments and useful independent investigation, with fixed budgets, matched positive initial goal cohort, exact learner-action attribution and common-case prediction scoring. The currently over-observed bounded world cannot be manipulated to create an artificial win; richer-world activation requires its own evidence-backed gate.
 4. Keep original live Ora operationally separate, persistent Ora2 pilot off and the former Phase42 negative evidence intact. Reconstruct moving heads before the next write or merge.
 
+
+
+## October 8, 2026 — executed structural-transfer research and next learning gate
+
+This is an added executed research record. It changes no baseline, original state or runtime entry point. The earlier Timing Study 001 remains a **valid negative** (1/4 wins, -0.002088082052306428 bits/case), with no retuning or rerun.
+
+### Exact research evidence and release
+
+The retrospective leave-one-source-location-out comparison was **registered before execution** at commit a38b8ea311463abc7cdd93456b6ce9c7b099abd1, protocol blob 2b19d789923f8f50c2abb76d7bab829d52717eb3. The underlying historical data and marginal coverage had been inspected beforehand, so this is not a blind prospective environmental comparison. See docs/ORA2_ACTION_EFFECT_TRANSFER_STUDY001.md.
+
+One original sealed planner-only copied evidence execution succeeded: https://github.com/JeremyHennessy/AgentTest/actions/runs/37818768173 ; source head eef894307c8514f69efe25d133d2b3e655b98836. Existing cycle-1803 snapshot and journal SHA-256 pins were verified. Eight hosted synthetic unit checks passed. **No new Core/copy world actions or original live Ora actions were executed**. Original pilot remains off.
+
+Exact scientific archive: https://github.com/JeremyHennessy/AgentTest/actions/runs/37818768173/artifacts/11568716195 , artifact 11568716195, ZIP SHA-256 7359ee9fa8421a6983485725fecf146097a024f46e22050d5cc758da5e11277b, inner full 95-case JSON report SHA-256 62f147fd7ea034a4509a133dc40c7967af957367236a3376ed7d9119b21e9f43. Archive expires January 6, 2027; preserve durably before expiry.
+
+**The predeclared narrow transfer screen PASSED:** 1,637 same-world records, 25 entirely held-out source-location folds, 95 real recorded position/action cases, five never-observed combinations excluded with no fabricated truths. Mean shared learned-action-effect loss 0.22792299553548018 versus non-spatial absolute-location baseline loss 7.338797720226491 bits/case, improvement 7.110874724691012 bits/case; 25/25 folds favorable. Exact top-one: 94/95 learned-effect and 0/95 non-spatial control. Archived case-level sums, uniqueness and SHA-256 were independently audited.
+
+**Critical limitations:** The baseline was especially weak for spatial prediction; this is retrospective one-world evidence from deterministic transitions. Coordinate translation/clamping is an engineer-authored hypothesis class, not discovered or selected autonomously by Ora. One real local obstruction caused the sole learned-effect mistake; the underlying source history separately contains repeated consistent obstructed outcomes. Never inject the known hidden exception mapping into the learner as a supposed discovery. These numbers are NOT proof of a general intelligence advance, useful self-selected experiments, increased goal completion, consciousness or persistent-pilot readiness.
+
+PR #255 was reviewed and merged ONLY into Ora 2 development at merge commit a10931d4334fdd25da32d617973ba3737254b071; exact reviewed candidate b017bd61d3e0bb0d793add2ee504ec17c4533707. Green exact-head PR verification: https://github.com/JeremyHennessy/AgentTest/actions/runs/37819385184 ; separate green post-merge push/PR verify: https://github.com/JeremyHennessy/AgentTest/actions/runs/37820062283 and https://github.com/JeremyHennessy/AgentTest/actions/runs/37820070767. No original Phase 41 source, live history or Observer was changed.
+
+### Next development candidate: experience-based exception memory
+
+PR #256 at https://github.com/JeremyHennessy/AgentTest/pull/256 is a separate draft from ora2/learned-exception-memory-20261008, head e9e39a795e024b444cea5886637ae519beac1fa7 and base a10931d4334fdd25da32d617973ba3737254b071. It derives local disagreement and posterior forecasts solely from actual retained provenance rows without reading hidden world mechanics or altering any writer, controller, choice, goal or pilot. The local weight and model structure are authored. Synthetic tests were submitted and exact-head CI was still pending at this handoff update. Do not call it merged, verified as a release, or an empirical learning benefit until separately demonstrated.
+
+Mandatory next executable steps:
+1. Read the latest exact-head PR #256 push/PR checks, review full diff and changing development base, and merge only a reviewed green head into the Ora 2 development line (not live main); verify the resulting post-merge source/CI independently.
+2. Before any scientific behavioral execution, prospectively declare and fix one finite copied-world comparison with a **strong spatial baseline**, varied or context-conditional hidden effects, whole-world/causal holdouts, exact learner-action attribution and uncertainty/calibration measures. World effects must not be revealed to the learner, and there must be no authored puzzle solutions or hidden answer labels. A candidate's software tests are not a benefit gate.
+3. Independently preserve genuine inherited goals/plans using the verified cycle-1803 checkpoint when testing active ownership. Pilot remains OFF until a newly declared benefit and continuity screen both pass; keep the full original Ora, prior negative evidence, immutable Phase 41 and current Observer intact.
+4. Separately monitor original autonomous heartbeat and growing snapshot. The read-only gzip feasibility result is NOT a deployed snapshot migration; a lossless dual-reader/writer/recovery/Observer solution needs its own gated work.
