@@ -221,6 +221,35 @@ class HeartbeatSchedulerTests(unittest.TestCase):
         self.assertIn(("run", 101), self.actions.reads)
         self.assertNotIn(("run", 999), self.actions.reads)
 
+    def test_managed_controller_terminal_race_still_dispatches_successor(self):
+        scheduler = self.scheduler(ready())
+        calls = []
+
+        def racing_tick(mode, ticket, own_run_id):
+            calls.append((mode, ticket, own_run_id))
+            if len(calls) == 1:
+                return {"status": "dispatched", "request_id": ticket}
+            if len(calls) == 2:
+                terminal = ready()
+                terminal.update(next_request_id=NEXT, request_status="completed")
+                self.receipts.state = terminal
+                return {"status": "already_terminal", "request_id": ticket}
+            self.fail("controller called tick again after observing terminal receipt")
+
+        def advance(_):
+            if len(calls) == 1:
+                self.receipts.state = pending()
+                return
+            self.fail("controller slept instead of re-reading the raced terminal receipt")
+
+        scheduler.tick = racing_tick
+        scheduler.sleep = advance
+        result = scheduler.controller(TICKET, 500)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(result["completed_request_id"], TICKET)
+        self.assertEqual(result["request_id"], NEXT)
+        self.assertEqual(self.actions.dispatches, [("heartbeat-controller.yml", NEXT)])
+
     def test_stale_completed_controller_does_not_spawn_successor(self):
         state = ready()
         state.update(next_request_id=NEXT, request_status="completed")
