@@ -31,7 +31,7 @@ jobs:
           mkdir -p _observer_source/tests
           cp observer.html observer.css observer.js _observer_source/
           cp tests/observer_browser_check.py _observer_source/tests/
-          cp index.html _observer_source/legacy.html
+          cp legacy.html _observer_source/legacy.html
           sha256sum _observer_source/observer.html _observer_source/observer.css _observer_source/observer.js
       - name: Retain candidate source
         uses: actions/upload-artifact@v4
