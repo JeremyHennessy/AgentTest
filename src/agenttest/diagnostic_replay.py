@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .core import AgentCore
+from .journal_tail_rotation import logical_events
 from .state import StateStore
 
 DIAGNOSTIC_VERSION = "deterministic-replay-v1"
@@ -135,11 +136,8 @@ def run_fixture() -> dict[str, Any]:
             0.8,
         )
 
-        journal = []
-        if store.journal_path.exists():
-            for line in store.journal_path.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    journal.append(json.loads(line))
+        # Full logical history is required after an archive cutover.
+        journal = list(logical_events(store.path.parent)) if store.journal_path.exists() else []
 
         rendered = {
             "cycles": [first, second, third],
