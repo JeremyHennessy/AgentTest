@@ -1,0 +1,85 @@
+name: ora2-authentic-inherited-goal-engineering
+
+# Finite original study evidence with disposable copied world. Not a new study.
+on:
+  push:
+    branches:
+      - ora2/temporal-phase42-20261007
+    paths:
+      - 'ora2/inherited_origin.py'
+      - 'ora2/reconstruct_inherited_checkpoint.py'
+      - 'ora2/inherited_continuity_check.py'
+      - 'ora2/lifecycle_store.py'
+      - 'tests/test_ora2_inherited_origin.py'
+      - '.github/workflows/ora2-authentic-inherited-goal.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ora2-authentic-origin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inherited-continuity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONPATH: src:.
+      PYTHONDONTWRITEBYTECODE: '1'
+      AGENTTEST_MODEL: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Verify branch, locked Phase41 source and read-only original state
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/ora2/temporal-phase42-20261007'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD:src)" = '9b0f880af84a0b1b69fd6aa9009ab738acd7dfad'
+          git diff --exit-code HEAD -- state/ src/
+      - name: Unit-test exact historical origin admission
+        run: python -B -m unittest discover -s tests -p 'test_ora2_inherited_origin.py' -v
+      - name: Retrieve sealed planner-only original Timing Study 001 artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/11521061953/zip" \
+            > "$RUNNER_TEMP/timing001-original-planner-artifact.zip"
+          echo "859df0d4b24abf4b856b1c66eb19782361e980dc749b5a3fc5878e9dd65ab3b4  $RUNNER_TEMP/timing001-original-planner-artifact.zip" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/cycle1803"
+      - name: Reconstruct cycle-1803 copied inherited goal without world action
+        shell: bash
+        run: |
+          python -B -m ora2.reconstruct_inherited_checkpoint \
+            --artifact "$RUNNER_TEMP/timing001-original-planner-artifact.zip" \
+            --output-directory "$RUNNER_TEMP/cycle1803"
+      - name: Four full six-stage copied cycles with cold restarts and replay assertions
+        shell: bash
+        run: |
+          python -B -m ora2.inherited_continuity_check \
+            --root "$GITHUB_WORKSPACE" \
+            --snapshot "$RUNNER_TEMP/cycle1803/study002_snapshot.json" \
+            --journal "$RUNNER_TEMP/cycle1803/study002_journal.jsonl" \
+            --database "$RUNNER_TEMP/cycle1803-check.sqlite" \
+            --report "$RUNNER_TEMP/cycle1803-continuity.json" \
+            --cycles 4
+          git diff --exit-code HEAD -- state/ src/
+      - name: Archive bounded copied engineering receipts, not original state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ora2-real-goal-continuity-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/cycle1803-continuity.json
+            ${{ runner.temp }}/cycle1803-check.sqlite
+          retention-days: 90
