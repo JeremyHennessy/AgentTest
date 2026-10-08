@@ -19,6 +19,8 @@ from .learner import Config, ProtocolError, CapacityError, canonical
 from .lifecycle import MODE, source_identity, forecast_menu, run_cycle, learn_cycle, sha, MAX_SNAPSHOT
 from .storage import encode
 
+OWNED_MODE = 'ora2-phase41-owned-cycle-v1'
+
 MAX_LOGICAL_BYTES = 128 * 1024 * 1024
 REQUEST = re.compile(r'[A-Za-z0-9_.:-]{1,128}\Z')
 
@@ -41,9 +43,11 @@ class LifecycleSession:
             raise ProtocolError('lifecycle database is corrupt')
 
     @classmethod
-    def create(cls, path, root, snapshot, journal, *, enabled=False, seed=0, cycle_limit=8):
+    def create(cls, path, root, snapshot, journal, *, enabled=False, seed=0, cycle_limit=8, allow_ora2=False):
         if enabled is not True or type(cycle_limit) is not int or not 1 <= cycle_limit <= 64:
             raise ProtocolError('explicit isolated-copy enablement and 1..64 cycles required')
+        if type(allow_ora2) is not bool:
+            raise ProtocolError('allow_ora2 must be an explicit boolean')
         if Path(path).is_symlink():
             raise ProtocolError('symbolic link destination')
         target, root = Path(path).resolve(), Path(root).resolve()
@@ -56,6 +60,9 @@ class LifecycleSession:
         seeded_agent(origin, seed=seed, config=config)
         meta = {'mode': MODE, 'code': code, 'seed': seed, 'config': asdict(config),
                 'cycle_limit': cycle_limit, 'state_blob': STATE_BLOB, 'journal_blob': JOURNAL_BLOB}
+        if allow_ora2:
+            meta['allow_ora2'] = True
+            meta['mode'] = OWNED_MODE
         text = encode(meta)
         first = sha((text + '\n' + sha(raw) + '\n' + sha(history)).encode())
         fd = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
@@ -92,10 +99,14 @@ class LifecycleSession:
             raise ProtocolError('missing original archive')
         text, raw, journal = saved
         meta = strict_json(text)
-        if (meta.get('mode') != MODE or meta.get('code') != source_identity(self.root) or
+        if (meta.get('mode') not in (MODE, OWNED_MODE) or meta.get('code') != source_identity(self.root) or
                 meta.get('state_blob') != STATE_BLOB or meta.get('journal_blob') != JOURNAL_BLOB or
                 blob_id(raw) != STATE_BLOB or blob_id(journal) != JOURNAL_BLOB):
             raise ProtocolError('lifecycle origin or source mismatch')
+        if type(meta.get('allow_ora2', False)) is not bool:
+            raise ProtocolError('invalid action ownership authority')
+        if (meta.get('mode') == OWNED_MODE) != meta.get('allow_ora2', False):
+            raise ProtocolError('mode and action ownership authority differ')
         limit = meta.get('cycle_limit')
         if type(limit) is not int or not 1 <= limit <= 64:
             raise ProtocolError('invalid retained cycle budget')
@@ -109,12 +120,13 @@ class LifecycleSession:
         state_hash = sha(raw)
         count = 0
         appended = []
+        controls = []
         logical = len(text.encode()) + len(raw) + len(journal)
         for seq, request, body, prior, checksum in self.db.execute('SELECT seq,request,body,prior,seal FROM events ORDER BY seq'):
             if seq != count + 1 or prior != previous or seal(prior, body) != checksum:
                 raise ProtocolError('lifecycle event-chain mismatch')
             record = strict_json(body)
-            if (record.get('request') != request or record.get('sequence') != seq or record.get('mode') != MODE or
+            if (record.get('request') != request or record.get('sequence') != seq or record.get('mode') != meta['mode'] or
                     not REQUEST.fullmatch(request) or record.get('before_snapshot_sha256') != state_hash or
                     record.get('cycle') != origin['origin_cycle'] + seq):
                 raise ProtocolError('lifecycle event identity mismatch')
@@ -130,7 +142,18 @@ class LifecycleSession:
                      'planning_lab': {'bounds': 2, 'world_version': WORLD,
                                       'position': report['position_after'],
                                       'transition_observations': prior_rows + report['transition_records']}}
-            expected_report = learn_cycle(agent, before, after, record['forecasts'])
+            owner = record.get('owner', 'phase41')
+            if owner == 'ora2' and meta.get('allow_ora2') is True:
+                from .control import learn_selected
+                choice = agent.choose(('north', 'east', 'south', 'west'))
+                expected_report = learn_selected(agent, before, after, record['forecasts'], choice)
+                if record.get('control', {}).get('choice') != choice.record():
+                    raise ProtocolError('retained control choice changed')
+                controls.append(record['control'])
+            elif owner == 'phase41':
+                expected_report = learn_cycle(agent, before, after, record['forecasts'])
+            else:
+                raise ProtocolError('unauthorized retained action owner')
             if encode(expected_report) != encode(report):
                 raise ProtocolError('saved passive learning or attribution does not reproduce')
             rows = report['transition_records']
@@ -153,6 +176,8 @@ class LifecycleSession:
                 working['planning_lab']['transition_observations'] != origin_state['planning_lab']['transition_observations'] + appended or
                 public_observation(working['planning_lab']['position']) != strict_json(agent.observation)):
             raise ProtocolError('current Phase 41 history is inconsistent')
+        if working['planning_lab'].get('ora2_executions', []) != origin_state['planning_lab'].get('ora2_executions', []) + controls:
+            raise ProtocolError('retained control attribution differs from journal')
         if len(current[2]) > MAX_SNAPSHOT or logical + len(current[2]) > MAX_LOGICAL_BYTES:
             raise CapacityError('lifecycle logical storage budget exhausted')
         return agent, meta, origin, count, previous, current[2], logical
@@ -162,10 +187,12 @@ class LifecycleSession:
         try:
             agent, meta, origin, count, previous, raw, logical = self._restore()
             state = strict_json(raw)
-            report = {'mode': MODE, 'cycle': state['cycles'], 'completed_cycles': count,
+            report = {'mode': meta['mode'], 'cycle': state['cycles'], 'completed_cycles': count,
                       'cycle_limit': meta['cycle_limit'], 'identity': origin['identity'],
                       'position': state['planning_lab']['position'], 'learner': agent.summary(),
-                      'action_owner': 'unchanged_phase41_planner', 'ora2_choices': 0,
+                      'action_owner': ('explicit_per_cycle' if meta.get('allow_ora2') else 'unchanged_phase41_planner'),
+                      'ora2_choices': len(state['planning_lab'].get('ora2_executions', [])),
+                      'allow_ora2': meta.get('allow_ora2', False),
                       'logical_bytes': logical + len(raw), 'head': previous, 'live_actions': 0}
             self.db.execute('COMMIT')
             return report
@@ -173,26 +200,32 @@ class LifecycleSession:
             self.db.execute('ROLLBACK')
             raise
 
-    def tick(self, request: str, *, enabled=False):
-        if enabled is not True or type(request) is not str or not REQUEST.fullmatch(request):
+    def tick(self, request: str, *, enabled=False, owner='phase41'):
+        if enabled is not True or owner not in ('phase41', 'ora2') or type(request) is not str or not REQUEST.fullmatch(request):
             raise ProtocolError('explicit isolated-copy request required')
         self.db.execute('BEGIN IMMEDIATE')
         try:
             agent, meta, origin, count, previous, raw, logical = self._restore()
             old = self.db.execute('SELECT body FROM events WHERE request=?', (request,)).fetchone()
             if old:
+                if strict_json(old[0]).get('owner', 'phase41') != owner:
+                    raise ProtocolError('same request cannot change action owner')
                 self.db.execute('COMMIT')
                 return {'replayed': True, 'result': strict_json(old[0])}
             if count >= meta['cycle_limit']:
                 raise CapacityError('cycle budget exhausted; no automatic reset')
-            staged = run_cycle(raw, agent, self.root, enabled=True)
+            if owner == 'ora2' and meta.get('allow_ora2') is not True:
+                raise ProtocolError('this copied session was not enabled for learner control')
+            staged = run_cycle(raw, agent, self.root, enabled=True, owner=owner)
             if staged['source'] != meta['code']:
                 raise ProtocolError('source changed before staging')
-            record = {'mode': MODE, 'sequence': count + 1, 'request': request, 'cycle': staged['cycle'],
+            record = {'mode': meta['mode'], 'sequence': count + 1, 'request': request, 'cycle': staged['cycle'],
                       'before_snapshot_sha256': sha(raw), 'after_snapshot_sha256': sha(staged['snapshot']),
                       'forecasts': staged['forecasts'], 'temporal': staged['temporal'],
                       'journal_suffix': staged['journal'].decode(), 'outputs': staged['outputs'],
                       'sidecars': staged['sidecars']}
+            if owner == 'ora2':
+                record.update(owner=owner, control=staged['control'])
             body = encode(record)
             if logical + len(body.encode()) + len(staged['snapshot']) > MAX_LOGICAL_BYTES:
                 raise CapacityError('new lifecycle result exceeds logical storage budget')
@@ -209,7 +242,7 @@ class LifecycleSession:
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description='Ora 2 passive learning in a full isolated Phase 41 lifecycle')
+    parser = argparse.ArgumentParser(description='Ora 2 full isolated Phase 41 lifecycle with explicit action ownership')
     parser.add_argument('command', choices=('init', 'step', 'status'))
     parser.add_argument('--database', required=True)
     parser.add_argument('--root', default='.')
@@ -217,15 +250,17 @@ def main():
     parser.add_argument('--seed', type=int, default=17)
     parser.add_argument('--cycle-limit', type=int, default=8)
     parser.add_argument('--request')
+    parser.add_argument('--allow-ora2', action='store_true')
+    parser.add_argument('--owner', choices=('phase41', 'ora2'), default='phase41')
     args = parser.parse_args()
     root = Path(args.root).resolve()
     if args.command == 'init':
         with LifecycleSession.create(args.database, root, root / 'state/organism.json', root / 'state/journal.jsonl',
-                                     enabled=args.isolated_copy, seed=args.seed, cycle_limit=args.cycle_limit) as session:
+                                     enabled=args.isolated_copy, seed=args.seed, cycle_limit=args.cycle_limit, allow_ora2=args.allow_ora2) as session:
             print(json.dumps(session.status(), sort_keys=True))
     else:
         with LifecycleSession(args.database, root) as session:
-            report = session.status() if args.command == 'status' else session.tick(args.request, enabled=args.isolated_copy)
+            report = session.status() if args.command == 'status' else session.tick(args.request, enabled=args.isolated_copy, owner=args.owner)
             print(json.dumps(report, sort_keys=True))
 
 
