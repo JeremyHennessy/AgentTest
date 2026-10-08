@@ -1,0 +1,90 @@
+name: ora2-registered-action-effect-transfer-001
+
+# One saved-evidence comparison, no scheduler/pilot/actuator/model API.
+on:
+  push:
+    branches:
+      - ora2/action-effect-transfer-20261008
+    paths:
+      - '.github/workflows/ora2-action-effect-transfer-study001.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ora2-registered-action-effect-transfer-001
+  cancel-in-progress: false
+
+jobs:
+  historical-heldout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: src:.
+      PYTHONDONTWRITEBYTECODE: '1'
+      AGENTTEST_MODEL: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Verify frozen protocol and historical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/ora2/action-effect-transfer-20261008'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD:src)" = '9b0f880af84a0b1b69fd6aa9009ab738acd7dfad'
+          test "$(git rev-parse HEAD:docs/ORA2_ACTION_EFFECT_TRANSFER_STUDY001.md)" = '2b19d789923f8f50c2abb76d7bab829d52717eb3'
+          git diff --exit-code HEAD -- state/ src/
+      - name: Test pure synthetic transfer cases
+        run: python -B -m unittest discover -s tests -p 'test_ora2_action_effect_transfer.py' -v
+      - name: Download existing original sealed planner artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/11521061953/zip" > "$RUNNER_TEMP/frozen-planner-artifact.zip"
+          echo "859df0d4b24abf4b856b1c66eb19782361e980dc749b5a3fc5878e9dd65ab3b4  $RUNNER_TEMP/frozen-planner-artifact.zip" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/cycle1803"
+      - name: Reconstruct genuine cycle-1803 copied checkpoint with no action
+        run: |
+          python -B -m ora2.reconstruct_inherited_checkpoint \
+            --artifact "$RUNNER_TEMP/frozen-planner-artifact.zip" \
+            --output-directory "$RUNNER_TEMP/cycle1803"
+      - name: Run the one preregistered spatial holdout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -B -m ora2.action_effect_transfer \
+            --snapshot "$RUNNER_TEMP/cycle1803/study002_snapshot.json" \
+            --journal "$RUNNER_TEMP/cycle1803/study002_journal.jsonl" \
+            --output "$RUNNER_TEMP/ora2-action-effect-transfer-study001.json"
+          echo "f37c788cee851622823a848a7e3b8b32f67c06bec4b94eb5b709922e7a7aa6ec  $RUNNER_TEMP/cycle1803/study002_snapshot.json" | sha256sum -c -
+          echo "717b7380101ff7656b13cc5d9f8ac14ade862a6bdd1b9363ad3029d29d8e35e9  $RUNNER_TEMP/cycle1803/study002_journal.jsonl" | sha256sum -c -
+          git diff --exit-code HEAD -- state/ src/
+          python - <<'PY'
+          import json,os,hashlib,pathlib
+          p=pathlib.Path(os.environ["RUNNER_TEMP"])/"ora2-action-effect-transfer-study001.json"
+          r=json.loads(p.read_text())
+          if (not r["validity_screen"] or r["status"]!="VALID_RECORDED_HELDOUT_RESULT"
+                  or r["original_live_ora_actions"] or r["copied_world_actions"]
+                  or r["persistent_pilot_enabled"]):
+              raise SystemExit("SCIENCE_INVALID_OR_ACTION_BOUNDARY_CHANGED")
+          print("Result SHA-256",hashlib.sha256(p.read_bytes()).hexdigest())
+          print("Full cases",r["evaluated_cases"],"folds",r["positions"])
+          print("Frozen screen met:",r["transfer_screen_met"])
+          PY
+      - name: Preserve every case and the result, even if negative
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ora2-action-effect-transfer-study001-${{ github.run_id }}
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/ora2-action-effect-transfer-study001.json
+          retention-days: 90

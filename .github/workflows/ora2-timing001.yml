@@ -1,0 +1,88 @@
+name: Ora 2 Timing Study 001
+on:
+  push:
+    branches:
+      - ora2/timing-study-001-20261008
+permissions:
+  contents: read
+jobs:
+  session:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 9
+      matrix:
+        include:
+          - {policy: progress, seed: 0}
+          - {policy: progress, seed: 1}
+          - {policy: progress, seed: 2}
+          - {policy: progress, seed: 3}
+          - {policy: random, seed: 0}
+          - {policy: random, seed: 1}
+          - {policy: random, seed: 2}
+          - {policy: random, seed: 3}
+          - {policy: planner, seed: 0}
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.15'
+      - name: Check evaluator and accounting with authored cases
+        run: python -m unittest discover -s studies/timing001 -v
+      - name: Execute exactly one registered copied session
+        env:
+          STUDY_OUTPUT: ${{ runner.temp }}/timing001/${{ matrix.policy }}-${{ matrix.seed }}
+          STUDY_POLICY: ${{ matrix.policy }}
+          STUDY_SEED: ${{ matrix.seed }}
+        run: python studies/timing001/run.py arm --policy "$STUDY_POLICY" --seed "$STUDY_SEED" --output "$STUDY_OUTPUT"
+      - name: Preserve complete or failed session evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: timing001-${{ matrix.policy }}-${{ matrix.seed }}
+          path: ${{ runner.temp }}/timing001/${{ matrix.policy }}-${{ matrix.seed }}/
+          retention-days: 90
+          if-no-files-found: error
+  summary:
+    if: always() && github.run_attempt == 1
+    needs: session
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.15'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: timing001-*
+          path: ${{ runner.temp }}/collected
+      - name: Validate all registered session artifacts and summarize once
+        env:
+          ARTIFACT_ROOT: ${{ runner.temp }}/collected
+          SUMMARY_OUTPUT: ${{ runner.temp }}/timing001-summary.json
+        run: |
+          for entry in "$ARTIFACT_ROOT"/timing001-*; do
+            mv "$entry" "$ARTIFACT_ROOT/${entry##*/timing001-}"
+          done
+          python studies/timing001/run.py summarize --artifacts "$ARTIFACT_ROOT" --output "$SUMMARY_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: timing001-summary
+          path: ${{ runner.temp }}/timing001-summary.json
+          retention-days: 90
+          if-no-files-found: error
