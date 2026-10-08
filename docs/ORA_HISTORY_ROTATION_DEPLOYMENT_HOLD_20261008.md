@@ -19,3 +19,13 @@ This is a read-only deployment handoff, **not** an installed history-rotation fi
 - Verify exact-head repository CI, untouched historical bytes and Phase 41 commitments, lossless reconstruction, concurrency/exclusive maintenance scheduling, resumability, rollback, post-rotation real heartbeats, and research readers. No production history mutation before these gates.
 - If GitHub rejects writes, capture the exact error, leave the protected branches and persistent pilot unchanged, preserve local diffs and checks, and report the blocked publication clearly. Do not route around platform security via another identity, API or privileged workflow.
 - Following a verified, legitimately permitted deployment, check rotation receipts and subsequent durable heartbeat completions separately; only then mark the incident resolved. The periodic two-hour independent summary remains read-only.
+
+## October 8 integration progress (NOT A DEPLOYMENT)
+
+This branch now contains the staged journal-tail module, guarded rotation workflow, heartbeat claim archive reader, diagnostic/research partial-input safeguards, and preservation/regression tests. It is no longer documentation-only. Existing live `main` and moving `autonomous/growth` are unchanged by these branch commits.
+
+The original source anchor remains main `84b987926b214adefa387a7465d64446b801bdd4` until revalidated. Exact candidate head must be read from PR #251 immediately before review/merge; do not reuse a saved SHA. The candidate's workflow can be triggered on a verified main merge and shares the existing growth concurrency group, but **it has not been executed**, and any failed terminal/quiescence/CAS gate must leave remote history unchanged.
+
+Mandatory verified release sequence: complete all exact-head repository CI jobs (unit, baseline-owned no-regression, capability-handoff, behavioral preservation), examine full diff and code warnings, verify no accidental state changes, merge only a reviewed exact candidate head to main, observe the scheduled guarded workflow and remote archive SHA, and confirm at least one subsequent real growth heartbeat and historical-claim verification. If any check fails, preserve the negative evidence and fix on the same branch, never route around security controls.
+
+**Release state: implementation staged, CI pending, production storage not protected.**
