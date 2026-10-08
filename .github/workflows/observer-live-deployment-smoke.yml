@@ -1,0 +1,85 @@
+name: Observer live Pages visual verification
+on:
+  push:
+    branches:
+      - diagnostic/observer-live-final-20261008
+permissions:
+  contents: read
+jobs:
+  live-visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check immutable deployed candidate source
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD:observer.html)" = 'ff469ade0628d4565b073a3ed0758b8665fed865'
+          test "$(git rev-parse HEAD:observer.css)" = '148a3f07136ef15a6e4b36f7b534853316909c1e'
+          test "$(git rev-parse HEAD:observer.js)" = '110d9bce6118a554537574a6497132875b0a2ac7'
+      - name: Verify real Pages bytes from public URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/observer-live"
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --max-time 30 "https://jeremyhennessy.github.io/AgentTest/" > "$RUNNER_TEMP/observer-live/index.html"
+            curl -fsSL --max-time 30 "https://jeremyhennessy.github.io/AgentTest/observer.css" > "$RUNNER_TEMP/observer-live/observer.css"
+            curl -fsSL --max-time 30 "https://jeremyhennessy.github.io/AgentTest/observer.js" > "$RUNNER_TEMP/observer-live/observer.js"
+            curl -fsSL --max-time 30 "https://jeremyhennessy.github.io/AgentTest/legacy.html" > "$RUNNER_TEMP/observer-live/legacy.html"
+            if (cd "$RUNNER_TEMP/observer-live" && printf '%s\n' \
+              '3029d003d5f00650aa4fd0275d9b04f81fa4d844117b0ccb6b6615afcfd284be  index.html' \
+              'f9dc880566c2da12aa52e7efdd4fe571a2b2209e8b66d8f01f0a9421ade2351b  observer.css' \
+              '7f353aba304ec01d0d457ee8cb0df9139de4506df5fd8112665cc47d0e77c7fc  observer.js' \
+              '110696d42165acd7fd3133054414370a314bffb2bbf71a7672d374c54878d4ef  legacy.html' | sha256sum -c -); then
+              break
+            fi
+            if [ "$attempt" = 6 ]; then echo "Pages served bytes differ from verified deployment"; exit 1; fi
+            sleep 15
+          done
+      - name: Install isolated read-only browser
+        run: |
+          python -m pip install playwright==1.57.0
+          python -m playwright install --with-deps chromium
+      - name: Render ACTUAL live Pages on desktop and mobile
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          out=Path(os.environ['RUNNER_TEMP'])/'observer-live'
+          checks=[]
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
+              for width,height in ((1440,1000),(390,844),(320,800)):
+                  page=browser.new_page(viewport={'width':width,'height':height})
+                  errors=[]
+                  page.on('pageerror',lambda e:errors.append(str(e)))
+                  response=page.goto('https://jeremyhennessy.github.io/AgentTest/',wait_until='domcontentloaded',timeout=60000)
+                  page.locator('#tab-overview').wait_for(timeout=30000)
+                  assert response.status==200
+                  assert 'Question the evidence.' in page.locator('h1').first.inner_text()
+                  assert page.locator('[role=tab]').count()==3
+                  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+                  page.screenshot(path=str(out/f'live-pages-{width}.png'),full_page=True)
+                  assert not errors, errors
+                  checks.append({'width':width,'http_status':response.status,'page_errors':errors,'overflow':False})
+                  page.close()
+              browser.close()
+          (out/'live-pages-browser.json').write_text(json.dumps({'scope':'actual GitHub Pages site, not fixture','checks':checks},indent=2))
+          print(json.dumps(checks))
+          PY
+      - name: Preserve deployed-source and actual rendered screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: observer-live-pages-${{ github.run_id }}
+          path: ${{ runner.temp }}/observer-live/
+          if-no-files-found: warn
+          retention-days: 30
