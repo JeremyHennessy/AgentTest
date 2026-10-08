@@ -1,0 +1,63 @@
+name: ora2-clean-hosted-integration
+
+# This is hosted CI on a copied world, not activation of persistent Ora 2.
+# Never writes original live Ora state or enables optional model providers.
+on:
+  push:
+    branches:
+      - ora2/temporal-phase42-20261007
+    paths:
+      - 'ora2/opportunity.py'
+      - 'ora2/live_check.py'
+      - 'tests/test_ora2_opportunity.py'
+      - '.github/workflows/ora2-clean-hosted-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ora2-clean-hosted-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  copied-world:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: src:.
+      PYTHONDONTWRITEBYTECODE: '1'
+      AGENTTEST_MODEL: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Verify immutable protected source and exact checkout
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/ora2/temporal-phase42-20261007'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD:src)" = '9b0f880af84a0b1b69fd6aa9009ab738acd7dfad'
+          git diff --exit-code HEAD -- state/ src/
+      - name: Run new opportunity and continuity unit contracts
+        run: python -B -m unittest discover -s tests -p test_ora2_opportunity.py -v
+      - name: Four original-world actions on copied state with cold restarts
+        shell: bash
+        run: |
+          python -B -m ora2.live_check --root "$GITHUB_WORKSPACE" \
+            --database "$RUNNER_TEMP/ora2-clean-smoke.sqlite" \
+            --report "$RUNNER_TEMP/ora2-clean-smoke.json" --cycles 4 --seed 5
+          git diff --exit-code HEAD -- state/ src/
+      - name: Preserve actual engineering evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ora2-clean-smoke-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/ora2-clean-smoke.json
+            ${{ runner.temp }}/ora2-clean-smoke.sqlite
+          retention-days: 30
