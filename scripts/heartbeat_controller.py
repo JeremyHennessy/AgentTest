@@ -457,6 +457,14 @@ class Scheduler:
             print(json.dumps(result, sort_keys=True), flush=True)
             status = result["status"]
             if status == "already_terminal":
+                # The durable receipt can become terminal between the loop's
+                # outer inspect() and tick()'s independent inspect(). If this
+                # controller already managed the request, re-enter the loop so
+                # the terminal branch above can dispatch the deterministic
+                # successor. A stale controller that never managed the ticket
+                # remains inert.
+                if managed:
+                    continue
                 return result
             if status == "resumed":
                 managed = resumed = True
