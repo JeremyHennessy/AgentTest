@@ -57,6 +57,15 @@ class ActionEffectTransferTests(unittest.TestCase):
                                 row((1,0),"a",(1,-1),3)])
         self.assertGreater(predict(training,(2,0),"a",model="shared_effect")[(2,-1)],0.9)
 
+    def test_conflicting_effects_retain_uncertainty_without_hidden_answer(self):
+        training=validate_rows([row((0,0),"c",(1,0),1),
+                                row((0,0),"c",(0,1),2)])
+        d=predict(training,(1,1),"c",model="shared_effect")
+        self.assertGreater(d[(2,1)],0.40)
+        self.assertGreater(d[(1,2)],0.40)
+        self.assertLess(d[(2,1)],0.6)
+        self.assertAlmostEqual(sum(d.values()),1.0)
+
     def test_corrupt_world_identity_and_duplicate_provenance_fail_closed(self):
         good=row((0,0),"x",(0,1),1)
         with self.assertRaisesRegex(StudyInvalid,"nonmatching"):
