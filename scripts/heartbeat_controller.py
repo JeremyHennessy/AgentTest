@@ -73,7 +73,10 @@ class Actions:
     def runs(self, workflow: str, **filters) -> list[dict]:
         # GitHub caps filtered run searches at 1,000 results. Do not interpret a
         # truncated search as absence. Current tickets normally span minutes.
-        for snapshot_attempt in range(3):
+        # Permit bounded Actions indexing lag without inferring absence from a
+        # partial listing. Persistently incomplete snapshots still fail closed.
+        stabilization_delays = (1, 2, 5, 10)
+        for snapshot_attempt in range(len(stabilization_delays) + 1):
             rows = []
             for page in range(1, 11):
                 query = urlencode({"per_page": 100, "page": page, **filters})
@@ -94,8 +97,8 @@ class Actions:
             # Counts and pages can briefly reflect different Actions snapshots.
             # Discard the incomplete snapshot and repeat the same read from page
             # one; never infer absence from it or retry a malformed response.
-            if snapshot_attempt < 2:
-                time.sleep(snapshot_attempt + 1)
+            if snapshot_attempt < len(stabilization_delays):
+                time.sleep(stabilization_delays[snapshot_attempt])
         raise Blocked("workflow_run_search_incomplete")
 
     def active(self, workflow: str, exclude: int = 0) -> list[dict]:
