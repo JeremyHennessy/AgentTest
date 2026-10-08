@@ -1,13 +1,15 @@
 name: lossless-original-journal-rotation
 
-# A completed, reviewed, exact-head merge to main may trigger this one-time
-# guarded rotation. The job fails closed on in-flight or ambiguous receipts.
+# Run only AFTER the exact main source passes its required verification.
+# The original push-triggered maintenance race failed closed at the source gate.
 on:
-  push:
+  workflow_run:
+    workflows:
+      - verify
+    types:
+      - completed
     branches:
       - main
-    paths:
-      - '.github/workflows/journal-rotate.yml'
   workflow_dispatch:
 
 permissions:
@@ -21,6 +23,7 @@ concurrency:
 
 jobs:
   rotate:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,9 +40,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SOURCE_SHA: ${{ github.sha }}
           WORKFLOW_SHA: ${{ github.workflow_sha }}
+          VERIFIED_RUN_HEAD: ${{ github.event.workflow_run.head_sha || '' }}
+          VERIFIED_RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion || '' }}
         shell: bash
         run: |
-          test "$GITHUB_EVENT_NAME" = "workflow_dispatch" -o "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch" -o "$GITHUB_EVENT_NAME" = "workflow_run"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_run" ]; then
+            test "$VERIFIED_RUN_CONCLUSION" = "success"
+            test "$VERIFIED_RUN_HEAD" = "$SOURCE_SHA"
+          fi
           test "$GITHUB_REF" = "refs/heads/main"
           test "$WORKFLOW_SHA" = "$SOURCE_SHA"
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
