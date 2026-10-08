@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PagesInteractionTests(unittest.TestCase):
     def test_pages_console_uses_authenticated_github_handoff_without_embedded_secret(self) -> None:
-        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        page = (ROOT / "legacy.html").read_text(encoding="utf-8")
 
         self.assertIn("AgentTest · Persistent Growth Console", page)
         self.assertIn("autonomous/growth/state/last_interaction.json", page)
