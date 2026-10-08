@@ -78,7 +78,7 @@ class LearnedExceptionMemoryTests(unittest.TestCase):
         with self.assertRaisesRegex(StudyInvalid,"world"):
             propose_from_history(corrupt,(0,0),"violet")
         with self.assertRaisesRegex(StudyInvalid,"duplicate"):
-            propose_from_history(self.prefix+self.prefix,(0,0),"violet")
+            propose_from_history(self.prefix+[deepcopy(self.prefix[-1])],(0,0),"violet")
 
 
 if __name__=="__main__":
