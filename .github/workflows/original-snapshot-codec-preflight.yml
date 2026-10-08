@@ -1,0 +1,69 @@
+name: original-ora-snapshot-readonly-codec-preflight
+
+# A one-off read-only copied-state test; no schedule, state mutation, or API model.
+on:
+  push:
+    branches:
+      - research/original-snapshot-codec-preflight-20261008
+    paths:
+      - 'scripts/original_snapshot_codec_probe.py'
+      - 'tests/test_original_snapshot_codec_probe.py'
+      - '.github/workflows/original-snapshot-codec-preflight.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Verify exact candidate source and codec contract
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. python -B -m unittest discover -s tests -p 'test_original_snapshot_codec_probe.py' -v
+      - name: Snapshot authentic original growth branch in detached worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --filter=blob:none origin refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          git worktree add --detach "$RUNNER_TEMP/ora-growth-readonly" refs/remotes/origin/autonomous/growth
+          echo "ORIGINAL_GROWTH_HEAD=$(git -C "$RUNNER_TEMP/ora-growth-readonly" rev-parse HEAD)" >> "$GITHUB_ENV"
+          test -z "$(git -C "$RUNNER_TEMP/ora-growth-readonly" status --porcelain)"
+      - name: Verify byte-identical gzip on the real snapshot without publishing it
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. python -B scripts/original_snapshot_codec_probe.py \
+            --snapshot "$RUNNER_TEMP/ora-growth-readonly/state/organism.json" \
+            --output "$RUNNER_TEMP/ora-snapshot-codec-readonly.json"
+          test -z "$(git -C "$RUNNER_TEMP/ora-growth-readonly" status --porcelain)"
+          python - <<'PY'
+          import json, os, pathlib, subprocess
+          target=pathlib.Path(os.environ["RUNNER_TEMP"])/"ora-snapshot-codec-readonly.json"
+          report=json.loads(target.read_text())
+          report["growth_head"]=os.environ["ORIGINAL_GROWTH_HEAD"]
+          report["candidate_sha"]=os.environ["GITHUB_SHA"]
+          root=pathlib.Path(os.environ["RUNNER_TEMP"])/"ora-growth-readonly"
+          git_blob=subprocess.check_output(["git","-C",str(root),"rev-parse","HEAD:state/organism.json"],text=True).strip()
+          if report["snapshot_git_blob"]!=git_blob:
+              raise SystemExit("Original snapshot Git blob identity conflict")
+          target.write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+          print("Verified read-only original snapshot Git blob:",git_blob)
+          PY
+      - name: Archive bounded scientific receipt, not original history bytes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-snapshot-codec-readonly-${{ github.run_id }}
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/ora-snapshot-codec-readonly.json
+          retention-days: 30
