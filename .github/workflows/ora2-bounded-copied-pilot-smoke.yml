@@ -1,0 +1,69 @@
+name: ora2-bounded-copied-pilot-smoke
+
+# Engineering-only finite copied-world action exercise. No persistent pilot,
+# original state mutation, scheduling, external models or live controllers.
+on:
+  push:
+    branches:
+      - ora2/blind-context-world-prototype-20261008
+    paths:
+      - '.github/workflows/ora2-bounded-copied-pilot-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ora2-bounded-copied-pilot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  isolated-copied-world:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+      PYTHONDONTWRITEBYTECODE: '1'
+      AGENTTEST_MODEL: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Confirm exact source and protected tree
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/ora2/blind-context-world-prototype-20261008'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD:src)" = '9b0f880af84a0b1b69fd6aa9009ab738acd7dfad'
+          git diff --exit-code HEAD -- src/ state/
+      - name: Verify copied-world source, public-only policy and cold replay
+        run: |
+          python -B -m unittest discover -s tests -p 'test_blind_context_world.py' -v
+          python -B -m unittest discover -s tests -p 'test_copied_pilot.py' -v
+      - name: Run bounded copied pilot across independent invocations
+        shell: bash
+        run: |
+          python -B -m ora2.copied_pilot \
+            --ledger "$RUNNER_TEMP/ora2-copied-ledger.json" \
+            --enable-copied --seed 3 \
+            --stream-id 1234567890abcdef1234567890abcdef \
+            --budget 16 --steps 8 > "$RUNNER_TEMP/ora2-first.json"
+          python -B -m ora2.copied_pilot \
+            --ledger "$RUNNER_TEMP/ora2-copied-ledger.json" \
+            --enable-copied --resume --steps 8 > "$RUNNER_TEMP/ora2-final.json"
+          python -B -c "import json,os,pathlib; d=json.loads(pathlib.Path(os.environ['RUNNER_TEMP'],'ora2-final.json').read_text()); assert d['completed_actions']==16 and d['authored_policy_actions']==16 and d['original_live_ora_actions']==0 and d['scientific_benefit_gate']=='NOT_TESTED'"
+          git diff --exit-code HEAD -- src/ state/
+      - name: Retain actual copied-world evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ora2-bounded-copied-pilot-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/ora2-first.json
+            ${{ runner.temp }}/ora2-final.json
+            ${{ runner.temp }}/ora2-copied-ledger.json
+          retention-days: 90
