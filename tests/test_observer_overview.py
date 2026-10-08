@@ -43,9 +43,12 @@ class ObserverOverviewTests(unittest.TestCase):
 
     def test_served_observer_replaced_without_changing_legacy_contract(self):
         workflow = (ROOT / '.github/workflows/pages.yml').read_text()
-        self.assertIn('cp observer.html _site/index.html', workflow)
-        self.assertIn('cp index.html _site/legacy.html', workflow)
-        self.assertIn('cmp index.html _site/legacy.html', workflow)
+        self.assertIn('cp index.html _site/index.html', workflow)
+        self.assertIn('cp legacy.html _site/legacy.html', workflow)
+        self.assertIn('cmp index.html observer.html', workflow)
+        self.assertIn('cmp legacy.html _site/legacy.html', workflow)
+        self.assertEqual((ROOT / 'index.html').read_bytes(), (ROOT / 'observer.html').read_bytes())
+        self.assertIn('AgentTest · Persistent Growth Console', (ROOT / 'legacy.html').read_text())
         self.assertTrue(any(a.get('href') == 'legacy.html' for a in self.page.links))
         self.assertIn('Ora Observatory', self.html)
         self.assertIn('Question the evidence.', self.html)
