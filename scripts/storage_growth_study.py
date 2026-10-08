@@ -70,6 +70,9 @@ def collection_sizes(state: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def journal_inventory(path: Path) -> dict[str, Any]:
+    source = path.resolve()
+    if source.name == "journal.jsonl" and ((source.parent / "journal-archives.json").exists() or (source.parent / "journal-archives.json").is_symlink()):
+        raise ValueError("active journal tail is not full history; use a verified logical export")
     events = Counter()
     raw_by_event = Counter()
     cycle_field_bytes = Counter()

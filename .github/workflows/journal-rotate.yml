@@ -1,0 +1,107 @@
+name: lossless-original-journal-rotation
+
+# A completed, reviewed, exact-head merge to main may trigger this one-time
+# guarded rotation. The job fails closed on in-flight or ambiguous receipts.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/journal-rotate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: agenttest-autonomous-growth-v2
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.14"
+
+      - name: Require exact verified main source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.sha }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        shell: bash
+        run: |
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch" -o "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$WORKFLOW_SHA" = "$SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          guard_path="$(mktemp "$RUNNER_TEMP/journal-verified-source-XXXXXX.py")"
+          git show "$SOURCE_SHA:scripts/verified_growth_source.py" > "$guard_path"
+          python -I -B "$guard_path" verify-ci --source-sha "$SOURCE_SHA" --repository "$GITHUB_REPOSITORY"
+          echo "VERIFIED_SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+          echo "JOURNAL_SOURCE_GUARD=$guard_path" >> "$GITHUB_ENV"
+          transport_path="$(mktemp "$RUNNER_TEMP/journal-transport-XXXXXX.py")"
+          git show "$SOURCE_SHA:scripts/heartbeat_transport.py" > "$transport_path"
+          echo "JOURNAL_TRANSPORT=$transport_path" >> "$GITHUB_ENV"
+
+      - name: Acquire current growth head and merge verified source only
+        shell: bash
+        run: |
+          git config user.name "agenttest-growth"
+          git config user.email "agenttest-growth@users.noreply.github.com"
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          git checkout -B autonomous/growth origin/autonomous/growth
+          echo "GROWTH_REMOTE_BASE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          git merge --no-edit "$VERIFIED_SOURCE_SHA"
+          python -I -B "$JOURNAL_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA" --require-clean
+
+      - name: Rotate inactive journal into immutable verified archive
+        shell: bash
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+            python scripts/rotate_live_journal.py rotate \
+              --root "$GITHUB_WORKSPACE" \
+              --expected-remote-head "$GROWTH_REMOTE_BASE" \
+              > "$RUNNER_TEMP/journal-rotation-receipt.json"
+          python -I -B "$JOURNAL_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
+          git add state/
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          row=json.loads((Path(os.environ['RUNNER_TEMP'])/'journal-rotation-receipt.json').read_text())
+          name=row['archive']['name']
+          old=row['original_journal_blob']
+          archived=subprocess.check_output(['git','rev-parse', ':state/'+name], text=True).strip()
+          active_size=int(subprocess.check_output(['git','cat-file','-s',':state/journal.jsonl'],text=True).strip())
+          if archived != old or active_size != 0:
+              raise SystemExit('Git-staged archive is not byte-identical, or active tail is not empty.')
+          # Exactly three state paths may change in this maintenance commit.
+          expected={'state/journal.jsonl', 'state/journal-archives.json', 'state/'+name}
+          changed=set(subprocess.check_output(['git','diff','--cached','--name-only'], text=True).splitlines())
+          if changed != expected:
+              raise SystemExit('Unexpected staged changes: '+repr(sorted(changed ^ expected)))
+          print('Sealed existing Git blob:', archived, 'new tail bytes:', active_size)
+          PY
+          git diff --cached --quiet && { echo "No journal changes staged"; exit 1; }
+          git commit -m "Seal original Ora journal without losing history"
+          python -I -B "$JOURNAL_SOURCE_GUARD" verify-source --source-sha "$VERIFIED_SOURCE_SHA"
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/rotate_live_journal.py verify --root "$GITHUB_WORKSPACE"
+
+      - name: Publish exact growth extension and confirm remotely
+        shell: bash
+        run: |
+          python -I -B "$JOURNAL_TRANSPORT" publish \
+            --root "$GITHUB_WORKSPACE" \
+            --candidate "$(git rev-parse HEAD)" \
+            --expected-parent "$GROWTH_REMOTE_BASE"
+          git fetch origin autonomous/growth:refs/remotes/origin/autonomous/growth
+          test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/autonomous/growth)"
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python scripts/rotate_live_journal.py verify --root "$GITHUB_WORKSPACE"

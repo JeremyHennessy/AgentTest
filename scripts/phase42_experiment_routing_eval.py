@@ -186,7 +186,10 @@ def main() -> int:
     parser.add_argument("--output")
     args = parser.parse_args()
     try:
-        text = Path(args.records).read_text(encoding="utf-8")
+        source = Path(args.records).resolve()
+        if source.name == "journal.jsonl" and ((source.parent / "journal-archives.json").exists() or (source.parent / "journal-archives.json").is_symlink()):
+            raise ValueError("active journal tail is not full history; use a verified logical export")
+        text = source.read_text(encoding="utf-8")
         try:
             records = json.loads(text)
             if isinstance(records, dict):
