@@ -1,0 +1,64 @@
+name: ora2-blind-context-study001
+
+# ONE prospectively registered copied-world passive prediction comparison.
+# Do not rerun or extend a consumed study to manufacture a positive result.
+on:
+  push:
+    branches:
+      - ora2/blind-context-world-prototype-20261008
+    paths:
+      - '.github/workflows/ora2-blind-context-study001.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ora2-blind-context-study001-once
+  cancel-in-progress: false
+
+jobs:
+  registered-comparison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: .
+      PYTHONDONTWRITEBYTECODE: '1'
+      AGENTTEST_MODEL: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify frozen prospective protocol and immutable original source
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/ora2/blind-context-world-prototype-20261008'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git hash-object docs/ORA2_BLIND_CONTEXT_STUDY001.md)" = '930a9956a62bba1a53af455afe2b07e2a0f13746'
+          test "$(git rev-parse HEAD:src)" = '9b0f880af84a0b1b69fd6aa9009ab738acd7dfad'
+          git diff --exit-code HEAD -- state/ src/
+      - name: Synthetic-only preflight without registered seeds
+        run: |
+          python -B -m unittest discover -s tests -p 'test_blind_context_world.py' -v
+          python -B -m unittest discover -s tests -p 'test_blind_context_study001.py' -v
+      - name: Execute one registered 12-world passive comparison
+        shell: bash
+        run: |
+          python -B -m ora2.blind_context_study001 \
+            --root "$GITHUB_WORKSPACE" \
+            --output "$RUNNER_TEMP/ora2-blind-context-study001.json" \
+            --enable-registered-study > "$RUNNER_TEMP/ora2-blind-context-study001-summary.json"
+          python -B -c "import json,os,pathlib; p=pathlib.Path(os.environ['RUNNER_TEMP'],'ora2-blind-context-study001-summary.json'); d=json.loads(p.read_text()); assert d['paired_scored_cases']==576 and d['actions']==768 and d['original_live_ora_actions']==0 and d['learner_owned_actions']==0 and d['status'] in ('VALID_POSITIVE','VALID_NEGATIVE','INCONCLUSIVE_LOW_SENSITIVITY')"
+          git diff --exit-code HEAD -- state/ src/
+      - name: Preserve full cases and negative findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ora2-blind-context-study001-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/ora2-blind-context-study001.json
+            ${{ runner.temp }}/ora2-blind-context-study001-summary.json
+          retention-days: 90
