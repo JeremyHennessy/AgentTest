@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - index.html
+      - observer.html
+      - observer.css
+      - observer.js
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -33,7 +36,14 @@ jobs:
         shell: bash
         run: |
           mkdir -p _site
-          cp index.html _site/index.html
+          cp observer.html _site/index.html
+          cp observer.css observer.js _site/
+          cp index.html _site/legacy.html
+          cmp observer.html _site/index.html
+          cmp index.html _site/legacy.html
+          cmp observer.css _site/observer.css
+          cmp observer.js _site/observer.js
+          sha256sum _site/index.html _site/observer.css _site/observer.js _site/legacy.html
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
