@@ -14,6 +14,7 @@ from pathlib import Path
 import subprocess
 
 from .current_world_investigation import execution_hash
+from .journal_tail_rotation import MANIFEST, logical_digest, logical_lines
 from .grounded_policy.primitives import Conflict, canonical, digest, label, strict_json
 
 VERSION = "current-world-heartbeat-claim-v1"
@@ -39,7 +40,10 @@ def _write(path: Path, state: dict) -> None:
 
 def _journal_hash(path: Path) -> str:
     journal = path.parent / "journal.jsonl"
-    return hashlib.sha256(journal.read_bytes() if journal.exists() else b"").hexdigest()
+    if not journal.exists() and not (path.parent / MANIFEST).exists():
+        return hashlib.sha256(b"").hexdigest()
+    # The durable claim binds the whole logical history, not only the active tail.
+    return logical_digest(path.parent)[1]
 
 
 def _state_hash(state: dict) -> str:
@@ -179,9 +183,14 @@ def verify_completed(path: Path, request_id: str, *, require_current: bool = Fal
     record = rows[0]
     if record.get("content_hash") != digest({k: v for k, v in record.items() if k != "content_hash"}):
         raise Conflict("completed_heartbeat_content_changed")
-    journal = path.parent / "journal.jsonl"
-    events = [strict_json(line) for line in journal.read_bytes().splitlines() if line.strip()]
-    matches = [event for event in events if event.get("heartbeat_request_id") == request_id]
+    # Archive-aware streaming retains strict JSON validation for every old event.
+    # Never hold an indefinitely growing list of historical events in memory.
+    matches = []
+    for line in logical_lines(path.parent):
+        if line.strip():
+            event = strict_json(line)
+            if event.get("heartbeat_request_id") == request_id:
+                matches.append(event)
     if len(matches) != 1 or digest(matches[0]) != record["event_hash"]:
         raise Conflict("missing_duplicate_or_changed_heartbeat_journal_event")
     event = matches[0]

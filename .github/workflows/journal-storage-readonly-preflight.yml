@@ -1,0 +1,89 @@
+name: journal-storage-readonly-live-data-preflight
+
+# Tests the REAL original growth history using the candidate reader.
+# No history mutation, Git push, branch update, model API or rotation.
+on:
+  push:
+    branches:
+      - fix/lossless-journal-rotation-20261008
+    paths:
+      - 'src/agenttest/journal_tail_rotation.py'
+      - '.github/workflows/journal-storage-readonly-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: journal-storage-readonly-preflight
+  cancel-in-progress: true
+
+jobs:
+  verify-growth-journal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Snapshot real original Ora growth branch read-only
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = "refs/heads/fix/lossless-journal-rotation-20261008"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --filter=blob:none origin refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          git worktree add --detach "$RUNNER_TEMP/ora-growth-readonly" refs/remotes/origin/autonomous/growth
+          test -z "$(git -C "$RUNNER_TEMP/ora-growth-readonly" status --porcelain)"
+      - name: Validate complete real journal without altering growth
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        shell: bash
+        run: |
+          python -B - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          from agenttest.journal_tail_rotation import verify, logical_events, logical_digest, publication_preflight
+          root = Path(os.environ['RUNNER_TEMP'])/'ora-growth-readonly'
+          state = root/'state'
+          journal=state/'journal.jsonl'
+          head=subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD'],text=True).strip()
+          blob=subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD:state/journal.jsonl'],text=True).strip()
+          before=journal.stat().st_size
+          original=hashlib.sha256(journal.read_bytes()).hexdigest()
+          report=verify(state)
+          decoded=sum(1 for _ in logical_events(state))
+          logical=logical_digest(state)
+          budget=publication_preflight(state)
+          if report['active_bytes'] != before or decoded != report['logical_events']:
+              raise SystemExit('Real growth journal validation failed')
+          if logical != (before, original) or hashlib.sha256(journal.read_bytes()).hexdigest() != original:
+              raise SystemExit('Real growth journal digests do not match')
+          if blob != subprocess.check_output(['git','-C',str(root),'hash-object',str(journal)],text=True).strip():
+              raise SystemExit('Real growth Git blob was not preserved')
+          if subprocess.check_output(['git','-C',str(root),'status','--porcelain']).strip():
+              raise SystemExit('Read-only growth worktree changed')
+          receipt=json.loads((state/'heartbeat_operation.json').read_bytes())
+          result={'status':'READ_ONLY_REAL_JOURNAL_VERIFIED','growth_head':head,
+                  'journal_git_blob':blob,'journal_bytes':before,'journal_sha256':original,
+                  'logical_events':decoded,'receipt_status_at_snapshot':receipt.get('status'),
+                  'publication_preflight':budget, 'candidate_sha':os.environ['GITHUB_SHA'],
+                  'history_mutations':0}
+          output=Path(os.environ['RUNNER_TEMP'])/'ora-journal-readonly-preflight.json'
+          output.write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(result,sort_keys=True))
+          PY
+      - name: Preserve exact live-data validation receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-real-data-${{ github.run_id }}
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/ora-journal-readonly-preflight.json
+          retention-days: 30
