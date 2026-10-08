@@ -392,14 +392,25 @@ class ActionsReadStabilizationTests(unittest.TestCase):
         self.assertIn("page=1", api.call_args.args[0])
         sleep.assert_called_once_with(1)
 
-    def test_persistently_incomplete_snapshot_remains_blocked_after_three_reads(self):
+    def test_delayed_complete_snapshot_is_accepted_without_guessing(self):
+        actions = controller.Actions("JeremyHennessy/AgentTest")
+        complete = [run(42, status="queued")]
+        responses = [{"total_count": 1, "workflow_runs": []} for _ in range(4)]
+        responses.append({"total_count": 1, "workflow_runs": complete})
+        with patch.object(actions, "api", side_effect=responses) as api, patch.object(controller.time, "sleep") as sleep:
+            self.assertEqual(actions.runs("growth.yml", status="queued"), complete)
+        self.assertEqual(api.call_count, 5)
+        self.assertTrue(all(call == api.call_args_list[0] for call in api.call_args_list))
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [1, 2, 5, 10])
+
+    def test_persistently_incomplete_snapshot_remains_blocked_after_five_reads(self):
         actions = controller.Actions("JeremyHennessy/AgentTest")
         with patch.object(actions, "api", return_value={"total_count": 1, "workflow_runs": []}) as api, patch.object(controller.time, "sleep") as sleep:
             with self.assertRaisesRegex(controller.Blocked, "workflow_run_search_incomplete"):
                 actions.runs("growth.yml", status="queued")
-        self.assertEqual(api.call_count, 3)
+        self.assertEqual(api.call_count, 5)
         self.assertTrue(all(call == api.call_args_list[0] for call in api.call_args_list))
-        self.assertEqual([call.args[0] for call in sleep.call_args_list], [1, 2])
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [1, 2, 5, 10])
 
 
 class BoundedLegacyLogTests(unittest.TestCase):
