@@ -9,3 +9,13 @@ This is a read-only deployment handoff, **not** an installed history-rotation fi
 - Local focused test rerun: 26 tests, one skipped. This is not full main-repository CI and does not authorize the state mutation.
 - Immediate engineering dependency: review exact main source readers and scripts, apply archive-aware compatibility, integrate candidate on a separate branch, test all source/state preservation checks and exact-head CI, then merge verified code to main. Rotation must run exclusively between completed heartbeat claims on an exact verified growth parent, preserve original journal Git blob by SHA, and verify both reconstruction and successor heartbeats after deployment.
 - Do not merge this documentation-only branch as a fix, dispatch the draft maintenance workflow, reset live state, delete history, or enable the separate Ora 2 pilot.
+
+
+## Custodian release discipline (October 8, 2026)
+
+- Treat a safety, permission, or CI block as an explicit unresolved deployment incident, never as a reason to declare the release complete or bypass the block.
+- First recheck current main, autonomous/growth, pending heartbeat claims, exact PR head, and live journal headroom. Never use stale source/state SHAs.
+- Maintain one tracked integration candidate. Add actual rotation implementation and all archive-aware reader/heartbeat/research compatibility patches before asking for merge.
+- Verify exact-head repository CI, untouched historical bytes and Phase 41 commitments, lossless reconstruction, concurrency/exclusive maintenance scheduling, resumability, rollback, post-rotation real heartbeats, and research readers. No production history mutation before these gates.
+- If GitHub rejects writes, capture the exact error, leave the protected branches and persistent pilot unchanged, preserve local diffs and checks, and report the blocked publication clearly. Do not route around platform security via another identity, API or privileged workflow.
+- Following a verified, legitimately permitted deployment, check rotation receipts and subsequent durable heartbeat completions separately; only then mark the incident resolved. The periodic two-hour independent summary remains read-only.
