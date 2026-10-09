@@ -102,8 +102,19 @@ def _unpack_previous(previous: dict[str, Any] | None) -> dict[str, Any] | None:
             or body["world_version"] != STATEFUL_WORLD_VERSION
             or type(body["total_native_rows"]) is not int
             or type(body["compatible_native_rows"]) is not int
-            or body["total_native_rows"] < body["compatible_native_rows"] > 0
-            or body["total_native_rows"] < 0):
+            or body["total_native_rows"] < body["compatible_native_rows"]
+            or body["compatible_native_rows"] < 1
+            or body["original_active_commitment"] not in (True, False)
+            or body["study_owns_action"] is not False
+            or any(not HEX256.fullmatch(str(body.get(k) or "")) for k in (
+                "original_history_prefix_sha256",
+                "compatible_history_prefix_sha256",
+                "model_full_evidence_sha256",
+            ))
+            or not isinstance(body["last_compatible_id"], str)
+            or not body["last_compatible_id"]
+            or (body["original_last_action_cycle"] is not None
+                and type(body["original_last_action_cycle"]) is not int)):
         raise ValueError("invalid old observation count/world binding")
     _bounded_position(body["public_position"])
     if set(body["forecasts"]) != set(ACTION_ORDER):
@@ -113,7 +124,10 @@ def _unpack_previous(previous: dict[str, Any] | None) -> dict[str, Any] | None:
             raise ValueError("missing precommitted comparison arms")
         for arm in ARMS:
             forecast = body["forecasts"][action][arm]
-            if not isinstance(forecast, dict) or forecast.get("action") != action:
+            if (not isinstance(forecast, dict) or forecast.get("action") != action
+                    or forecast.get("arm") != arm
+                    or forecast.get("version") != VERSION
+                    or forecast.get("lifetime_rows") != body["compatible_native_rows"]):
                 raise ValueError("prior prediction bound to another action")
             if forecast.get("before") != body["public_position"]:
                 raise ValueError("prediction position changed after freeze")
@@ -130,7 +144,11 @@ def _unpack_previous(previous: dict[str, Any] | None) -> dict[str, Any] | None:
             or min(summary["scored_natural_first_actions"],
                    summary["inconclusive_intervals"]) < 0
             or set(summary["by_arm_brier_sum"]) != set(ARMS)
-            or set(summary["by_arm_logloss_sum"]) != set(ARMS)):
+            or set(summary["by_arm_logloss_sum"]) != set(ARMS)
+            or any(type(value) not in (int, float)
+                   or not 0 <= value < float("inf")
+                   for key in ("by_arm_brier_sum", "by_arm_logloss_sum")
+                   for value in summary[key].values())):
         raise ValueError("prior score ancestry invalid")
     return body
 
