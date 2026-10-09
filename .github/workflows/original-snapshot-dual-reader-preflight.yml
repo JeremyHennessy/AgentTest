@@ -56,6 +56,9 @@ jobs:
           (isolated/name).write_bytes(packed)
           if read_snapshot_bytes(isolated/"organism.json")!=raw:
               raise SystemExit("byte-exact roundtrip mismatch")
+          from agenttest.state import StateStore
+          if StateStore(isolated/"organism.json").load()!=StateStore(original).load():
+              raise SystemExit("StateStore migrated object differs")
           if read_snapshot_bytes(original)!=raw:
               raise SystemExit("original changed during preflight")
           if subprocess.check_output(["git","-C",str(growth),"status","--porcelain"]).strip():
