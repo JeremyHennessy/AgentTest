@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from agenttest.diagnostic_experiments import evaluate_experiment_design
+from agenttest.snapshot_storage import read_snapshot_bytes
 
 
 def _now() -> str:
@@ -30,7 +31,7 @@ def main() -> None:
     args = parser.parse_args()
 
     state_path = Path(args.state)
-    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state = json.loads(read_snapshot_bytes(state_path))
     result = evaluate_experiment_design(state)
     if result.get("source_state_mutated"):
         raise SystemExit("experiment-design diagnostic mutated source state")

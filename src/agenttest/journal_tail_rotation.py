@@ -16,6 +16,8 @@ from pathlib import Path
 import re
 import stat
 import tempfile
+
+from .snapshot_storage import read_snapshot_bytes
 from typing import Iterator
 
 MANIFEST = "journal-archives.json"
@@ -266,7 +268,7 @@ def _heartbeat_quiescent(state_dir: Path) -> int:
     _regular(organism)
     try:
         op = json.loads(operation.read_bytes())
-        state = json.loads(organism.read_bytes())
+        state = json.loads(read_snapshot_bytes(organism))
     except (ValueError, UnicodeError) as error:
         raise JournalIntegrityError("invalid_state_or_heartbeat") from error
     if op.get("status") != "completed" or type(op.get("result_cycle")) is not int:

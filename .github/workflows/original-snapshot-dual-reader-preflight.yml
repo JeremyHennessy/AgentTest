@@ -1,0 +1,67 @@
+name: original-snapshot-dual-reader-real-copy-preflight
+
+# Never scheduled. Runs on a detached copy of the original growth commit.
+on:
+  push:
+    branches:
+      - fix/original-snapshot-dual-reader-20261008
+    paths:
+      - 'src/agenttest/snapshot_storage.py'
+      - 'tests/test_snapshot_storage.py'
+      - '.github/workflows/original-snapshot-dual-reader-preflight.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Verify codec synthetic contracts
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B -m unittest discover -s tests -p test_snapshot_storage.py -v
+      - name: Pin authentic original snapshot read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --filter=blob:none origin refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          git worktree add --detach "$RUNNER_TEMP/original-growth" refs/remotes/origin/autonomous/growth
+          test -z "$(git -C "$RUNNER_TEMP/original-growth" status --porcelain)"
+      - name: Reconstruct byte-exact authentic snapshot from candidate envelope
+        shell: bash
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python -B - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+          from agenttest.snapshot_storage import prepare_compressed_copy, read_snapshot_bytes
+          growth=pathlib.Path(os.environ["RUNNER_TEMP"])/"original-growth"
+          original=growth/"state/organism.json"
+          raw=read_snapshot_bytes(original)
+          expected=subprocess.check_output(["git","-C",str(growth),"rev-parse","HEAD:state/organism.json"],text=True).strip()
+          git_blob=hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
+          if git_blob!=expected:
+              raise SystemExit("authentic Git blob mismatch")
+          envelope,name,packed=prepare_compressed_copy(raw)
+          isolated=pathlib.Path(os.environ["RUNNER_TEMP"])/"compressed-copy"
+          isolated.mkdir()
+          (isolated/"organism.json").write_bytes(envelope)
+          (isolated/name).write_bytes(packed)
+          if read_snapshot_bytes(isolated/"organism.json")!=raw:
+              raise SystemExit("byte-exact roundtrip mismatch")
+          from agenttest.state import StateStore
+          if StateStore(isolated/"organism.json").load()!=StateStore(original).load():
+              raise SystemExit("StateStore migrated object differs")
+          if read_snapshot_bytes(original)!=raw:
+              raise SystemExit("original changed during preflight")
+          if subprocess.check_output(["git","-C",str(growth),"status","--porcelain"]).strip():
+              raise SystemExit("original worktree was modified")
+          print(json.dumps({"status":"READ_ONLY_EXACT_ROUNDTRIP","growth_head":subprocess.check_output(["git","-C",str(growth),"rev-parse","HEAD"],text=True).strip(),"candidate_head":os.environ["GITHUB_SHA"],"original_bytes":len(raw),"compressed_bytes":len(packed),"raw_sha256":hashlib.sha256(raw).hexdigest(),"original_actions":0,"history_writes":0,"production_cutover":False},sort_keys=True))
+          PY
