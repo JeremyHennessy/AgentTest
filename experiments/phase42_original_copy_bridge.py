@@ -148,8 +148,6 @@ def probe_original_copy(
             "state": state,
             "execution": None,
         }
-    if interrupted and not permit_commitment_interruption:
-        raise AssertionError("unreachable commitment authorization")
     case_id = "P42C-" + hashlib.sha256(
         json.dumps([cycle, position, selected, request_id],
                    sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -172,7 +170,7 @@ def probe_original_copy(
             selected["forecast"]["probabilities"], kind,
         ),
         "postaction_forecast_for_same_original_context": forecast(
-            view, selected["command"], [
+            view, selected["command"], ([
                 *previous,
                 {
                     "id": "copied:" + result["id"],
@@ -180,7 +178,7 @@ def probe_original_copy(
                     "command": selected["command"],
                     "outcome_kind": kind,
                 },
-            ],
+            ])[-MAX_HISTORY:],
         ),
         "state": state,
     }
