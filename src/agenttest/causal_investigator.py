@@ -13,7 +13,7 @@ import json
 import math
 from typing import Any
 
-VERSION = "phase42-evidence-owned-v1"
+VERSION = "phase42-evidence-owned-v2"
 OUTCOMES = (
     "blocked",
     "moved",
@@ -223,11 +223,17 @@ def select_investigation(
         family_n = expected["family_samples"]
         # The objective is *uncertainty about usable public effects*, not
         # reaching a specific object, direction, puzzle key or score.
+        # The first exploratory version always preferred completely unseen
+        # action families: none of 48 selected forecasts used existing evidence.
+        # Value a *new-context test of a learned family* alongside fresh search.
+        # This is a new development policy, not a post-hoc positive study score.
         information_opportunity = (
-            0.60 * entropy
-            + 0.30 / math.sqrt(1 + local_n)
-            + 0.10 / math.sqrt(1 + family_n)
+            0.45 * entropy
+            + 0.25 / math.sqrt(1 + local_n)
+            + 0.15 / math.sqrt(1 + family_n)
         )
+        if family_n > 0 and local_n == 0:
+            information_opportunity += 0.27 / math.sqrt(1 + family_n)
         # Repeated observed failures are counted, not suppressed or relabeled.
         redundant = (expected["local_blocked"] + expected["local_no_effect"])
         score = information_opportunity / (1 + 0.4 * redundant)
@@ -235,17 +241,35 @@ def select_investigation(
         rankings.append((score, tie, deepcopy(candidate), expected))
     # The digest breaks ties without favoring compass order or a known solution.
     score, _, command, expected = min(rankings, key=lambda r: (-r[0], r[1]))
+    current_hash = _digest(public)
+    kind = (
+        "test_cross_context_prediction"
+        if expected["family_samples"] and not expected["local_samples"]
+        else "new_action_family"
+        if not expected["family_samples"]
+        else "retest_local_uncertainty"
+    )
+    alternatives = sorted(
+        (o for o in OUTCOMES if o != expected["predicted_outcome"]),
+        key=lambda o: (-expected["probabilities"][o], o),
+    )
     return {
         "version": VERSION,
         "owner_id": f"INV{len(prior_events) + 1:06d}",
-        "question": "What observable effect follows this bounded public action?",
+        "question": (
+            f"What public effect follows {command_key(command)[0]} "
+            f"in observed context {current_hash[:12]}?"
+        ),
+        "hypothesis": expected["predicted_outcome"],
+        "alternatives": alternatives[:2],
+        "inquiry_mode": kind,
         "command": command,
         "forecast": expected,
         "selection_score": round(score, 12),
         "available_commands": len(menu),
         "history_length": len(prior_events),
-        "public_hash": _digest(public),
-        "policy": "empirical-uncertainty-with-repeat-cost-v1",
+        "public_hash": current_hash,
+        "policy": "hierarchical-transfer-probe-v2",
     }
 
 
