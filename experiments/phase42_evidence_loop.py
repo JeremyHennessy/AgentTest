@@ -286,6 +286,45 @@ def study(steps: int = 32) -> dict:
                 e["command"] != e["memory_ablated_command"]
                 for e in capsule["events"]
             )
+            # One-step *evaluation only*: compare actual and memory-masked
+            # commands from the exact same prior world. The mask's outcome is
+            # never returned to the investigator, stored in its capsule, or
+            # used to choose a subsequent action.
+            replay_world = initial_world(seed)
+            actual_public_changes = 0
+            ablated_public_changes = 0
+            actual_blocked = 0
+            ablated_blocked = 0
+            memory_better_changes = 0
+            ablation_better_changes = 0
+            for index, event in enumerate(capsule["events"], 1):
+                counter_world, counter_receipt = transition(
+                    replay_world, event["memory_ablated_command"], cycle=index,
+                )
+                counter_public = observe_world(counter_world)
+                before_public = policy.project_public(event["public_before"])
+                actual_change = (
+                    policy.project_public(event["public_after"]) != before_public
+                )
+                counter_change = (
+                    policy.project_public(counter_public) != before_public
+                )
+                actual_public_changes += int(actual_change)
+                ablated_public_changes += int(counter_change)
+                actual_blocked += int(event["outcome_kind"] == "blocked")
+                ablated_blocked += int(
+                    policy.classify_outcome(
+                        event["public_before"], counter_public, counter_receipt,
+                    ) == "blocked"
+                )
+                if event["command"] != event["memory_ablated_command"]:
+                    memory_better_changes += int(actual_change and not counter_change)
+                    ablation_better_changes += int(counter_change and not actual_change)
+                replay_world, _ = transition(
+                    replay_world, event["command"], cycle=index,
+                )
+                if observe_world(replay_world) != event["public_after"]:
+                    raise AssertionError("one-step comparison lost exact world history")
             family_samples = [
                 e["selection"]["forecast"]["family_samples"]
                 for e in capsule["events"]
@@ -316,6 +355,12 @@ def study(steps: int = 32) -> dict:
                 "uniform_brier": summary["uniform_brier"],
                 "forecast_improves_on_uniform": summary["forecast_improves_on_uniform"],
                 "memory_changes_choice_count": choices,
+                "actual_public_changes": actual_public_changes,
+                "ablated_public_changes": ablated_public_changes,
+                "actual_blocked": actual_blocked,
+                "ablated_blocked": ablated_blocked,
+                "memory_only_public_change_advantages": memory_better_changes,
+                "ablation_only_public_change_advantages": ablation_better_changes,
                 "decisions_with_family_evidence": sum(n > 0 for n in family_samples),
                 "decisions_with_local_evidence": sum(n > 0 for n in local_samples),
                 "cross_context_followups": sum(
@@ -338,7 +383,7 @@ def study(steps: int = 32) -> dict:
             "Four deterministic mirrored layouts are not independent organisms.",
             "Repeated checks of a fixed authored world are software/mechanism evidence only.",
             "Uniform and pooled-global-history forecasts are simple controls; any advantage is not task benefit.",
-            "Counterfactual memory ablation here tests same-context decision influence only.",
+            "One-step memory ablation measures public change and blocked actions from identical starting worlds; it does not isolate long-term task utility.",
             "No long-term learning, new world, organism, self-maintenance, consciousness, or live activation is claimed.",
         ],
     }
