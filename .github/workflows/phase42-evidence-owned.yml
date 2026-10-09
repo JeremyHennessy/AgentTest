@@ -43,6 +43,8 @@ jobs:
               'actions_per_world':r['actions_per_world'],
               'mean_prequential_brier':[x['mean_prequential_brier'] for x in r['rows']],
               'memory_choice_differences':[x['memory_changes_choice_count'] for x in r['rows']],
+              'decisions_with_family_evidence':[x['decisions_with_family_evidence'] for x in r['rows']],
+              'decisions_with_local_evidence':[x['decisions_with_local_evidence'] for x in r['rows']],
               'status':r['status'],
           },sort_keys=True))
           PY
