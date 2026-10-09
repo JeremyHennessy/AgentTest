@@ -18,7 +18,7 @@ FORMAT = "ora-original-gzip-v1"
 MAX_RAW = 100 * 1024 * 1024
 MAX_PACKED = 100 * 1024 * 1024
 BLOCK = 1024 * 1024
-HEX = re.compile(r"[0-9a-f]{64}\\Z")
+HEX = re.compile(r"[0-9a-f]{64}\Z")
 
 
 class SnapshotStorageError(ValueError):
@@ -122,5 +122,5 @@ def prepare_compressed_copy(raw: bytes) -> tuple[bytes, str, bytes]:
                 "raw_sha256": _sha(raw), "gzip_bytes": len(packed),
                 "gzip_sha256": _sha(packed), "gzip_file": filename,
                 "cycle": cycle}
-    encoded = (json.dumps(envelope, sort_keys=True, separators=(",", ":")) + "\\n").encode()
+    encoded = (json.dumps(envelope, sort_keys=True, separators=(",", ":")) + "\n").encode()
     return encoded, filename, packed
