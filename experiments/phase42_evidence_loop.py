@@ -284,6 +284,14 @@ def study(steps: int = 32) -> dict:
                 e["command"] != e["memory_ablated_command"]
                 for e in capsule["events"]
             )
+            family_samples = [
+                e["selection"]["forecast"]["family_samples"]
+                for e in capsule["events"]
+            ]
+            local_samples = [
+                e["selection"]["forecast"]["local_samples"]
+                for e in capsule["events"]
+            ]
             rows.append({
                 "seed": seed,
                 "events": summary["events"],
@@ -291,6 +299,10 @@ def study(steps: int = 32) -> dict:
                 "uniform_brier": summary["uniform_brier"],
                 "forecast_improves_on_uniform": summary["forecast_improves_on_uniform"],
                 "memory_changes_choice_count": choices,
+                "decisions_with_family_evidence": sum(n > 0 for n in family_samples),
+                "decisions_with_local_evidence": sum(n > 0 for n in local_samples),
+                "family_sample_counts": family_samples,
+                "local_sample_counts": local_samples,
                 "outcomes": summary["outcomes"],
                 "unique_public_contexts": summary["unique_public_contexts"],
                 "validated_capsule_digest": row["digest"],
