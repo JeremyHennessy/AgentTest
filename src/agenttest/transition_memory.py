@@ -49,9 +49,8 @@ def delta_key(before: Any, after: Any) -> str:
 
 
 def normalize(row: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(row, dict) or set(row) != {
-        "id", "index", "before", "action", "after", "world_version",
-    }:
+    fields = {"id", "index", "before", "action", "after", "world_version"}
+    if not isinstance(row, dict) or set(row) not in (fields, fields | {"delta"}):
         raise ValueError("transition-memory event fields do not match schema")
     identifier = row["id"]
     if (not isinstance(identifier, str) or not 0 < len(identifier) <= 160
@@ -65,6 +64,8 @@ def normalize(row: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("action not in public original-world command grammar")
     before, after = _position(row["before"]), _position(row["after"])
     delta = delta_key(before, after)
+    if "delta" in row and row["delta"] != delta:
+        raise ValueError("stored delta contradicts public before/after evidence")
     return {
         "id": identifier,
         "index": row["index"],
