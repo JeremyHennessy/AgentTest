@@ -177,7 +177,9 @@ class DurableOwnedLoopTests(unittest.TestCase):
         loop.step(self.path, request_id="one", expected_revision=0)
         original = json.loads(self._original())
         forged = deepcopy(original)
-        forged["events"][0]["command"] = {"action": "west"}
+        original_action = forged["events"][0]["command"]["action"]
+        different_action = next(a for a in ("north", "east", "south", "west") if a != original_action)
+        forged["events"][0]["command"] = {"action": different_action}
         forged["digest"] = loop._sha({k: v for k, v in forged.items() if k != "digest"})
         self.path.write_bytes(loop._bytes(forged))
         with self.assertRaisesRegex(ValueError, "non-owned action"):
