@@ -65,8 +65,14 @@ def _unpack_previous(previous: dict[str, Any] | None) -> dict[str, Any] | None:
         return None
     if (not isinstance(previous, dict)
             or set(previous) != {"protocol", "frozen", "prospective",
-                                "summary", "source_not_modified"}):
+                                "summary", "source_not_modified", "report_sha256"}):
         raise ValueError("invalid previous signed observational report envelope")
+    if (not isinstance(previous["report_sha256"], str)
+            or previous["report_sha256"] != digest({
+                key: value for key, value in previous.items()
+                if key != "report_sha256"
+            })):
+        raise ValueError("prior shadow report hash mismatch")
     if previous["protocol"] != STUDY or previous["source_not_modified"] is not True:
         raise ValueError("wrong prior source experiment or writer authority")
     data = previous["frozen"]
@@ -297,6 +303,7 @@ def inspect(
         "summary": _summary(previous_report, prospective),
         "source_not_modified": True,
     }
+    result["report_sha256"] = digest(result)
     if len(_json(result)) > MAX_PREVIOUS_ARTIFACT:
         raise ValueError("future shadow artifact exceeds source-safe limit")
     return result
