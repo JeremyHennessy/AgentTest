@@ -3,8 +3,9 @@
 **Scope:** original AgentTest only. AI-Research remains read-only; Ora2.0 is not
 read, altered or used as a runtime dependency by this work.
 
-**Dependency:** the separate evidence-owned investigation policy staged in
-AgentTest PR #263. This bridge sits above it on a separate review branch.
+**Dependency:** AgentTest PR #263 is merged in main at
+9c66b148c80c842799333aa4dd3a76b0cd1c4c93. This bridge is reviewed in
+separate PR #264 against that main baseline.
 
 ## Purpose
 
@@ -58,6 +59,30 @@ causes fail-closed rejection rather than a second act or silent repair.
   heartbeat. It must not be presented as an authorized natural autonomous
   action, proof of beneficial learning, restored resumption, or readiness
   for continuous self-directed existence.
+
+## Authentic exact-growth-copy result (2026-10-09 UTC)
+
+[Read-only Actions 37868560895](https://github.com/JeremyHennessy/AgentTest/actions/runs/37868560895)
+passed 11 focused synthetic tests and one additional authentic detached state check:
+
+- Growth head df7a153eeabff6bb8cda8dcb4f917b7fd7365735;
+  Git source blob c8000df37c4cee08c09d8f85807cff93ae72864b.
+- Original cycle 7487, advanced by one only in the disposable in-memory
+  copy. The copied result selected an actual original-world action under
+  new investigation owner INV000257.
+- The 256 most recent compatible source observations were admitted;
+  54 incompatible-world rows were preserved but excluded, not rewritten.
+- Default run **abstained_active_commitment**, as designed. A separate
+  copied, explicitly interruption-enabled invocation executed one native
+  original-world action. No live action was authorized.
+- The original input file's SHA256 remained
+  7604dd5db13e1d830dc04f16f950f3341d4801fc61d7c0a15de9733df4436319
+  before and after. The real copy reported no displaced plan for its
+  selected action; synthetic tests separately cover plan invalidation.
+
+This establishes copied-world source compatibility and bounded action
+ownership, not the quality of a new original-Ora policy, natural independent
+learning, atomic live journaling or unattended runtime readiness.
 
 ## What remains before original Ora can use this
 
