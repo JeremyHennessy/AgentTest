@@ -1,0 +1,82 @@
+name: phase42-original-copy-bridge-readonly
+
+on:
+  push:
+    branches:
+      - research/phase42-original-copy-bridge-20261009
+    paths:
+      - 'experiments/phase42_original_copy_bridge.py'
+      - 'tests/test_phase42_original_copy_bridge.py'
+      - '.github/workflows/phase42-original-copy-bridge.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  copied-original-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Verify synthetic compatibility and no-mutation tests
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B -m unittest discover -s tests -p test_phase42_original_copy_bridge.py -v
+      - name: Fetch one exact untouched original growth state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --filter=blob:none origin refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          growth_head="$(git rev-parse refs/remotes/origin/autonomous/growth)"
+          growth_blob="$(git rev-parse "$growth_head:state/organism.json")"
+          echo "ORIGINAL_GROWTH_HEAD=$growth_head" >> "$GITHUB_ENV"
+          echo "ORIGINAL_GROWTH_BLOB=$growth_blob" >> "$GITHUB_ENV"
+          git show "$growth_head:state/organism.json" > "$RUNNER_TEMP/original-growth-organism.json"
+          test "$(git hash-object "$RUNNER_TEMP/original-growth-organism.json")" = "$growth_blob"
+      - name: Test exactly one action on detached in-memory original state
+        shell: bash
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          set -euo pipefail
+          python -B - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          from agenttest.state import StateStore
+          from phase42_original_copy_bridge import probe_original_copy
+          file=Path(os.environ['RUNNER_TEMP'])/'original-growth-organism.json'
+          raw_before=hashlib.sha256(file.read_bytes()).hexdigest()
+          imported=StateStore(file).load()
+          original_cycle=imported['cycles']
+          original_position=list(imported['planning_lab']['position'])
+          # One simulated next cycle in memory ONLY; never mutate original input.
+          imported['cycles']=original_cycle+1
+          imported['generation']=original_cycle+1
+          guarded=probe_original_copy(imported,request_id='COPY-READONLY-1')
+          authorized=probe_original_copy(
+              imported,request_id='COPY-READONLY-2',
+              permit_commitment_interruption=True,
+          )
+          assert authorized['status']=='executed_on_copy'
+          assert authorized['execution']['action']==authorized['provenance']['candidate_selection']['command']['action']
+          assert imported['planning_lab']['position']==original_position
+          assert imported['cycles']==original_cycle+1
+          assert hashlib.sha256(file.read_bytes()).hexdigest()==raw_before
+          print(json.dumps({
+              'exact_growth_head':os.environ['ORIGINAL_GROWTH_HEAD'],
+              'exact_growth_blob':os.environ['ORIGINAL_GROWTH_BLOB'],
+              'initial_cycle':original_cycle,
+              'guarded_status':guarded['status'],
+              'copy_action_owner':authorized['provenance']['candidate_selection']['owner_id'],
+              'original_state_bytes_unchanged':True,
+              'original_state_sha256':raw_before,
+              'source_rows_used':authorized['provenance']['inherited_source_rows_used'],
+              'incompatible_source_rows_excluded':authorized['provenance']['incompatible_world_rows_preserved_not_imported'],
+              'any_displaced_plan':bool(authorized['execution']['displaced_plan_id']),
+              'live_activation':False,
+          },sort_keys=True))
+          PY
