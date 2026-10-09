@@ -225,6 +225,16 @@ class DurableOwnedLoopTests(unittest.TestCase):
             loop.step(self.path, request_id="next", expected_revision=0)
         self.assertEqual(self._original(), prior)
 
+    def test_runner_source_identity_is_pinned(self):
+        self._new()
+        raw = json.loads(self._original())
+        self.assertEqual(len(raw["source_hashes"]["runner"]), 64)
+        raw["source_hashes"]["runner"] = "f" * 64
+        raw["digest"] = loop._sha({k: v for k, v in raw.items() if k != "digest"})
+        self.path.write_bytes(loop._bytes(raw))
+        with self.assertRaisesRegex(ValueError, "source changed"):
+            loop.inspect(self.path)
+
     def test_no_overwrite_ever_and_reject_live_state_path(self):
         self._new()
         before = self._original()
@@ -252,6 +262,10 @@ class DurableOwnedLoopTests(unittest.TestCase):
         self.assertTrue(all(x["events"] == 2 for x in result["rows"]))
         self.assertIn("not_preregistered", result["status"])
         self.assertIn("not independent", " ".join(result["limitations"]))
+        for row in result["rows"]:
+            self.assertIn("global_prior_brier", row)
+            self.assertIn("cross_context_followups", row)
+            self.assertGreater(row["global_prior_brier"], 0)
 
 
 if __name__ == "__main__":
