@@ -52,3 +52,22 @@ No model receives the held-out outcome until **after** it has emitted and record
 ## Release/activation boundary
 
 This study is a **read-only** mirror of original learning evidence. It does **not** modify `src/agenttest/core.py`, `state/*`, `.github/workflows/growth.yml`, heartbeat scripts, the approved Observer source, or old history. Storage PR #262 remains separate. No OpenAI API, external model provider, new world, hidden reward or new capability activation is permitted by the study. A future connection to the owned-action executive needs its own baseline no-regression test, commitment arbitration, atomic memory receipt and verified natural action ownership, with no forced question resumption.
+
+## Pre-study admission amendment — complete original history scale
+
+On the first authentic read-only original-state attempt (Actions
+[37870869481](https://github.com/JeremyHennessy/AgentTest/actions/runs/37870869481)),
+**16/16 synthetic tests passed**, but full native-history extraction rejected
+with `eligible source exceeds bounded memory` because the registered 4,096-row
+engineering cap was too low. No held-out predictions, scores, or study results
+were produced. The source was not altered.
+
+Before any scientific outcome was exposed, **only** the total evidence capacity
+was raised to 32,768 native compatible events and the maximum serialized cold
+memory envelope to 20 MiB, preserving **all** original rows. The study's
+chronological split, six baseline arms, smoothing constants, outcome grammar,
+metrics, negative outcomes and stopping rules are unchanged. If authentic
+history exceeds this larger cap or integrity checking fails, record another
+pre-study admission failure rather than taking a favorable slice or discarding
+old evidence. This amendment is engineering scope reconciliation, not a positive
+result or authority for a new policy.
