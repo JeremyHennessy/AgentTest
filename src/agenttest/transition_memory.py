@@ -19,7 +19,7 @@ ACTIONS = ("north", "east", "south", "west")
 DELTAS = ("0,0", "1,0", "-1,0", "0,1", "0,-1")
 ALPHA = 0.5
 LOCAL_STRENGTH = 3.0
-MAX_ROWS = 4096
+MAX_ROWS = 32768
 _MIN_PROB = 1e-300
 
 
@@ -176,7 +176,7 @@ class TransitionMemory:
 
     @classmethod
     def restore(cls, blob: bytes) -> "TransitionMemory":
-        if not isinstance(blob, bytes) or len(blob) > 5 * 1024 * 1024:
+        if not isinstance(blob, bytes) or len(blob) > 20 * 1024 * 1024:
             raise ValueError("invalid persisted evidence capsule size")
         try:
             value = json.loads(blob)
