@@ -46,7 +46,7 @@ jobs:
           original=growth/"state/organism.json"
           raw=read_snapshot_bytes(original)
           expected=subprocess.check_output(["git","-C",str(growth),"rev-parse","HEAD:state/organism.json"],text=True).strip()
-          git_blob=hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\\0"+raw).hexdigest()
+          git_blob=hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
           if git_blob!=expected:
               raise SystemExit("authentic Git blob mismatch")
           envelope,name,packed=prepare_compressed_copy(raw)
