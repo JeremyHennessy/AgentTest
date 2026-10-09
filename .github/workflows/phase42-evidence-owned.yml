@@ -1,0 +1,63 @@
+name: phase42-evidence-owned-readonly-study
+
+on:
+  push:
+    branches:
+      - research/phase42-evidence-owned-loop-20261009
+    paths:
+      - 'src/agenttest/causal_investigator.py'
+      - 'experiments/phase42_evidence_loop.py'
+      - 'tests/test_phase42_evidence_owned.py'
+      - '.github/workflows/phase42-evidence-owned.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  owned-action-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Verify owned-action and corruption checks
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B -m unittest discover -s tests -p test_phase42_evidence_owned.py -v
+      - name: Execute fixed bounded exploratory study
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B experiments/phase42_evidence_loop.py study --steps 12 > /tmp/phase42-evidence-owned.json
+          python - <<'PY'
+          import json
+          r=json.load(open('/tmp/phase42-evidence-owned.json'))
+          assert r['worlds']==4
+          assert r['actions_per_world']==12
+          assert len(r['rows'])==4
+          assert all(x['events']==12 for x in r['rows'])
+          assert r['status']=='exploratory_not_preregistered_scientific_test'
+          print(json.dumps({
+              'worlds':r['worlds'],
+              'actions_per_world':r['actions_per_world'],
+              'mean_prequential_brier':[x['mean_prequential_brier'] for x in r['rows']],
+              'memory_choice_differences':[x['memory_changes_choice_count'] for x in r['rows']],
+              'decisions_with_family_evidence':[x['decisions_with_family_evidence'] for x in r['rows']],
+              'decisions_with_local_evidence':[x['decisions_with_local_evidence'] for x in r['rows']],
+              'cross_context_followups':[x['cross_context_followups'] for x in r['rows']],
+              'global_prior_brier':[x['global_prior_brier'] for x in r['rows']],
+              'beats_global_prior':[x['beats_global_prior'] for x in r['rows']],
+              'actual_public_changes':[x['actual_public_changes'] for x in r['rows']],
+              'ablated_public_changes':[x['ablated_public_changes'] for x in r['rows']],
+              'actual_blocked':[x['actual_blocked'] for x in r['rows']],
+              'ablated_blocked':[x['ablated_blocked'] for x in r['rows']],
+              'status':r['status'],
+          },sort_keys=True))
+          PY
+      - name: Retain unedited results for later review
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase42-evidence-owned-receipt
+          path: /tmp/phase42-evidence-owned.json
+          retention-days: 30
