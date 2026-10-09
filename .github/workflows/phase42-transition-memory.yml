@@ -1,0 +1,89 @@
+name: original-ora-transition-memory-readonly
+
+on:
+  push:
+    branches:
+      - research/phase42-transition-memory-20261009
+    paths:
+      - 'src/agenttest/transition_memory.py'
+      - 'experiments/phase42_transition_memory_study.py'
+      - 'tests/test_phase42_transition_memory.py'
+      - '.github/workflows/phase42-transition-memory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  original-memory-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Verify scoped pure-model and original audit tests
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B -m unittest discover -s tests -p test_phase42_transition_memory.py -v
+      - name: Pin complete original Ora state from one durable growth Git commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --filter=blob:none origin refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          head="$(git rev-parse refs/remotes/origin/autonomous/growth)"
+          blob="$(git rev-parse "$head:state/organism.json")"
+          git show "$head:state/organism.json" > "$RUNNER_TEMP/ora-original-unchanged.json"
+          test "$(git hash-object "$RUNNER_TEMP/ora-original-unchanged.json")" = "$blob"
+          echo "ORIGINAL_HEAD=$head" >> "$GITHUB_ENV"
+          echo "ORIGINAL_BLOB=$blob" >> "$GITHUB_ENV"
+          echo "ORIGINAL_SHA256=$(sha256sum "$RUNNER_TEMP/ora-original-unchanged.json" | cut -d ' ' -f1)" >> "$GITHUB_ENV"
+      - name: Audit original native receipts and score withheld suffix twice
+        shell: bash
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          set -euo pipefail
+          python -B experiments/phase42_transition_memory_study.py \
+            --state "$RUNNER_TEMP/ora-original-unchanged.json" \
+            --original-commit "$ORIGINAL_HEAD" \
+            --original-blob "$ORIGINAL_BLOB" \
+            --expected-sha256 "$ORIGINAL_SHA256" \
+            --output "$RUNNER_TEMP/memory-trial-1.json"
+          python -B experiments/phase42_transition_memory_study.py \
+            --state "$RUNNER_TEMP/ora-original-unchanged.json" \
+            --original-commit "$ORIGINAL_HEAD" \
+            --original-blob "$ORIGINAL_BLOB" \
+            --expected-sha256 "$ORIGINAL_SHA256" \
+            --output "$RUNNER_TEMP/memory-trial-2.json"
+          cmp "$RUNNER_TEMP/memory-trial-1.json" "$RUNNER_TEMP/memory-trial-2.json"
+          test "$(git hash-object "$RUNNER_TEMP/ora-original-unchanged.json")" = "$ORIGINAL_BLOB"
+          test "$(sha256sum "$RUNNER_TEMP/ora-original-unchanged.json" | cut -d ' ' -f1)" = "$ORIGINAL_SHA256"
+          python - <<'PY'
+          import json, os
+          with open(os.environ['RUNNER_TEMP']+'/memory-trial-1.json') as source:
+              report=json.load(source)
+          ev=report['evaluation']
+          assert ev['status'] in ('candidate_improves_over_family','candidate_no_gain')
+          assert ev['evaluation_rows']>=24
+          assert report['original_state_modified'] is False
+          assert report['original_ora_activation'] is False
+          print(json.dumps({
+              'source_commit':report['source']['exact_commit'],
+              'source_cycle':report['source']['original_cycle'],
+              'eligible':ev['total_compatible_rows'],
+              'heldout':ev['evaluation_rows'],
+              'status':ev['status'],
+              'family_minus_candidate_brier':ev['family_minus_candidate_brier'],
+              'local_usable_forecasts':ev['candidate_local_evidence_forecasts'],
+              'raw_source_unchanged':True,
+          },sort_keys=True))
+          PY
+      - name: Archive read-only study and exact source reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-ora-transition-memory-study
+          path: ${{ runner.temp }}/memory-trial-1.json
+          retention-days: 30
+          if-no-files-found: warn
