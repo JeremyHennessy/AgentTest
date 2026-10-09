@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from agenttest.state import StateStore
+from agenttest.state import StateStore, initial_state
 from agenttest.snapshot_storage import (
     SnapshotStorageError, prepare_compressed_copy, read_snapshot_bytes,
 )
@@ -99,6 +99,9 @@ class SnapshotStorageTests(unittest.TestCase):
             read_snapshot_bytes(self.state)
 
     def test_state_store_reads_legacy_and_envelope(self):
+        valid = initial_state()
+        valid["cycles"] = 7453
+        self.raw = (json.dumps(valid, sort_keys=True) + "\n").encode()
         self.state.write_bytes(self.raw)
         legacy = StateStore(self.state).load()
         self.make_envelope()
