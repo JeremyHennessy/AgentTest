@@ -6,6 +6,7 @@ It does not read or write the original organism, heartbeat, agenda or Observer.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from contextlib import contextmanager
 from copy import deepcopy
 import hashlib
@@ -42,6 +43,7 @@ def _sources() -> dict[str, str]:
     from open_object_world_challenge import __file__ as world_file
     from open_object_world_challenge_explorer import __file__ as menu_file
     return {
+        "runner": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "policy": hashlib.sha256(Path(policy.__file__).read_bytes()).hexdigest(),
         "world": hashlib.sha256(Path(world_file).read_bytes()).hexdigest(),
         "menu": hashlib.sha256(Path(menu_file).read_bytes()).hexdigest(),
@@ -292,15 +294,34 @@ def study(steps: int = 32) -> dict:
                 e["selection"]["forecast"]["local_samples"]
                 for e in capsule["events"]
             ]
+            global_scores = []
+            earlier_outcomes = Counter()
+            for index, item in enumerate(capsule["events"]):
+                # An independent, constant-form predictor that ignores action,
+                # context, and selection; it uses only earlier class frequencies.
+                baseline = {
+                    outcome: (earlier_outcomes[outcome] + 0.5) /
+                             (index + 0.5 * len(policy.OUTCOMES))
+                    for outcome in policy.OUTCOMES
+                }
+                global_scores.append(policy.brier(baseline, item["outcome_kind"]))
+                earlier_outcomes[item["outcome_kind"]] += 1
+            mean_global = sum(global_scores) / len(global_scores)
             rows.append({
                 "seed": seed,
                 "events": summary["events"],
                 "mean_prequential_brier": summary["mean_prequential_brier"],
+                "global_prior_brier": round(mean_global, 8),
+                "beats_global_prior": summary["mean_prequential_brier"] < mean_global,
                 "uniform_brier": summary["uniform_brier"],
                 "forecast_improves_on_uniform": summary["forecast_improves_on_uniform"],
                 "memory_changes_choice_count": choices,
                 "decisions_with_family_evidence": sum(n > 0 for n in family_samples),
                 "decisions_with_local_evidence": sum(n > 0 for n in local_samples),
+                "cross_context_followups": sum(
+                    e["selection"]["inquiry_mode"] == "test_cross_context_prediction"
+                    for e in capsule["events"]
+                ),
                 "family_sample_counts": family_samples,
                 "local_sample_counts": local_samples,
                 "outcomes": summary["outcomes"],
@@ -316,7 +337,7 @@ def study(steps: int = 32) -> dict:
         "limitations": [
             "Four deterministic mirrored layouts are not independent organisms.",
             "Repeated checks of a fixed authored world are software/mechanism evidence only.",
-            "An untrained uniform forecast is a weak control; an improvement is not task benefit.",
+            "Uniform and pooled-global-history forecasts are simple controls; any advantage is not task benefit.",
             "Counterfactual memory ablation here tests same-context decision influence only.",
             "No long-term learning, new world, organism, self-maintenance, consciousness, or live activation is claimed.",
         ],
