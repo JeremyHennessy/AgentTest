@@ -17,6 +17,7 @@ from typing import Any
 from agenttest.action_lab import ACTION_ORDER, STATEFUL_WORLD_VERSION
 from agenttest.two_clock_stream import TwoClockStream, VERSION, brier, digest, _json
 from phase42_transition_memory_study import extract_verified_native
+from phase42_planner_comparison import freeze_plan, validate_preview, compare_future
 
 STUDY = "phase42-original-prospective-shadow-v1"
 SOURCE_REPO = "JeremyHennessy/AgentTest"
@@ -89,8 +90,17 @@ def _unpack_previous(previous: dict[str, Any] | None) -> dict[str, Any] | None:
         "original_active_commitment", "original_last_action_cycle",
         "study_owns_action",
     }
-    if set(body) != required or body["version"] != VERSION:
+    # Old immutable main shadow receipts must remain prospective-scoreable.
+    # Planner metadata is optional on the old release and cannot be backfilled.
+    if (set(body) not in (required, required | {"planner_baseline"})
+            or body["version"] != VERSION):
         raise ValueError("different frozen memory/receipt schema")
+    if "planner_baseline" in body:
+        validate_preview(
+            body["planner_baseline"],
+            body["original_source"]["commit"],
+            body["public_position"],
+        )
     orig = body["original_source"]
     if (not isinstance(orig, dict) or orig.get("repository") != SOURCE_REPO
             or orig.get("branch") != SOURCE_BRANCH
@@ -134,10 +144,16 @@ def _unpack_previous(previous: dict[str, Any] | None) -> dict[str, Any] | None:
             # Also validates grammar and probability normalization.
             brier(forecast, "0,0")
     summary = previous["summary"]
-    if not isinstance(summary, dict) or set(summary) != {
+    old_keys = {
         "scored_natural_first_actions", "by_arm_brier_sum",
         "by_arm_logloss_sum", "inconclusive_intervals",
-    }:
+    }
+    planner_keys = {
+        "planner_comparison_count", "planner_brier_sum",
+        "learner_brier_sum_on_planner", "planner_inconclusive",
+    }
+    if (not isinstance(summary, dict)
+            or set(summary) not in (old_keys, old_keys | planner_keys)):
         raise ValueError("invalid prior prospective evidence ledger")
     if (type(summary["scored_natural_first_actions"]) is not int
             or type(summary["inconclusive_intervals"]) is not int
@@ -148,7 +164,17 @@ def _unpack_previous(previous: dict[str, Any] | None) -> dict[str, Any] | None:
             or any(type(value) not in (int, float)
                    or not 0 <= value < float("inf")
                    for key in ("by_arm_brier_sum", "by_arm_logloss_sum")
-                   for value in summary[key].values())):
+                   for value in summary[key].values())
+            or (planner_keys.issubset(summary) and (
+                type(summary["planner_comparison_count"]) is not int
+                or type(summary["planner_inconclusive"]) is not int
+                or summary["planner_comparison_count"] < 0
+                or summary["planner_inconclusive"] < 0
+                or any(type(summary[k]) not in (int, float)
+                       or not 0 <= summary[k] < float("inf")
+                       for k in ("planner_brier_sum",
+                                 "learner_brier_sum_on_planner"))
+            ))):
         raise ValueError("prior score ancestry invalid")
     return body
 
@@ -156,7 +182,7 @@ def _unpack_previous(previous: dict[str, Any] | None) -> dict[str, Any] | None:
 def _score_prior(
     previous: dict | None, *,
     source: dict, cycle: int,
-    native: list[dict], compatible: list[dict],
+    native: list[dict], compatible: list[dict], current_lab: dict,
 ) -> dict[str, Any]:
     old = _unpack_previous(previous)
     if old is None:
@@ -204,6 +230,14 @@ def _score_prior(
         arm: brier(old["forecasts"][action][arm], physical_delta)
         for arm in ARMS
     }
+    plan_comparison = compare_future(
+        old.get("planner_baseline"),
+        current_lab=current_lab,
+        first=first,
+        old_source_commit=old["original_source"]["commit"],
+        old_position=old["public_position"],
+        learned_scores=scores,
+    )
     return {
         "status": "scored_one_natural_first_action", "credit": True,
         "prior_source_commit": old["original_source"]["commit"],
@@ -216,6 +250,7 @@ def _score_prior(
         "naturally_chosen_action": action,
         "actual_public_delta": physical_delta,
         "preaction_scores": scores,
+        "original_plan_comparison": plan_comparison,
         "prior_active_commitment": old["original_active_commitment"],
         "prediction_not_action_selection": True,
         "later_natural_events_not_scored": max(0, len(native) - old_total - 1),
@@ -237,12 +272,31 @@ def _summary(previous: dict | None, result: dict) -> dict:
         "inconclusive_intervals": previous_summary["inconclusive_intervals"],
         "by_arm_brier_sum": dict(previous_summary["by_arm_brier_sum"]),
         "by_arm_logloss_sum": dict(previous_summary["by_arm_logloss_sum"]),
+        "planner_comparison_count": previous_summary.get(
+            "planner_comparison_count", 0
+        ),
+        "planner_brier_sum": previous_summary.get(
+            "planner_brier_sum", 0.0
+        ),
+        "learner_brier_sum_on_planner": previous_summary.get(
+            "learner_brier_sum_on_planner", 0.0
+        ),
+        "planner_inconclusive": previous_summary.get(
+            "planner_inconclusive", 0
+        ),
     }
     if result["credit"]:
         total["scored_natural_first_actions"] += 1
         for arm, value in result["preaction_scores"].items():
             total["by_arm_brier_sum"][arm] += value["brier"]
             total["by_arm_logloss_sum"][arm] += value["logloss"]
+        plan = result["original_plan_comparison"]
+        if plan["credit"]:
+            total["planner_comparison_count"] += 1
+            total["planner_brier_sum"] += plan["original_planner_brier"]
+            total["learner_brier_sum_on_planner"] += plan["two_clock_brier"]
+        else:
+            total["planner_inconclusive"] += 1
     else:
         total["inconclusive_intervals"] += 1
     return total
@@ -306,13 +360,14 @@ def inspect(
         "last_compatible_id": compatible[-1]["id"],
         "model_full_evidence_sha256": hashlib.sha256(frozen_memory).hexdigest(),
         "forecasts": forecasts,
+        "planner_baseline": freeze_plan(full_state, source["commit"], position),
         "original_active_commitment": pending,
         "original_last_action_cycle": lab.get("last_action_cycle"),
         "study_owns_action": False,
     }
     prospective = _score_prior(
         previous_report, source=source, cycle=cycle,
-        native=all_native, compatible=compatible,
+        native=all_native, compatible=compatible, current_lab=lab,
     )
     result = {
         "protocol": STUDY,
@@ -369,6 +424,8 @@ def main() -> None:
         "cold_full_history": True,
         "prior": report["prospective"]["status"],
         "cumulative_scored_events": report["summary"]["scored_natural_first_actions"],
+        "matched_native_plan_comparisons": report["summary"]["planner_comparison_count"],
+        "planner_baseline_freeze": report["frozen"]["body"]["planner_baseline"]["status"],
         "original_world_writes": 0,
     }, sort_keys=True))
 

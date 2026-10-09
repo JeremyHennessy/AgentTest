@@ -5,12 +5,16 @@ on:
     branches:
       - main
       - research/phase42-whole-history-shadow-20261009
+      - research/phase42-native-planner-comparison-20261009
     paths:
       - 'src/agenttest/two_clock_stream.py'
       - 'experiments/phase42_original_shadow.py'
+      - 'experiments/phase42_planner_comparison.py'
       - 'tests/test_phase42_original_shadow.py'
+      - 'tests/test_phase42_planner_comparison.py'
       - '.github/workflows/phase42-shadow.yml'
       - 'docs/PHASE42_PROSPECTIVE_SHADOW_PROTOCOL.md'
+      - 'docs/PHASE42_ORIGINAL_PLAN_COMPARISON_PROTOCOL.md'
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
@@ -41,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$GITHUB_REF" in
-            refs/heads/main|refs/heads/research/phase42-whole-history-shadow-20261009) ;;
+            refs/heads/main|refs/heads/research/phase42-whole-history-shadow-20261009|refs/heads/research/phase42-native-planner-comparison-20261009) ;;
             *) echo "unexpected source branch"; exit 1;;
           esac
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -52,6 +56,8 @@ jobs:
           set -euo pipefail
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
             python -B -m unittest discover -s tests -p 'test_phase42_original_shadow.py' -v
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+            python -B -m unittest discover -s tests -p 'test_phase42_planner_comparison.py' -v
 
       - name: Copy and cryptographically pin full original Ora live snapshot
         shell: bash
@@ -144,6 +150,8 @@ jobs:
               'original_commit':report['frozen']['body']['original_source']['commit'],
               'frozen_source_hash':report['frozen']['sha256'],
               'scored_prospective_total':report['summary']['scored_natural_first_actions'],
+              'planner_baseline_status':report['frozen']['body']['planner_baseline']['status'],
+              'matched_native_plan_compares':report['summary']['planner_comparison_count'],
               'original_writes':0,
               'replay_identical':True,
           },sort_keys=True))
