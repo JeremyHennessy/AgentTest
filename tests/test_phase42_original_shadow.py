@@ -301,6 +301,31 @@ class AuthenticSourceShadowTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "report hash"):
             pinned(state, commit="2" * 40, previous=forged)
 
+    def test_forged_source_denominator_and_comparison_arm_fails_closed(self):
+        state = fixtures()
+        previous = pinned(state)
+        next_native(state)
+        wrong = deepcopy(previous)
+        wrong["frozen"]["body"]["compatible_native_rows"] = -5
+        wrong["frozen"]["sha256"] = digest(wrong["frozen"]["body"])
+        wrong["report_sha256"] = digest({k: v for k, v in wrong.items()
+                                         if k != "report_sha256"})
+        with self.assertRaisesRegex(ValueError, "invalid old observation"):
+            pinned(state, commit="2" * 40, previous=wrong)
+        wrong = deepcopy(previous)
+        wrong["frozen"]["body"]["forecasts"]["north"]["action"]["arm"] = "two_clock"
+        wrong["frozen"]["sha256"] = digest(wrong["frozen"]["body"])
+        wrong["report_sha256"] = digest({k: v for k, v in wrong.items()
+                                         if k != "report_sha256"})
+        with self.assertRaisesRegex(ValueError, "prior prediction bound"):
+            pinned(state, commit="2" * 40, previous=wrong)
+        wrong = deepcopy(previous)
+        wrong["summary"]["by_arm_brier_sum"]["action"] = -1.0
+        wrong["report_sha256"] = digest({k: v for k, v in wrong.items()
+                                         if k != "report_sha256"})
+        with self.assertRaisesRegex(ValueError, "prior score ancestry"):
+            pinned(state, commit="2" * 40, previous=wrong)
+
     def test_different_source_world_and_origin_bytes_fail_closed(self):
         state = fixtures()
         source = pinned(state)
