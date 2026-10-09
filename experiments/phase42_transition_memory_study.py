@@ -21,7 +21,7 @@ from agenttest.transition_memory import VERSION, delta_key, evaluate_history, di
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 MAX_SOURCE_BYTES = 128 * 1024 * 1024
-MAX_NATIVE_OBSERVATIONS = 4096
+MAX_NATIVE_OBSERVATIONS = 32768
 
 
 def extract_verified_native(state: dict[str, Any]) -> dict[str, Any]:
