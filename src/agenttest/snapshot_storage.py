@@ -15,8 +15,8 @@ import re
 import stat
 
 FORMAT = "ora-original-gzip-v1"
-MAX_RAW = 100 * 1024 * 1024
-MAX_PACKED = 100 * 1024 * 1024
+MAX_RAW = 512 * 1024 * 1024
+MAX_PACKED = 96 * 1024 * 1024
 BLOCK = 1024 * 1024
 HEX = re.compile(r"[0-9a-f]{64}\Z")
 
