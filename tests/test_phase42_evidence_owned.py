@@ -266,6 +266,12 @@ class DurableOwnedLoopTests(unittest.TestCase):
             self.assertIn("global_prior_brier", row)
             self.assertIn("cross_context_followups", row)
             self.assertGreater(row["global_prior_brier"], 0)
+            self.assertGreaterEqual(row["actual_public_changes"], 0)
+            self.assertGreaterEqual(row["ablated_public_changes"], 0)
+            self.assertLessEqual(row["actual_public_changes"], 2)
+            self.assertLessEqual(row["ablated_public_changes"], 2)
+            self.assertLessEqual(row["memory_only_public_change_advantages"], 2)
+            self.assertLessEqual(row["ablation_only_public_change_advantages"], 2)
 
 
 if __name__ == "__main__":
