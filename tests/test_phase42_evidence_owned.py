@@ -90,6 +90,25 @@ class InvestigationPolicyTests(unittest.TestCase):
                            pooled["probabilities"]["blocked"])
         self.assertEqual(current["local_blocked"], 3)
 
+    def test_learned_family_is_retested_in_unseen_context(self):
+        previous = self.public
+        moved = dict(previous, position=[1, 0])
+        evidence = [{
+            "id": "INV000001", "public_before": previous,
+            "command": {"action": "north"}, "outcome_kind": "moved",
+        }]
+        # Neither target direction nor next context is chosen by a fixture.
+        # This unit test isolates the mechanism: family evidence is now a
+        # candidate for a new-context test rather than always discarded.
+        chosen = policy.select_investigation(moved, evidence, self.menu)
+        self.assertEqual(chosen["version"], "phase42-evidence-owned-v2")
+        self.assertEqual(chosen["command"], {"action": "north"})
+        self.assertEqual(chosen["inquiry_mode"], "test_cross_context_prediction")
+        self.assertEqual(chosen["forecast"]["family_samples"], 1)
+        self.assertEqual(chosen["forecast"]["local_samples"], 0)
+        self.assertIn(chosen["hypothesis"], policy.OUTCOMES)
+        self.assertEqual(len(chosen["alternatives"]), 2)
+
     def test_selection_deterministic_no_mutation(self):
         observation = deepcopy(self.public)
         history = []
