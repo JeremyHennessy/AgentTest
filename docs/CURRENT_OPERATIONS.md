@@ -1,5 +1,70 @@
 # Ora: current operations and ground-up Phase 42 readiness
 
+## Latest original-Ora cognitive development checkpoint — 2026-10-09 UTC
+
+This is the most recent dated supplement. The older 2026-10-07
+integration and cycle-5926 paragraphs below are historical checkpoints;
+do not confuse them with current source status. Recheck the current Git
+main/growth/action SHA before any operational claim.
+
+- **Latest fully merged research parent at this checkpoint:** AgentTest main
+  3b2ded841554111882540e63b19a44129d1eb3cd; [PR #263](https://github.com/JeremyHennessy/AgentTest/pull/263),
+  [#264](https://github.com/JeremyHennessy/AgentTest/pull/264),
+  [#265](https://github.com/JeremyHennessy/AgentTest/pull/265),
+  [#266](https://github.com/JeremyHennessy/AgentTest/pull/266) are merged.
+  Existing production Core/heartbeat and approved Observer/UI are byte-identical
+  to the older source baseline. New cognitive modules are experimental,
+  inactive in ordinary original Ora decisions.
+- **Read-only current full-history research candidate:**
+  [PR #267](https://github.com/JeremyHennessy/AgentTest/pull/267).
+  At exact-growth source 2703c0e70266e6143229c9a4e29f1124ee52f1db,
+  copied original cycle 7501: 7,325 compatible native physical action
+  observations inherited without deletion, 54 other-world rows independently
+  counted. Full-memory cold restore/parity, 17 focused tests and a separately
+  pinned branch Actions source run passed. The initial frozen read-only receipt
+  **has no prospective outcome yet**. The future main-only hourly workflow must
+  first create its own receipt before any later natural action can be scored.
+  See [protocol](PHASE42_PROSPECTIVE_SHADOW_PROTOCOL.md) and
+  [first receipt](PHASE42_PROSPECTIVE_SHADOW_FIRST_RECEIPT.md).
+- **Science already demonstrated but not live:** 7,319 original naturally
+  selected actions support retrospective spatial forecasts, with very small
+  absolute improvement over an already strong action-only baseline. Four
+  controlled synthetic physics-panel experiments (4,000 total source probes)
+  support multiple-timescale belief revision in forward/reverse physics and
+  one-noise/no-change controls. They **do not** show useful autonomous
+  decision-making, novel-function emergence, descendant reproduction or
+  consciousness. See [retrospective](PHASE42_TRANSITION_MEMORY_RESULTS.md)
+  and [controlled physics](PHASE42_TWO_CLOCK_RESULTS.md).
+- **Production is still healthy at this checkpoint:** original heartbeat
+  continued successfully on source 3b2ded84 from cycle 7501 to 7503. Do not
+  promote the prospective shadow as a heartbeat or a self-learning live
+  controller. Independent source tests and read-only forecasts have no write
+  or action authority.
+- **Only approved repo for edits in this project conversation is AgentTest.**
+  AI-Research has been consulted read-only. Do not modify Ora2.0, assume API
+  keys, import model providers, publish synthetic outcomes as native actions,
+  replace personal memories, or activate the new world under this research
+  permission. Storage draft PR #262 is intentionally independent and not
+  included in cognitive read-only releases.
+
+**Next release gates, in order:** (1) confirm exact-head PR #267 invariant
+tests, preservation, capability handoff and no-regression; release read-only
+whole-history shadow only after independent source verification; (2) collect
+genuinely prospective matched *natural* action receipts, recording misses,
+stale environments, commitment scope, changed-origin failures and opportunity
+denominators; (3) use copied original full lifecycle to compare whether any
+new learner-proposed action yields useful, commitment-preserving improvement
+over the **already selected original planner action**; an advantage in
+prediction alone is not an action-quality result; (4) separately reconcile
+lossless original writer/storage safety (PR #262) before changing live
+transactional state; (5) only then propose a bounded, opt-in original cycle
+action ownership pilot with a reviewed rollback/stop plan. Research puzzles,
+shifting obstacles, scarce resources and ecological pressure belong to
+separate copied-world experiments. No new-world activation without the
+owner's separately requested decision.
+
+---
+
 ## Authority and checkpoint
 
 Updated **2026-10-07 11:45 UTC**. This is the maintained operational handoff and

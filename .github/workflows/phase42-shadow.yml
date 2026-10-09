@@ -1,0 +1,158 @@
+name: phase42-original-prospective-shadow
+
+on:
+  push:
+    branches:
+      - main
+      - research/phase42-whole-history-shadow-20261009
+    paths:
+      - 'src/agenttest/two_clock_stream.py'
+      - 'experiments/phase42_original_shadow.py'
+      - 'tests/test_phase42_original_shadow.py'
+      - '.github/workflows/phase42-shadow.yml'
+      - 'docs/PHASE42_PROSPECTIVE_SHADOW_PROTOCOL.md'
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: agenttest-phase42-prospective-shadow-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  read-only-original-shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+
+      - name: Verify only approved main or isolated test branch runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$GITHUB_REF" in
+            refs/heads/main|refs/heads/research/phase42-whole-history-shadow-20261009) ;;
+            *) echo "unexpected source branch"; exit 1;;
+          esac
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Run focused fail-closed and full-history cold-restart tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+            python -B -m unittest discover -s tests -p 'test_phase42_original_shadow.py' -v
+
+      - name: Copy and cryptographically pin full original Ora live snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --filter=blob:none origin \
+            refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          original="$(git rev-parse refs/remotes/origin/autonomous/growth)"
+          blob="$(git rev-parse "$original:state/organism.json")"
+          git show "$original:state/organism.json" > "$RUNNER_TEMP/ora-full-original-state.json"
+          test "$(git hash-object "$RUNNER_TEMP/ora-full-original-state.json")" = "$blob"
+          sha="$(sha256sum "$RUNNER_TEMP/ora-full-original-state.json" | cut -d ' ' -f1)"
+          echo "ORIGINAL_HEAD=$original" >> "$GITHUB_ENV"
+          echo "ORIGINAL_BLOB=$blob" >> "$GITHUB_ENV"
+          echo "ORIGINAL_SHA256=$sha" >> "$GITHUB_ENV"
+
+      - name: Locate prior successful main-branch shadow artifact without trusting unverified sources
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # A development branch is never accepted as prior prospective evidence.
+          if [ "$GITHUB_REF" != 'refs/heads/main' ]; then
+            echo "Isolated branch research: no prior main artifact imported."
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=ora-phase42-original-shadow&per_page=100" \
+            > "$RUNNER_TEMP/available-shadow-artifacts.json"
+          prior="$(jq -r --arg current "$GITHUB_RUN_ID" \
+            '[.artifacts[] | select(.expired==false and .workflow_run.head_branch=="main" and
+              (.workflow_run.id|tostring)!=$current)] | sort_by(.created_at) |
+              reverse | .[0].workflow_run.id // empty' \
+            "$RUNNER_TEMP/available-shadow-artifacts.json")"
+          if [ -z "$prior" ]; then
+            echo "No prior source-verifiable main-branch prospective receipt."
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior" \
+            > "$RUNNER_TEMP/prior-shadow-workflow.json"
+          jq -e '.status=="completed" and .conclusion=="success" and
+            .head_branch=="main" and
+            .name=="phase42-original-prospective-shadow" and
+            (.path | endswith("phase42-shadow.yml"))' \
+            "$RUNNER_TEMP/prior-shadow-workflow.json" > /dev/null
+          mkdir -p "$RUNNER_TEMP/previous-shadow"
+          gh run download "$prior" --name ora-phase42-original-shadow \
+            --dir "$RUNNER_TEMP/previous-shadow"
+          test -f "$RUNNER_TEMP/previous-shadow/phase42-shadow-next.json"
+          echo "PREVIOUS_SHADOW_FILE=$RUNNER_TEMP/previous-shadow/phase42-shadow-next.json" \
+            >> "$GITHUB_ENV"
+          echo "Verified a previous successful main-only observation receipt."
+
+      - name: Freeze present alternatives and assess only next native action of prior receipt
+        shell: bash
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          set -euo pipefail
+          args=(
+            --state "$RUNNER_TEMP/ora-full-original-state.json"
+            --original-commit "$ORIGINAL_HEAD"
+            --original-blob "$ORIGINAL_BLOB"
+            --expected-sha256 "$ORIGINAL_SHA256"
+          )
+          if [ -n "${PREVIOUS_SHADOW_FILE:-}" ]; then
+            args+=(--previous "$PREVIOUS_SHADOW_FILE")
+          fi
+          python -B experiments/phase42_original_shadow.py \
+            "${args[@]}" --output "$RUNNER_TEMP/phase42-shadow-next.json"
+          python -B experiments/phase42_original_shadow.py \
+            "${args[@]}" --output "$RUNNER_TEMP/phase42-shadow-replay.json"
+          cmp "$RUNNER_TEMP/phase42-shadow-next.json" "$RUNNER_TEMP/phase42-shadow-replay.json"
+          test "$(git hash-object "$RUNNER_TEMP/ora-full-original-state.json")" = "$ORIGINAL_BLOB"
+          test "$(sha256sum "$RUNNER_TEMP/ora-full-original-state.json" | cut -d ' ' -f1)" = "$ORIGINAL_SHA256"
+          python - <<'PY'
+          import json, os
+          p=os.environ['RUNNER_TEMP']+'/phase42-shadow-next.json'
+          with open(p) as handle:
+              report=json.load(handle)
+          assert report['source_not_modified'] is True
+          assert report['frozen']['body']['study_owns_action'] is False
+          assert report['frozen']['body']['compatible_native_rows']>7000
+          assert len(report['frozen']['body']['forecasts'])==4
+          assert report['prospective']['credit'] is False or report['prospective']['status']=='scored_one_natural_first_action'
+          print(json.dumps({
+              'status':report['prospective']['status'],
+              'original_cycle':report['frozen']['body']['cycle'],
+              'compatible_rows':report['frozen']['body']['compatible_native_rows'],
+              'original_commit':report['frozen']['body']['original_source']['commit'],
+              'frozen_source_hash':report['frozen']['sha256'],
+              'scored_prospective_total':report['summary']['scored_natural_first_actions'],
+              'original_writes':0,
+              'replay_identical':True,
+          },sort_keys=True))
+          PY
+
+      - name: Keep immutable next-action prediction for independent later verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: ora-phase42-original-shadow
+          path: ${{ runner.temp }}/phase42-shadow-next.json
+          retention-days: 30
+          if-no-files-found: error
