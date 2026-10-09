@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from agenttest.state import StateStore
 from agenttest.snapshot_storage import (
     SnapshotStorageError, prepare_compressed_copy, read_snapshot_bytes,
 )
@@ -96,6 +97,14 @@ class SnapshotStorageTests(unittest.TestCase):
         self.state.write_text(json.dumps(manifest))
         with self.assertRaises(SnapshotStorageError):
             read_snapshot_bytes(self.state)
+
+    def test_state_store_reads_legacy_and_envelope(self):
+        self.state.write_bytes(self.raw)
+        legacy = StateStore(self.state).load()
+        self.make_envelope()
+        compressed = StateStore(self.state).load()
+        self.assertEqual(legacy, compressed)
+        self.assertEqual(compressed["cycles"], 7453)
 
     def test_raw_preparation_does_not_write(self):
         self.state.write_bytes(self.raw)
