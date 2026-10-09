@@ -84,6 +84,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: original-ora-transition-memory-study
-          path: /tmp/memory-trial-1.json
+          path: ${{ runner.temp }}/memory-trial-1.json
           retention-days: 30
           if-no-files-found: warn
