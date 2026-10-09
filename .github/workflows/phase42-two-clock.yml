@@ -1,0 +1,66 @@
+name: phase42-two-clock-changed-world-readonly
+
+on:
+  push:
+    branches:
+      - research/phase42-reversible-memory-20261009
+    paths:
+      - 'src/agenttest/two_clock_memory.py'
+      - 'experiments/phase42_two_clock_study.py'
+      - 'tests/test_phase42_two_clock.py'
+      - '.github/workflows/phase42-two-clock.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changed-world-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Verify local-memory, restart and full comparison tests
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B -m unittest discover -s tests -p test_phase42_two_clock.py -v
+      - name: Execute all fixed physical probes with no positive-outcome gate
+        shell: bash
+        env:
+          PYTHONPATH: src:experiments
+        run: |
+          set -euo pipefail
+          python -B experiments/phase42_two_clock_study.py --output "$RUNNER_TEMP/two-clock-run1.json"
+          python -B experiments/phase42_two_clock_study.py --output "$RUNNER_TEMP/two-clock-run2.json"
+          cmp "$RUNNER_TEMP/two-clock-run1.json" "$RUNNER_TEMP/two-clock-run2.json"
+          python - <<'PY'
+          import json,os
+          with open(os.environ['RUNNER_TEMP']+'/two-clock-run1.json') as file:
+              r=json.load(file)
+          assert r['status'] in ('mechanism_pass','negative_or_mixed')
+          assert set(r['scenarios'])=={'no_change','forward_change','reverse_change','single_faulty_sensor'}
+          for name,scenario in r['scenarios'].items():
+              assert scenario['training_probes']==600
+              assert scenario['evaluation_probes']==400
+              assert scenario['metrics']['TWOCLOCK-1']['all']['count']==400
+          print(json.dumps({
+              'status':r['status'],
+              'conditions':r['conditions'],
+              'markers':{n:s['change_marker_count'] for n,s in r['scenarios'].items()},
+              'late_sensitive_brier':{
+                  n:{
+                      'two_clock':s['metrics']['TWOCLOCK-1']['late_sensitive']['mean_brier'],
+                      'lifetime':s['metrics']['LIFETIME-1']['late_sensitive']['mean_brier'],
+                  }
+                  for n,s in r['scenarios'].items()
+              },
+              'byte_identical_replay':True,
+          },sort_keys=True))
+          PY
+      - name: Retain unedited negative and positive outcomes
+        uses: actions/upload-artifact@v4
+        with:
+          name: ora-two-clock-frozen-study
+          path: ${{ runner.temp }}/two-clock-run1.json
+          retention-days: 30
