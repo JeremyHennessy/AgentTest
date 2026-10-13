@@ -118,7 +118,7 @@ class SnapshotStorageTests(unittest.TestCase):
         self.assertEqual(read_snapshot_bytes(self.state), first)
 
         next_raw = (json.dumps({"cycles": 7454, "episodes": [{"v": "hello"}] * 1000,
-                                "memory": ["new event retained"]}, sort_keys=True) + "\\n").encode()
+                                "memory": ["new event retained"]}, sort_keys=True) + "\n").encode()
         next_envelope, next_name, next_packed = prepare_stable_compressed_copy(next_raw)
         self.assertEqual(next_name, name)
         self.assertNotEqual(next_packed, packed)
