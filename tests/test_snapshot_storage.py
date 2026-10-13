@@ -7,7 +7,7 @@ import unittest
 
 from agenttest.state import StateStore, initial_state
 from agenttest.snapshot_storage import (
-    SnapshotStorageError, prepare_compressed_copy, read_snapshot_bytes,
+    SnapshotStorageError, prepare_compressed_copy, prepare_stable_compressed_copy, read_snapshot_bytes,
 )
 
 
@@ -108,6 +108,32 @@ class SnapshotStorageTests(unittest.TestCase):
         compressed = StateStore(self.state).load()
         self.assertEqual(legacy, compressed)
         self.assertEqual(compressed["cycles"], 7453)
+
+    def test_stable_filename_roundtrip_and_interrupted_generation_refusal(self):
+        first = self.raw
+        envelope, name, packed = prepare_stable_compressed_copy(first)
+        self.assertEqual(name, "snapshot-current.json.gz")
+        (self.root / name).write_bytes(packed)
+        self.state.write_bytes(envelope)
+        self.assertEqual(read_snapshot_bytes(self.state), first)
+
+        next_raw = (json.dumps({"cycles": 7454, "episodes": [{"v": "hello"}] * 1000,
+                                "memory": ["new event retained"]}, sort_keys=True) + "\\n").encode()
+        next_envelope, next_name, next_packed = prepare_stable_compressed_copy(next_raw)
+        self.assertEqual(next_name, name)
+        self.assertNotEqual(next_packed, packed)
+        # An interrupted two-file working-tree update must not silently
+        # read either the previous or the following generation.
+        (self.root / name).write_bytes(next_packed)
+        with self.assertRaises(SnapshotStorageError):
+            read_snapshot_bytes(self.state)
+        self.state.write_bytes(next_envelope)
+        self.assertEqual(read_snapshot_bytes(self.state), next_raw)
+        self.assertEqual(
+            sorted(p.name for p in self.root.glob("snapshot*.json.gz")), [name]
+        )
+        self.assertEqual(prepare_stable_compressed_copy(next_raw),
+                         (next_envelope, name, next_packed))
 
     def test_raw_preparation_does_not_write(self):
         self.state.write_bytes(self.raw)
