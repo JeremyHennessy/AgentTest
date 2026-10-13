@@ -31,8 +31,8 @@ jobs:
           blob="$(git rev-parse "$head:state/organism.json")"
           expected="$(git cat-file -s "$blob")"
           test "$expected" -gt 0
-          printf '%s\\n' "$head" > "$RUNNER_TEMP/growth-head.txt"
-          printf '%s\\n' "$blob" > "$RUNNER_TEMP/snapshot-blob.txt"
+          printf '%s' "$head" > "$RUNNER_TEMP/growth-head.txt"
+          printf '%s' "$blob" > "$RUNNER_TEMP/snapshot-blob.txt"
           git show "$head:state/organism.json" > "$RUNNER_TEMP/original-organism.json"
           test "$(wc -c < "$RUNNER_TEMP/original-organism.json")" -eq "$expected"
           actual="$(git ls-remote origin refs/heads/autonomous/growth | cut -f1)"
