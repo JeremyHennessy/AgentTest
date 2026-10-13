@@ -309,7 +309,7 @@ class HeartbeatTransportTests(unittest.TestCase):
         def oversized(root, *args, **kwargs):
             if args[:3] == ("cat-file", "-s", f"{candidate}:state/organism.json"):
                 return subprocess.CompletedProcess(args, 0,
-                    str(t.GITHUB_MAX_BLOB_BYTES + 1).encode() + b"\\n", b"")
+                    str(t.GITHUB_MAX_BLOB_BYTES + 1).encode(), b"")
             if args[0] == "push":
                 pushes.append(args)
             return real_git(root, *args, **kwargs)
@@ -326,7 +326,7 @@ class HeartbeatTransportTests(unittest.TestCase):
         def at_limit(root, *args, **kwargs):
             if args[:3] == ("cat-file", "-s", f"{candidate}:state/organism.json"):
                 return subprocess.CompletedProcess(args, 0,
-                    str(t.GITHUB_MAX_BLOB_BYTES).encode() + b"\\n", b"")
+                    str(t.GITHUB_MAX_BLOB_BYTES).encode(), b"")
             return real_git(root, *args, **kwargs)
         with patch.object(t, "_git", side_effect=at_limit):
             self.assertEqual(
