@@ -330,7 +330,8 @@ def claim(root: Path, request_id: str, source_sha: str, run_id: int, mode: str) 
     from agenttest.perception import repository_snapshot
     observation = repository_snapshot(root)
     state_path = root / "state/organism.json"
-    state = json.loads(state_path.read_bytes())
+    from agenttest.snapshot_storage import read_snapshot_bytes
+    state = json.loads(read_snapshot_bytes(state_path))
     bounded = state.get("current_world_heartbeat") or {}
     if bounded.get("pending"):
         raise TransportError("legacy_bounded_pending_requires_original_recovery")
@@ -386,7 +387,9 @@ def complete(root: Path, request_id: str, source_sha: str, claim_commit: str) ->
         raise TransportError("completion_claim_commit_mismatch")
     if _state_hash(root, claim_commit) != row["input_state_hash"]:
         raise TransportError("completion_claim_input_mismatch")
-    state = json.loads((root / "state/organism.json").read_bytes())
+    _agent_import(root)
+    from agenttest.snapshot_storage import read_snapshot_bytes
+    state = json.loads(read_snapshot_bytes(root / "state/organism.json"))
     if state.get("cycles") != row["input_cycle"] + 1:
         raise TransportError("completion_must_contain_exactly_one_cycle")
     # Verify preserved journal prefix against the exact claimed Git blob.

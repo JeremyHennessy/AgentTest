@@ -10,6 +10,7 @@ from .episode_identity import ensure_episode_sequence, infer_episode_sequence_cu
 from .agenda import ensure_agenda_state, initial_agenda_state
 from .objective_identity import ensure_objective_identity
 from .planning_lab import initial_planning_lab_state
+from .snapshot_storage import read_snapshot_bytes
 
 SCHEMA_VERSION = 25
 
@@ -293,8 +294,7 @@ class StateStore:
     def load(self) -> dict[str, Any]:
         if not self.path.exists():
             return initial_state()
-        with self.path.open("r", encoding="utf-8") as handle:
-            return migrate_state(json.load(handle))
+        return migrate_state(json.loads(read_snapshot_bytes(self.path)))
 
     def save(self, state: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
