@@ -68,8 +68,9 @@ def _check_envelope(obj: dict) -> None:
     for field in ("raw_sha256", "gzip_sha256"):
         if type(obj[field]) is not str or not HEX.fullmatch(obj[field]):
             raise SnapshotStorageError("invalid snapshot digest")
-    if obj["gzip_file"] != "snapshot-" + obj["gzip_sha256"] + ".json.gz":
-        raise SnapshotStorageError("invalid content-addressed snapshot filename")
+    expected = "snapshot-" + obj["gzip_sha256"] + ".json.gz"
+    if obj["gzip_file"] not in (expected, "snapshot-current.json.gz"):
+        raise SnapshotStorageError("invalid compressed snapshot filename")
     if type(obj["cycle"]) is not int or obj["cycle"] < 0:
         raise SnapshotStorageError("invalid snapshot cycle")
 
@@ -124,3 +125,17 @@ def prepare_compressed_copy(raw: bytes) -> tuple[bytes, str, bytes]:
                 "cycle": cycle}
     encoded = (json.dumps(envelope, sort_keys=True, separators=(",", ":")) + "\n").encode()
     return encoded, filename, packed
+
+def prepare_stable_compressed_copy(raw: bytes) -> tuple[bytes, str, bytes]:
+    """Pure, default-off stable-path representation for prospective writer tests.
+
+    The single packed filename can be overwritten *in a new Git tree together
+    with its manifest*. Never publish one without the other or use this helper
+    to overwrite original live state outside a reviewed exclusive-writer gate.
+    Old content-addressed envelopes remain readable without migration.
+    """
+    manifest_bytes, _, packed = prepare_compressed_copy(raw)
+    manifest = json.loads(manifest_bytes)
+    manifest["gzip_file"] = "snapshot-current.json.gz"
+    encoded = (json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    return encoded, manifest["gzip_file"], packed
