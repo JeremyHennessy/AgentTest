@@ -1,0 +1,81 @@
+name: original-snapshot-capacity-readonly
+# Read-only proof of the *actual* growth snapshot before any storage cutover.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/original-snapshot-capacity-readonly.yml'
+      - 'scripts/heartbeat_transport.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  detached-capacity-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.14"
+      - name: Pin authentic growth commit and extract only the state blob
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --filter=blob:none origin refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          head="$(git rev-parse refs/remotes/origin/autonomous/growth)"
+          blob="$(git rev-parse "$head:state/organism.json")"
+          expected="$(git cat-file -s "$blob")"
+          test "$expected" -gt 0
+          printf '%s' "$head" > "$RUNNER_TEMP/growth-head.txt"
+          printf '%s' "$blob" > "$RUNNER_TEMP/snapshot-blob.txt"
+          git show "$head:state/organism.json" > "$RUNNER_TEMP/original-organism.json"
+          test "$(wc -c < "$RUNNER_TEMP/original-organism.json")" -eq "$expected"
+          actual="$(git ls-remote origin refs/heads/autonomous/growth | cut -f1)"
+          test "$actual" = "$head" || { echo "Growth changed during copy: refuse"; exit 1; }
+      - name: Prove exact lossless compression without changing any tracked file
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I -B - <<'PY'
+          import gzip, hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          raw = (root / "original-organism.json").read_bytes()
+          source = json.loads(raw)
+          assert type(source) is dict and type(source.get("cycles")) is int
+          packed = gzip.compress(raw, compresslevel=6, mtime=0)
+          assert gzip.decompress(packed) == raw
+          assert gzip.compress(raw, compresslevel=6, mtime=0) == packed
+          bound = 100 * 1024 * 1024
+          report = {
+              "scope": "read_only_original_growth",
+              "growth_head": (root / "growth-head.txt").read_text().strip(),
+              "snapshot_blob": (root / "snapshot-blob.txt").read_text().strip(),
+              "cycle": source["cycles"],
+              "raw_bytes": len(raw),
+              "github_blob_limit_bytes": bound,
+              "remaining_raw_headroom": bound - len(raw),
+              "packed_bytes": len(packed),
+              "packed_under_github_limit": len(packed) <= bound,
+              "raw_sha256": hashlib.sha256(raw).hexdigest(),
+              "packed_sha256": hashlib.sha256(packed).hexdigest(),
+              "restored_raw_sha256": hashlib.sha256(gzip.decompress(packed)).hexdigest(),
+              "original_unchanged": True,
+              "compressed_published": False,
+              "heartbeat_recovered": False,
+          }
+          assert report["packed_under_github_limit"], "Compressed snapshot also exceeds GitHub cap"
+          (root / "ora-snapshot-capacity-evidence.json").write_text(json.dumps(report, sort_keys=True, indent=2))
+          print(json.dumps(report, sort_keys=True))
+          PY
+          test -z "$(git status --porcelain)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-ora-snapshot-capacity-evidence
+          path: ${{ runner.temp }}/ora-snapshot-capacity-evidence.json
+          retention-days: 7

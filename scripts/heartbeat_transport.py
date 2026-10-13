@@ -21,6 +21,7 @@ OP_PATH = "state/heartbeat_operation.json"
 REMOTE_REF = "refs/remotes/origin/autonomous/growth"
 BRANCH = "autonomous/growth"
 MAX_RECORD_BYTES = 64 * 1024
+GITHUB_MAX_BLOB_BYTES = 100 * 1024 * 1024
 
 
 class TransportError(RuntimeError):
@@ -447,6 +448,19 @@ def publish(root: Path, candidate: str, expected_parent: str, *, attempts: int =
                 return {"status": "published", "candidate": candidate, "remote_head": remote, "attempts": attempt}
             if remote != expected_parent:
                 raise TransportError("remote_advanced_incompatibly")
+            # The live snapshot is an ordinary Git blob, not Git LFS. GitHub
+            # rejects a blob larger than 100 MiB even when local Git commit,
+            # state integrity, and behavioral preservation all succeed. Reject
+            # before network publication; never mistake this for lost ACK.
+            size_result = _git(root, "cat-file", "-s", f"{candidate}:state/organism.json")
+            try:
+                snapshot_bytes = int(size_result.stdout.strip())
+            except ValueError as error:
+                raise TransportError("unreadable_candidate_snapshot_size") from error
+            if snapshot_bytes > GITHUB_MAX_BLOB_BYTES:
+                raise TransportError(
+                    f"candidate_snapshot_exceeds_github_blob_limit:{snapshot_bytes}>{GITHUB_MAX_BLOB_BYTES}"
+                )
             _git(root, "push", "origin", f"{candidate}:refs/heads/{BRANCH}", check=False)
             try:
                 remote = _remote(root)
