@@ -1,0 +1,53 @@
+name: original-storage-representation-readonly
+
+on:
+  push:
+    branches:
+      - research/original-snapshot-git-scale-20261020
+    paths:
+      - 'src/agenttest/snapshot_chunk_research.py'
+      - 'scripts/snapshot_scale_eval.py'
+      - 'tests/test_snapshot_chunk_research.py'
+      - '.github/workflows/original-storage-scale-readonly.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Test fail-closed chunk representation
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B -m unittest discover -s tests -p test_snapshot_chunk_research.py -v
+      - name: Pin source original blob and copy read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --filter=blob:none origin refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          original="$(git rev-parse refs/remotes/origin/autonomous/growth)"
+          test "$original" = "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          blob="$(git rev-parse "$original:state/organism.json")"
+          test "$blob" = "b99783f1baef5ca679e1dd43740956ec3111cc25"
+          git show "$original:state/organism.json" > "$RUNNER_TEMP/ora-original-9904.json"
+          test "$(git hash-object "$RUNNER_TEMP/ora-original-9904.json")" = "$blob"
+      - name: Compare genuine source under identical artificial one-field change
+        shell: bash
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python -B scripts/snapshot_scale_eval.py --source "$RUNNER_TEMP/ora-original-9904.json" --output "$RUNNER_TEMP/original-storage-scale-results.json"
+          test "$(git status --porcelain)" = ""
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-storage-scale-copy-only
+          path: ${{ runner.temp }}/original-storage-scale-results.json
+          retention-days: 14
