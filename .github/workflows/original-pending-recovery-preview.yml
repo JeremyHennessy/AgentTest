@@ -1,0 +1,74 @@
+name: original-ora-pending-chunk-recovery-preview
+
+on:
+  push:
+    branches:
+      - test/original-pending-chunk-recovery-20261021
+    paths:
+      - 'scripts/original_pending_recovery_preview.py'
+      - '.github/workflows/original-pending-recovery-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Checkout exact old pending claim in a disposable Git worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --filter=blob:none origin refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          head="$(git rev-parse refs/remotes/origin/autonomous/growth)"
+          test "$head" = "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          git worktree add --detach "$RUNNER_TEMP/frozen-original" "$head"
+          test -z "$(git -C "$RUNNER_TEMP/frozen-original" status --porcelain)"
+      - name: Recompute old-source pending native cycle and normal diagnostics without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/frozen-original"
+          export PYTHONPATH="$PWD/src"
+          export PYTHONDONTWRITEBYTECODE=1
+          python -B scripts/heartbeat_transport.py cycle --root "$PWD" \
+            --request-id "heartbeat:v1:ccb6e57dd7b5d37e7bcbed9eea7d3ba9a65e31556f7dbbf562b19b882cd668e4" \
+            --source-sha "d6452c239c7665166e9dd5196a46451442dc8505" \
+            --claim-commit "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          python -B -m agenttest propose
+          python -B -m agenttest propose-change
+          python -B -m agenttest review-change
+          python -B -m agenttest diagnose-change
+          python -B -m agenttest review-change
+          python -B scripts/experiment_design_eval.py --state state/organism.json --output state/experiment_design_diagnostic.json
+          python -B scripts/blocked_attention_eval.py --state state/organism.json --output state/blocked_attention_diagnostic.json
+          python -B scripts/phase42_integrity_eval.py --state state/organism.json
+          python -B scripts/phase42_resumption_opportunity_eval.py --state state/organism.json --output state/phase42_resumption_opportunities.json
+          python -B scripts/heartbeat_transport.py complete --root "$PWD" \
+            --request-id "heartbeat:v1:ccb6e57dd7b5d37e7bcbed9eea7d3ba9a65e31556f7dbbf562b19b882cd668e4" \
+            --source-sha "d6452c239c7665166e9dd5196a46451442dc8505" \
+            --claim-commit "584e861165fb65639f1eea0ac165f3cae85d5e91"
+      - name: Create and verify exact historical receipt as *local-only* chunked Git transaction
+        shell: bash
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python -B scripts/original_pending_recovery_preview.py \
+            --copy "$RUNNER_TEMP/frozen-original" \
+            --output "$RUNNER_TEMP/original-pending-chunk-recovery-preview.json"
+          test "$(git ls-remote origin refs/heads/autonomous/growth | cut -f1)" = "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          test -z "$(git status --porcelain)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-ora-pending-chunked-local-receipt
+          path: ${{ runner.temp }}/original-pending-chunk-recovery-preview.json
+          retention-days: 30
