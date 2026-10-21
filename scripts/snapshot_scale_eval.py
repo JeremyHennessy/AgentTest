@@ -46,31 +46,39 @@ def pack_cost(where:Path,older:bytes,newer:bytes,kind:str) -> dict:
             "original_bytes":len(older),"synthetic_new_bytes":len(newer)}
 
 
-def run(source:Path) -> dict:
+def run(source:Path, candidate:Path | None = None) -> dict:
     older=source.read_bytes()
     old_hash=hashlib.sha256(older).hexdigest()
     state=json.loads(older)
     if state.get("cycles")!=9904:
         raise SystemExit("unexpected original growth input cycle")
-    # The identical simulated update is not presented as a natural Ora action.
-    state["isolated_storage_comparison_marker"]={"experiment":"matched-representation", "value":1}
-    newer=(json.dumps(state,sort_keys=True,separators=(",",":"))+"\n").encode()
+    if candidate is None:
+        # This control is not presented as a natural Ora action.
+        state["isolated_storage_comparison_marker"]={"experiment":"matched-representation","value":1}
+        newer=(json.dumps(state,sort_keys=True,separators=(",",":"))+"\n").encode()
+        study_name="real_cycle9904_matched_synthetic_update"
+    else:
+        newer=candidate.read_bytes()
+        if json.loads(newer).get("cycles")!=state["cycles"]+1:
+            raise SystemExit("copied next-cycle candidate does not advance exactly once")
+        study_name="real_cycle9904_copied_native_full_cycle"
     with tempfile.TemporaryDirectory() as tmp:
         parent=Path(tmp)
         results=[pack_cost(parent/k,older,newer,k) for k in ("gzip","parts")]
     if source.read_bytes()!=older or hashlib.sha256(source.read_bytes()).hexdigest()!=old_hash:
         raise SystemExit("original source modified")
-    return {"study":"real_cycle9904_matched_synthetic_update","read_only":True,"native_actions":0,
+    return {"study":study_name,"read_only":True,"live_actions_published":0,
             "input_sha256":old_hash,"chunk_size":CHUNK_BYTES,"results":results,
-            "conclusion_limit":"A two-generation synthetic serialization comparison; not an actual heartbeat, not a long-horizon repository growth measurement."}
+            "conclusion_limit":"Two-generation copied-storage comparison only. A copied natural-policy action is not a durably published original-world heartbeat or a long-horizon Git storage guarantee."}
 
 
 def main() -> None:
     p=argparse.ArgumentParser()
     p.add_argument("--source",type=Path,required=True)
+    p.add_argument("--candidate",type=Path)
     p.add_argument("--output",type=Path,required=True)
     args=p.parse_args()
-    result=run(args.source)
+    result=run(args.source,args.candidate)
     args.output.write_text(json.dumps(result,sort_keys=True,indent=2)+"\n")
     print(json.dumps(result,sort_keys=True))
 
