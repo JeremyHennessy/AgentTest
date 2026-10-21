@@ -87,8 +87,8 @@ jobs:
           store=StateStore(target)
           current=store.load()
           current_cycle=current["cycles"]
-          current.pop("updated_at",None)
           store.save(current)
+          current.pop("updated_at",None)
           manifest=json.loads(target.read_bytes())
           if manifest.get("format")!="ora-original-gzip-v1": raise SystemExit("writer did not produce envelope")
           after=store.load()

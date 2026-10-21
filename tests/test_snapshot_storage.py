@@ -151,7 +151,7 @@ class SnapshotStorageTests(unittest.TestCase):
             StateStore(self.state).save(state)
         raw=self.state.read_bytes()
         self.assertEqual(json.loads(raw)["cycles"],18)
-        self.assertEqual(raw, (json.dumps(json.loads(raw),separators=(",",":"),sort_keys=True)+"\\n").encode())
+        self.assertEqual(raw, (json.dumps(json.loads(raw),separators=(",",":"),sort_keys=True) + "\n").encode())
         self.assertFalse((self.root/"snapshot-current.json.gz").exists())
 
     def test_explicit_pack_then_implicit_stable_repack(self):
@@ -166,10 +166,10 @@ class SnapshotStorageTests(unittest.TestCase):
         after=store.load()
         self.assertEqual(after["cycles"],19)
         after["cycles"]=20
-        after["memory"]=["retained","new"]
+        after["storage_probe_marker"]="retained-new"
         with patch.dict(os.environ, {"ORA_ORIGINAL_SNAPSHOT_GZIP":"0"}):
             store.save(after)
-        self.assertEqual(store.load()["memory"],["retained","new"])
+        self.assertEqual(store.load()["storage_probe_marker"],"retained-new")
         self.assertEqual(store.load()["cycles"],20)
         self.assertEqual([p.name for p in self.root.glob("snapshot*.json.gz")],["snapshot-current.json.gz"])
 
