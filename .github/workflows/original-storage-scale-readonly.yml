@@ -1,0 +1,105 @@
+name: original-storage-representation-readonly
+
+on:
+  push:
+    branches:
+      - research/original-snapshot-git-scale-20261020
+    paths:
+      - 'src/agenttest/snapshot_chunk_research.py'
+      - 'scripts/snapshot_scale_eval.py'
+      - 'tests/test_snapshot_chunk_research.py'
+      - '.github/workflows/original-storage-scale-readonly.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Test fail-closed chunk representation
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -B -m unittest discover -s tests -p test_snapshot_chunk_research.py -v
+      - name: Pin source original blob and copy read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --filter=blob:none origin refs/heads/autonomous/growth:refs/remotes/origin/autonomous/growth
+          original="$(git rev-parse refs/remotes/origin/autonomous/growth)"
+          test "$original" = "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          blob="$(git rev-parse "$original:state/organism.json")"
+          test "$blob" = "b99783f1baef5ca679e1dd43740956ec3111cc25"
+          git show "$original:state/organism.json" > "$RUNNER_TEMP/ora-original-9904.json"
+          test "$(git hash-object "$RUNNER_TEMP/ora-original-9904.json")" = "$blob"
+      - name: Compare genuine source under identical artificial one-field change
+        shell: bash
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python -B scripts/snapshot_scale_eval.py --source "$RUNNER_TEMP/ora-original-9904.json" --output "$RUNNER_TEMP/original-storage-scale-results.json"
+          test "$(git status --porcelain)" = ""
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-storage-scale-copy-only
+          path: ${{ runner.temp }}/original-storage-scale-results.json
+          retention-days: 14
+
+      - name: Recompute one frozen original-world pending cycle on a disposable worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/original-growth-copy" refs/remotes/origin/autonomous/growth
+          copy="$RUNNER_TEMP/original-growth-copy"
+          test "$(git -C "$copy" rev-parse HEAD)" = "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          test -z "$(git -C "$copy" status --porcelain)"
+          export PYTHONPATH="$copy/src"
+          export PYTHONDONTWRITEBYTECODE=1
+          pushd "$copy"
+          python -B scripts/heartbeat_transport.py cycle --root "$copy" \
+            --request-id "heartbeat:v1:ccb6e57dd7b5d37e7bcbed9eea7d3ba9a65e31556f7dbbf562b19b882cd668e4" \
+            --source-sha "d6452c239c7665166e9dd5196a46451442dc8505" \
+            --claim-commit "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          python -B -m agenttest propose
+          python -B -m agenttest propose-change
+          python -B -m agenttest review-change
+          python -B -m agenttest diagnose-change
+          python -B -m agenttest review-change
+          python -B scripts/experiment_design_eval.py --state state/organism.json --output state/experiment_design_diagnostic.json
+          python -B scripts/blocked_attention_eval.py --state state/organism.json --output state/blocked_attention_diagnostic.json
+          python -B scripts/phase42_integrity_eval.py --state state/organism.json
+          python -B scripts/phase42_resumption_opportunity_eval.py --state state/organism.json --output state/phase42_resumption_opportunities.json
+          python -B scripts/heartbeat_transport.py complete --root "$copy" \
+            --request-id "heartbeat:v1:ccb6e57dd7b5d37e7bcbed9eea7d3ba9a65e31556f7dbbf562b19b882cd668e4" \
+            --source-sha "d6452c239c7665166e9dd5196a46451442dc8505" \
+            --claim-commit "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          popd
+          cp "$copy/state/organism.json" "$RUNNER_TEMP/copied-computed-cycle-9905.json"
+          test "$(git -C "$copy" rev-parse HEAD)" = "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          test "$(git hash-object "$RUNNER_TEMP/ora-original-9904.json")" = "b99783f1baef5ca679e1dd43740956ec3111cc25"
+          test "$(git ls-remote origin refs/heads/autonomous/growth | cut -f1)" = "584e861165fb65639f1eea0ac165f3cae85d5e91"
+
+      - name: Compare storage for the copied full native cycle
+        shell: bash
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python -B scripts/snapshot_scale_eval.py \
+            --source "$RUNNER_TEMP/ora-original-9904.json" \
+            --candidate "$RUNNER_TEMP/copied-computed-cycle-9905.json" \
+            --output "$RUNNER_TEMP/original-storage-real-cycle-results.json"
+          test "$(git ls-remote origin refs/heads/autonomous/growth | cut -f1)" = "584e861165fb65639f1eea0ac165f3cae85d5e91"
+          test "$(git status --porcelain)" = ""
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-storage-full-cycle-copy-only
+          path: ${{ runner.temp }}/original-storage-real-cycle-results.json
+          retention-days: 14
