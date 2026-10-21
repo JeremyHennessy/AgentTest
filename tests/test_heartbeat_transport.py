@@ -302,6 +302,39 @@ class HeartbeatTransportTests(unittest.TestCase):
         self.assertEqual(pushed, [])
         self.assertEqual(t._head(self.root), candidate)
 
+    def test_oversized_snapshot_fails_closed_before_any_push(self):
+        parent, candidate = self.finished()
+        real_git = t._git
+        pushes = []
+        def oversized(root, *args, **kwargs):
+            if args[:3] == ("cat-file", "-s", f"{candidate}:state/organism.json"):
+                return subprocess.CompletedProcess(args, 0,
+                    str(t.GITHUB_MAX_BLOB_BYTES + 1).encode(), b"")
+            if args[0] == "push":
+                pushes.append(args)
+            return real_git(root, *args, **kwargs)
+        with patch.object(t, "_git", side_effect=oversized):
+            with self.assertRaisesRegex(t.TransportError, "candidate_snapshot_exceeds_github_blob_limit"):
+                t.publish(self.root, candidate, parent, attempts=2, sleeper=lambda _: None)
+        self.assertEqual(pushes, [])
+        self.assertEqual(t._remote(self.root), parent)
+        self.assertEqual(t._head(self.root), candidate)
+
+    def test_snapshot_at_exact_hard_limit_preserves_remote_ack_protocol(self):
+        parent, candidate = self.finished()
+        real_git = t._git
+        def at_limit(root, *args, **kwargs):
+            if args[:3] == ("cat-file", "-s", f"{candidate}:state/organism.json"):
+                return subprocess.CompletedProcess(args, 0,
+                    str(t.GITHUB_MAX_BLOB_BYTES).encode(), b"")
+            return real_git(root, *args, **kwargs)
+        with patch.object(t, "_git", side_effect=at_limit):
+            self.assertEqual(
+                t.publish(self.root, candidate, parent, sleeper=lambda _: None)["status"],
+                "published",
+            )
+        self.assertEqual(t._remote(self.root), candidate)
+
     def test_missing_receipt_trailer_blocks_publication(self):
         parent = self.claimed()
         self.compute(self.request, parent)
