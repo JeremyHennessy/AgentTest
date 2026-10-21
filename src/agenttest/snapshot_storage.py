@@ -251,6 +251,54 @@ def _replace_exact(path: Path, payload: bytes) -> None:
         raise SnapshotStorageError("snapshot write failed before Git publication") from exc
 
 
+
+# Future-proof format switch is opt-in; no production workflow sets this flag.
+CHUNK_WRITE_ENV = "ORA_ORIGINAL_SNAPSHOT_CHUNKS"
+
+
+def chunking_requested() -> bool:
+    flag = os.environ.get(CHUNK_WRITE_ENV, "0")
+    if flag not in ("0", "1"):
+        raise SnapshotStorageError("unsupported chunk writer mode")
+    return flag == "1"
+
+
+def existing_is_chunked(path: str | Path) -> bool:
+    path = Path(path)
+    if not path.exists():
+        return False
+    # A canonical chunk manifest is small. Avoid reading the 105 MiB raw JSON
+    # on every legacy write just to detect a default-off storage mode.
+    if path.stat().st_size > 64 * 1024:
+        return False
+    obj = _parse_object(_read_regular(path, 64 * 1024))
+    if obj.get("format") != CHUNK_FORMAT:
+        return False
+    read_snapshot_bytes(path)  # all parts, cycle and hashes must agree
+    return True
+
+
+def write_chunked_snapshot_bytes(path: str | Path, raw: bytes) -> dict:
+    """Local prepared multi-file write. Never itself publishes a Git commit.
+
+    An interrupted partial working-tree generation fails integrity checks and
+    must be discarded before re-fetching the unchanged exact remote input.
+    """
+    path = Path(path)
+    if compression_requested():
+        raise SnapshotStorageError("conflicting gzip and chunk writer requests")
+    if path.exists():
+        read_snapshot_bytes(path)  # reject corrupt/partial previous state
+    envelope, pieces = prepare_chunked_copy(raw)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    for name, body in sorted(pieces.items()):
+        _replace_exact(path.parent / name, body)
+    _replace_exact(path, envelope)
+    if read_snapshot_bytes(path) != raw:
+        raise SnapshotStorageError("post-write chunked snapshot mismatch")
+    return {"format": CHUNK_FORMAT, "raw_bytes": len(raw),
+            "raw_sha256": _sha(raw), "part_count": len(pieces)}
+
 def write_snapshot_bytes(path: str | Path, raw: bytes,
                          *, force_compressed: bool = False) -> dict:
     """Preserve raw format by default or a validated compressed format.
@@ -265,6 +313,10 @@ def write_snapshot_bytes(path: str | Path, raw: bytes,
     if not isinstance(raw, bytes):
         raise SnapshotStorageError("snapshot writer requires bytes")
     _parse_object(raw)
+    if chunking_requested() or existing_is_chunked(path):
+        if force_compressed:
+            raise SnapshotStorageError("conflicting chunk and forced gzip format")
+        return write_chunked_snapshot_bytes(path, raw)
     packed_mode = existing_is_compressed(path) or force_compressed
     path.parent.mkdir(parents=True, exist_ok=True)
     if not packed_mode:

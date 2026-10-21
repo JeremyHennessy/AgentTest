@@ -11,7 +11,8 @@ from .agenda import ensure_agenda_state, initial_agenda_state
 from .objective_identity import ensure_objective_identity
 from .planning_lab import initial_planning_lab_state
 from .snapshot_storage import (read_snapshot_bytes, compression_requested,
-                               existing_is_compressed, write_snapshot_bytes)
+                               existing_is_compressed, write_snapshot_bytes,
+                               chunking_requested, existing_is_chunked)
 
 SCHEMA_VERSION = 25
 
@@ -301,6 +302,10 @@ class StateStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         state = migrate_state(state)
         state["updated_at"] = utc_now()
+        if chunking_requested() or existing_is_chunked(self.path):
+            raw = (json.dumps(state, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8")
+            write_snapshot_bytes(self.path, raw)
+            return
         if compression_requested() or existing_is_compressed(self.path):
             # Format-preserving opt-in writer. No compressed format is produced
             # in the original growth lane without explicit workflow enablement.
