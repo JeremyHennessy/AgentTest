@@ -81,7 +81,7 @@ async function loadWorld(){
   set('world-status','Resolving one exact original-Ora state commit…');
   const ref=await getJson(API+'/git/ref/heads/autonomous/growth'),pinned=ref?.object?.sha;
   if(!isSha(pinned))throw new Error('Original state ref did not resolve to a commit.');
-  const state=normalizeSnapshot(await getJson(RAW+'/'+pinned+'/state/organism.json',{large:true,onProgress:n=>set('world-status','Reading pinned state: '+(n/1048576).toFixed(1)+' MiB…')}));
+  const state=normalizeSnapshot(await OraSnapshotReader.resolve(RAW+'/'+pinned+'/state',await getJson(RAW+'/'+pinned+'/state/organism.json',{large:true,onProgress:n=>set('world-status','Reading pinned state: '+(n/1048576).toFixed(1)+' MiB…')}),n=>set('world-status','Reading pinned state: '+(n/1048576).toFixed(1)+' MiB…')));
   const lab=state.planning_lab,rows=lab.transition_observations.filter(r=>r?.world_version===lab.world_version&&pos(r.before)&&pos(r.after)).slice(-24);
   let trail=[];for(const row of rows){if(trail.length&&!same(trail[trail.length-1],row.before))trail=[];if(!trail.length)trail.push(row.before);trail.push(row.after);}
   if(!trail.length||!same(trail[trail.length-1],lab.position))trail=[lab.position];

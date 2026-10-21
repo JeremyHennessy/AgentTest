@@ -10,6 +10,7 @@ on:
       - legacy.html
       - observer.css
       - observer.js
+      - snapshot-reader.js
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -38,18 +39,19 @@ jobs:
         run: |
           mkdir -p _site
           # Branch-source Pages and Actions Pages must serve the same homepage.
-          test "$(git rev-parse HEAD:legacy.html)" = 'f72df3ce6ec3e5be24eadb24764ba1864acc4e03'
+          test "$(git rev-parse HEAD:legacy.html)" = '954f3152ce0c278655defd06e9256019b9772aa1'
           cmp index.html observer.html
           cp index.html _site/index.html
           cp observer.html _site/observer.html
-          cp observer.css observer.js _site/
+          cp observer.css observer.js snapshot-reader.js _site/
           cp legacy.html _site/legacy.html
           cmp index.html _site/index.html
           cmp observer.html _site/observer.html
           cmp legacy.html _site/legacy.html
           cmp observer.css _site/observer.css
           cmp observer.js _site/observer.js
-          sha256sum _site/index.html _site/observer.css _site/observer.js _site/legacy.html
+          cmp snapshot-reader.js _site/snapshot-reader.js
+          sha256sum _site/index.html _site/observer.css _site/observer.js _site/snapshot-reader.js _site/legacy.html
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
