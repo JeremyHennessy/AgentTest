@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+from agenttest.snapshot_storage import read_snapshot_bytes
+
 from agenttest.semantic import question_has_active_experiment_path
 
 
@@ -168,7 +170,7 @@ def main() -> int:
     parser.add_argument("--state", default="state/organism.json")
     args = parser.parse_args()
 
-    state = json.loads(Path(args.state).read_text(encoding="utf-8"))
+    state = json.loads(read_snapshot_bytes(Path(args.state)))
     result = evaluate(state)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["ok"] else 1
