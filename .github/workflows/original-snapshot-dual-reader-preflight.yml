@@ -4,10 +4,11 @@ name: original-snapshot-dual-reader-real-copy-preflight
 on:
   push:
     branches:
-      - fix/original-snapshot-writer-preview-20261020
+      - fix/original-snapshot-chunk-reader-20261020
     paths:
       - 'src/agenttest/snapshot_storage.py'
       - 'tests/test_snapshot_storage.py'
+      - 'tests/test_snapshot_chunk_format.py'
       - '.github/workflows/original-snapshot-dual-reader-preflight.yml'
 
 permissions:
@@ -99,4 +100,29 @@ jobs:
           if subprocess.check_output(["git","-C",str(root/"original-growth"),"status","--porcelain"]).strip(): raise SystemExit("growth worktree modified")
           restored=read_snapshot_bytes(target)
           print(json.dumps({"scope":"real_original_copy","source_cycle":current_cycle,"unchanged_source_sha256":before,"restored_sha256":hashlib.sha256(restored).hexdigest(),"packed_file":manifest["gzip_file"],"packed_bytes":manifest["gzip_bytes"],"original_writes":0,"live_cutover":False},sort_keys=True))
+          PY
+
+      - name: Verify 104 MiB authentic original bytes through chunk reader without publishing
+        shell: bash
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python -B - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+          from agenttest.snapshot_storage import prepare_chunked_copy, read_snapshot_bytes
+          root=pathlib.Path(os.environ["RUNNER_TEMP"])
+          growth=root/"original-growth"
+          raw=(growth/"state"/"organism.json").read_bytes()
+          head=subprocess.check_output(["git","-C",str(growth),"rev-parse","HEAD"],text=True).strip()
+          if head!="584e861165fb65639f1eea0ac165f3cae85d5e91": raise SystemExit("growth source moved; no publication")
+          envelope,parts=prepare_chunked_copy(raw)
+          target=root/"chunk-reader-preview"
+          target.mkdir()
+          (target/"organism.json").write_bytes(envelope)
+          for name,payload in parts.items():
+              (target/name).write_bytes(payload)
+          if read_snapshot_bytes(target/"organism.json")!=raw: raise SystemExit("whole original bytes not reconstructed")
+          if subprocess.check_output(["git","-C",str(growth),"status","--porcelain"]).strip(): raise SystemExit("original copy modified")
+          print(json.dumps({"status":"READ_ONLY_ORIGINAL_CHUNK_PARITY","input_commit":head,"cycle":json.loads(raw)["cycles"],"original_sha256":hashlib.sha256(raw).hexdigest(),"part_count":len(parts),"largest_part":max(map(len,parts.values())),"growth_writes":0,"live_cutover":False},sort_keys=True))
           PY

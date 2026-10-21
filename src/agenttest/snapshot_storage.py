@@ -15,6 +15,9 @@ import re
 import stat
 
 FORMAT = "ora-original-gzip-v1"
+CHUNK_FORMAT = "ora-original-raw-chunks-v1"
+CHUNK_BYTES = 32 * 1024 * 1024
+CHUNK_NAME = re.compile(r"snapshot-part-([0-9]{6})\.bin\Z")
 MAX_RAW = 512 * 1024 * 1024
 MAX_PACKED = 96 * 1024 * 1024
 BLOCK = 1024 * 1024
@@ -75,6 +78,70 @@ def _check_envelope(obj: dict) -> None:
         raise SnapshotStorageError("invalid snapshot cycle")
 
 
+
+def prepare_chunked_copy(raw: bytes) -> tuple[bytes, dict[str, bytes]]:
+    """Pure deterministic split of *all original bytes*; no state edits or writes."""
+    if not isinstance(raw, bytes) or not 0 < len(raw) <= MAX_RAW:
+        raise SnapshotStorageError("invalid raw chunk source length")
+    state = _parse_object(raw)
+    if type(state.get("cycles")) is not int or state["cycles"] < 0:
+        raise SnapshotStorageError("chunk source cycle invalid")
+    pieces = {}
+    entries = []
+    for index, offset in enumerate(range(0, len(raw), CHUNK_BYTES)):
+        name = f"snapshot-part-{index:06d}.bin"
+        piece = raw[offset:offset + CHUNK_BYTES]
+        entries.append({"name": name, "bytes": len(piece), "sha256": _sha(piece)})
+        pieces[name] = piece
+    manifest = {
+        "format": CHUNK_FORMAT, "raw_bytes": len(raw), "raw_sha256": _sha(raw),
+        "cycle": state["cycles"], "chunk_bytes": CHUNK_BYTES, "parts": entries
+    }
+    return (json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n").encode(), pieces
+
+
+def _read_chunked_snapshot(path: Path, manifest: dict) -> bytes:
+    """Reject incomplete generations rather than mixing old and new parts."""
+    required = {"format", "raw_bytes", "raw_sha256", "cycle", "chunk_bytes", "parts"}
+    if set(manifest) != required or manifest["format"] != CHUNK_FORMAT:
+        raise SnapshotStorageError("unknown chunk manifest")
+    size = manifest["raw_bytes"]
+    if type(size) is not int or not 0 < size <= MAX_RAW:
+        raise SnapshotStorageError("invalid chunk original length")
+    if type(manifest["chunk_bytes"]) is not int or manifest["chunk_bytes"] != CHUNK_BYTES:
+        raise SnapshotStorageError("wrong chunking contract")
+    if type(manifest["cycle"]) is not int or manifest["cycle"] < 0:
+        raise SnapshotStorageError("invalid chunk cycle")
+    if type(manifest["raw_sha256"]) is not str or not HEX.fullmatch(manifest["raw_sha256"]):
+        raise SnapshotStorageError("invalid chunk full hash")
+    parts = manifest["parts"]
+    expected = (size + CHUNK_BYTES - 1) // CHUNK_BYTES
+    if not isinstance(parts, list) or len(parts) != expected:
+        raise SnapshotStorageError("missing or excess chunk entries")
+    output = bytearray()
+    for index, entry in enumerate(parts):
+        if not isinstance(entry, dict) or set(entry) != {"name", "bytes", "sha256"}:
+            raise SnapshotStorageError("invalid chunk entry")
+        name = entry["name"]
+        if type(name) is not str or not CHUNK_NAME.fullmatch(name) or name != f"snapshot-part-{index:06d}.bin":
+            raise SnapshotStorageError("invalid chunk name or order")
+        length = CHUNK_BYTES if index + 1 < len(parts) else size - index * CHUNK_BYTES
+        if type(entry["bytes"]) is not int or entry["bytes"] != length:
+            raise SnapshotStorageError("invalid chunk size claim")
+        if type(entry["sha256"]) is not str or not HEX.fullmatch(entry["sha256"]):
+            raise SnapshotStorageError("invalid chunk hash claim")
+        piece = _read_regular(path.parent / name, CHUNK_BYTES)
+        if len(piece) != length or _sha(piece) != entry["sha256"]:
+            raise SnapshotStorageError("chunk data mismatch")
+        output.extend(piece)
+    restored = bytes(output)
+    if len(restored) != size or _sha(restored) != manifest["raw_sha256"]:
+        raise SnapshotStorageError("full chunked snapshot mismatch")
+    state = _parse_object(restored)
+    if type(state.get("cycles")) is not int or state["cycles"] != manifest["cycle"]:
+        raise SnapshotStorageError("chunk restored cycle mismatch")
+    return restored
+
 def read_snapshot_bytes(path: str | Path) -> bytes:
     """Read exact raw JSON bytes; never fall back to an older snapshot."""
     path = Path(path)
@@ -82,6 +149,8 @@ def read_snapshot_bytes(path: str | Path) -> bytes:
     obj = _parse_object(raw)
     if "format" not in obj:
         return raw
+    if obj["format"] == CHUNK_FORMAT:
+        return _read_chunked_snapshot(path, obj)
     _check_envelope(obj)
     packed = _read_regular(path.parent / obj["gzip_file"], MAX_PACKED)
     if len(packed) != obj["gzip_bytes"] or _sha(packed) != obj["gzip_sha256"]:
