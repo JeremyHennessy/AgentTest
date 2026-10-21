@@ -356,6 +356,7 @@ details{margin-top:15px;border:1px solid var(--line);border-radius:14px;backgrou
 <footer><span><a href="https://github.com/JeremyHennessy/AgentTest" target="_blank">Repository</a></span><span><a href="https://github.com/JeremyHennessy/AgentTest/tree/autonomous/growth" target="_blank">Persistent state</a></span><span><a href="https://github.com/JeremyHennessy/AgentTest/pull/4" target="_blank">Growth journal</a></span><span id="refreshFoot">Waiting for refresh…</span></footer>
 </main>
 
+<script src="snapshot-reader.js"></script>
 <script>
 const ORGANISM_SOURCE="autonomous/growth/state/organism.json";
 const STATE_SOURCE="autonomous/growth/state/last_interaction.json";
@@ -801,7 +802,7 @@ async function load(){
    fetch(base+"/phase42_resumption_opportunities.json",{cache:"no-store"})
   ]);
   if(!r[0].ok||!r[1].ok)throw new Error("immutable state fetch failed");
-  const d=await Promise.all([r[0].json(),r[1].json(),r[2].ok?r[2].json():Promise.resolve(null)]);
+  const d=await Promise.all([r[0].json().then(s=>OraSnapshotReader.resolve(base,s)),r[1].json(),r[2].ok?r[2].json():Promise.resolve(null)]);
   lastLoadedSha=sha;
   render(d[0],d[1],d[2])
  }catch(e){

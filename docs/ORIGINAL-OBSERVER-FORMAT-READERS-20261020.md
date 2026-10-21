@@ -1,0 +1,7 @@
+# Ora Observer read-only format support — no visual redesign
+
+Main source `e53c549f6696723c8127aa9891467a43450885e2`. Immutable original-state loader uses the **exact SHA-pinned GitHub raw path** for raw JSON, stable gzip, or stable 32MiB chunks. It checks declared size, cycles, part hashes and full reconstructed SHA256 in-browser before rendering. No POST, new authority, subscription, memory truncation or hidden fallback.
+
+Only these presentation-path changes are permitted: a new separate read-only script, insertion of its script reference in the two byte-identical Observer homepages and legacy console, and replacement of their raw-only snapshot-deserialization calls with a format resolver. Observer CSS and all legacy HTML/CSS content before the original inline script remain **byte-identical** to parent. No position, card, color, typography, interaction or label changes. Raw-format source behavior is unchanged. Unsupported browsers fail visibly rather than displaying fabricated state. Tests cover correct raw/gzip/chunk decoding, source pin, tamper and unsupported formats, and legacy/observer static fidelity.
+
+The Pages workflow must package `snapshot-reader.js` and update the legacy blob guard to the new exact script-only blob. New format **not yet deployed in original world**. Before this can be used as evidence for recovery, visually compare actual live GitHub Pages at desktop/mobile, test large authentic 104MiB chunk loading and ensure pending-heartbeat recovery is verified separately.
