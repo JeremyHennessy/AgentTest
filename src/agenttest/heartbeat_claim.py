@@ -15,6 +15,7 @@ import subprocess
 
 from .current_world_investigation import execution_hash
 from .journal_tail_rotation import MANIFEST, logical_digest, logical_lines
+from .snapshot_storage import read_snapshot_bytes
 from .grounded_policy.primitives import Conflict, canonical, digest, label, strict_json
 
 VERSION = "current-world-heartbeat-claim-v1"
@@ -26,7 +27,7 @@ DEFAULT_PAYLOAD = {"mode": "current_world_investigation", "planning_lab": True,
 
 
 def _read(path: Path) -> dict:
-    value = strict_json(path.read_bytes())
+    value = strict_json(read_snapshot_bytes(path))
     if not isinstance(value, dict):
         raise Conflict("invalid_organism_object")
     return value
