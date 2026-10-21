@@ -4,7 +4,7 @@ name: original-snapshot-dual-reader-real-copy-preflight
 on:
   push:
     branches:
-      - fix/original-snapshot-readers-20261020
+      - fix/original-snapshot-writer-preview-20261020
     paths:
       - 'src/agenttest/snapshot_storage.py'
       - 'tests/test_snapshot_storage.py'
@@ -64,4 +64,39 @@ jobs:
           if subprocess.check_output(["git","-C",str(growth),"status","--porcelain"]).strip():
               raise SystemExit("original worktree was modified")
           print(json.dumps({"status":"READ_ONLY_EXACT_ROUNDTRIP","growth_head":subprocess.check_output(["git","-C",str(growth),"rev-parse","HEAD"],text=True).strip(),"candidate_head":os.environ["GITHUB_SHA"],"original_bytes":len(raw),"compressed_bytes":len(packed),"raw_sha256":hashlib.sha256(raw).hexdigest(),"original_actions":0,"history_writes":0,"production_cutover":False},sort_keys=True))
+          PY
+
+      - name: Verify real original copy saves losslessly via stable packed writer
+        shell: bash
+        env:
+          PYTHONPATH: src
+          ORA_ORIGINAL_SNAPSHOT_GZIP: "1"
+        run: |
+          set -euo pipefail
+          python -B - <<'PY'
+          import hashlib, json, os, pathlib, shutil, subprocess
+          from agenttest.state import StateStore
+          from agenttest.snapshot_storage import read_snapshot_bytes
+          root=pathlib.Path(os.environ["RUNNER_TEMP"])
+          original=root/"original-growth"/"state"/"organism.json"
+          isolated=root/"writer-preview"
+          isolated.mkdir()
+          target=isolated/"organism.json"
+          shutil.copyfile(original,target)
+          before=hashlib.sha256(original.read_bytes()).hexdigest()
+          store=StateStore(target)
+          current=store.load()
+          current_cycle=current["cycles"]
+          current.pop("updated_at",None)
+          store.save(current)
+          manifest=json.loads(target.read_bytes())
+          if manifest.get("format")!="ora-original-gzip-v1": raise SystemExit("writer did not produce envelope")
+          after=store.load()
+          if after.pop("updated_at",None) is None: raise SystemExit("updated_at missing")
+          if current!=after: raise SystemExit("real original copy changed semantic data")
+          if after["cycles"]!=current_cycle: raise SystemExit("writer changed cycle")
+          if hashlib.sha256(original.read_bytes()).hexdigest()!=before: raise SystemExit("source was modified")
+          if subprocess.check_output(["git","-C",str(root/"original-growth"),"status","--porcelain"]).strip(): raise SystemExit("growth worktree modified")
+          restored=read_snapshot_bytes(target)
+          print(json.dumps({"scope":"real_original_copy","source_cycle":current_cycle,"unchanged_source_sha256":before,"restored_sha256":hashlib.sha256(restored).hexdigest(),"packed_file":manifest["gzip_file"],"packed_bytes":manifest["gzip_bytes"],"original_writes":0,"live_cutover":False},sort_keys=True))
           PY

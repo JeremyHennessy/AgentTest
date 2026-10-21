@@ -10,7 +10,8 @@ from .episode_identity import ensure_episode_sequence, infer_episode_sequence_cu
 from .agenda import ensure_agenda_state, initial_agenda_state
 from .objective_identity import ensure_objective_identity
 from .planning_lab import initial_planning_lab_state
-from .snapshot_storage import read_snapshot_bytes
+from .snapshot_storage import (read_snapshot_bytes, compression_requested,
+                               existing_is_compressed, write_snapshot_bytes)
 
 SCHEMA_VERSION = 25
 
@@ -300,6 +301,12 @@ class StateStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         state = migrate_state(state)
         state["updated_at"] = utc_now()
+        if compression_requested() or existing_is_compressed(self.path):
+            # Format-preserving opt-in writer. No compressed format is produced
+            # in the original growth lane without explicit workflow enablement.
+            raw = (json.dumps(state, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8")
+            write_snapshot_bytes(self.path, raw, force_compressed=True)
+            return
         tmp_path = self.path.with_suffix(self.path.suffix + ".tmp")
         with tmp_path.open("w", encoding="utf-8") as handle:
             json.dump(state, handle, separators=(",", ":"), sort_keys=True)

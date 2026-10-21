@@ -15,7 +15,7 @@ import subprocess
 
 from .current_world_investigation import execution_hash
 from .journal_tail_rotation import MANIFEST, logical_digest, logical_lines
-from .snapshot_storage import read_snapshot_bytes
+from .snapshot_storage import read_snapshot_bytes, write_snapshot_bytes, compression_requested
 from .grounded_policy.primitives import Conflict, canonical, digest, label, strict_json
 
 VERSION = "current-world-heartbeat-claim-v1"
@@ -34,9 +34,8 @@ def _read(path: Path) -> dict:
 
 
 def _write(path: Path, state: dict) -> None:
-    temp = path.with_suffix(path.suffix + ".claim.tmp")
-    temp.write_bytes(canonical(state) + b"\n")
-    temp.replace(path)
+    write_snapshot_bytes(path, canonical(state) + b"\n",
+                         force_compressed=compression_requested())
 
 
 def _journal_hash(path: Path) -> str:

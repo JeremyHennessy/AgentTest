@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from agenttest.diagnostic_attention import evaluate_blocked_attention
+from agenttest.snapshot_storage import read_snapshot_bytes, write_snapshot_bytes, compression_requested
 
 
 def _now() -> str:
@@ -30,7 +31,7 @@ def main() -> None:
     args = parser.parse_args()
 
     state_path = Path(args.state)
-    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state = json.loads(read_snapshot_bytes(state_path))
     result = evaluate_blocked_attention(state)
     if result.get("source_state_mutated"):
         raise SystemExit("blocked-attention diagnostic mutated source state")
@@ -84,7 +85,8 @@ def main() -> None:
         }
         diagnostics.append(existing)
         state["updated_at"] = _now()
-        _write_json_atomic(state_path, state)
+        write_snapshot_bytes(state_path, (json.dumps(state, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8"),
+                             force_compressed=compression_requested())
 
         journal_path = state_path.parent / "journal.jsonl"
         journal_path.parent.mkdir(parents=True, exist_ok=True)

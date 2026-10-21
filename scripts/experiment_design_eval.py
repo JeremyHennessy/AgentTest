@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from agenttest.diagnostic_experiments import evaluate_experiment_design
-from agenttest.snapshot_storage import read_snapshot_bytes
+from agenttest.snapshot_storage import read_snapshot_bytes, write_snapshot_bytes, compression_requested
 
 
 def _now() -> str:
@@ -83,7 +83,8 @@ def main() -> None:
         }
         diagnostics.append(existing)
         state["updated_at"] = _now()
-        _write_json_atomic(state_path, state)
+        write_snapshot_bytes(state_path, (json.dumps(state, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8"),
+                             force_compressed=compression_requested())
 
         journal_path = state_path.parent / "journal.jsonl"
         journal_path.parent.mkdir(parents=True, exist_ok=True)

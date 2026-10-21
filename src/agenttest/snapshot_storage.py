@@ -139,3 +139,74 @@ def prepare_stable_compressed_copy(raw: bytes) -> tuple[bytes, str, bytes]:
     manifest["gzip_file"] = "snapshot-current.json.gz"
     encoded = (json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n").encode()
     return encoded, manifest["gzip_file"], packed
+
+# This writer is deliberately default-off for original production. The Git
+# workflow must still commit the packed payload and manifest together.
+STORAGE_ENV = "ORA_ORIGINAL_SNAPSHOT_GZIP"
+
+
+def compression_requested() -> bool:
+    setting = os.environ.get(STORAGE_ENV, "0")
+    if setting not in ("0", "1"):
+        raise SnapshotStorageError("unsupported snapshot write mode")
+    return setting == "1"
+
+
+def existing_is_compressed(path: str | Path) -> bool:
+    path = Path(path)
+    if not path.exists():
+        return False
+    existing = _read_regular(path, MAX_RAW)
+    obj = _parse_object(existing)
+    if "format" not in obj:
+        return False
+    _check_envelope(obj)
+    # Never overwrite a corrupt or mismatched previously committed snapshot.
+    read_snapshot_bytes(path)
+    return True
+
+
+def _replace_exact(path: Path, payload: bytes) -> None:
+    if path.is_symlink():
+        raise SnapshotStorageError("snapshot writer rejects symlinks")
+    temporary = path.with_name(path.name + ".tmp")
+    if temporary.exists() or temporary.is_symlink():
+        raise SnapshotStorageError("stale snapshot temporary file")
+    try:
+        with temporary.open("xb") as output:
+            output.write(payload)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path)
+    except OSError as exc:
+        raise SnapshotStorageError("snapshot write failed before Git publication") from exc
+
+
+def write_snapshot_bytes(path: str | Path, raw: bytes,
+                         *, force_compressed: bool = False) -> dict:
+    """Preserve raw format by default or a validated compressed format.
+
+    Git publication must atomically commit both state/organism.json and the
+    stable packed sibling in a *single expected-parent* growth commit.
+    A mid-write process failure can invalidate the local copy, never causing
+    a fallback to older data; discard that checkout and re-fetch the exact
+    remote parent. This helper does not push, checkpoint, or authorize cycles.
+    """
+    path = Path(path)
+    if not isinstance(raw, bytes):
+        raise SnapshotStorageError("snapshot writer requires bytes")
+    _parse_object(raw)
+    packed_mode = existing_is_compressed(path) or force_compressed
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not packed_mode:
+        _replace_exact(path, raw)
+        return {"format": "raw-json", "raw_bytes": len(raw)}
+    envelope, name, packed = prepare_stable_compressed_copy(raw)
+    # The order matters: a new manifest may never point to missing packed
+    # bytes. An interrupted stable overwrite fails checksum verification.
+    _replace_exact(path.parent / name, packed)
+    _replace_exact(path, envelope)
+    if read_snapshot_bytes(path) != raw:
+        raise SnapshotStorageError("post-write compressed state mismatch")
+    return {"format": FORMAT, "raw_bytes": len(raw), "gzip_bytes": len(packed),
+            "gzip_file": name, "raw_sha256": _sha(raw)}
