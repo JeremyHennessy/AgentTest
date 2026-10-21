@@ -4,7 +4,7 @@ name: original-snapshot-dual-reader-real-copy-preflight
 on:
   push:
     branches:
-      - fix/original-snapshot-chunk-reader-20261020
+      - fix/original-snapshot-chunk-writer-preview-20261020
     paths:
       - 'src/agenttest/snapshot_storage.py'
       - 'tests/test_snapshot_storage.py'
@@ -125,4 +125,40 @@ jobs:
           if read_snapshot_bytes(target/"organism.json")!=raw: raise SystemExit("whole original bytes not reconstructed")
           if subprocess.check_output(["git","-C",str(growth),"status","--porcelain"]).strip(): raise SystemExit("original copy modified")
           print(json.dumps({"status":"READ_ONLY_ORIGINAL_CHUNK_PARITY","input_commit":head,"cycle":json.loads(raw)["cycles"],"original_sha256":hashlib.sha256(raw).hexdigest(),"part_count":len(parts),"largest_part":max(map(len,parts.values())),"growth_writes":0,"live_cutover":False},sort_keys=True))
+          PY
+
+      - name: Test opt-in chunk writer with exact authentic original-state copy
+        shell: bash
+        env:
+          PYTHONPATH: src
+          ORA_ORIGINAL_SNAPSHOT_CHUNKS: "1"
+        run: |
+          set -euo pipefail
+          python -B - <<'PY'
+          import hashlib, json, os, pathlib, shutil, subprocess
+          from agenttest.snapshot_storage import read_snapshot_bytes,CHUNK_BYTES
+          from agenttest.state import StateStore
+          root=pathlib.Path(os.environ["RUNNER_TEMP"])
+          growth=root/"original-growth"
+          original=growth/"state"/"organism.json"
+          raw=original.read_bytes()
+          sha=hashlib.sha256(raw).hexdigest()
+          target=root/"chunk-writer-preview"
+          target.mkdir()
+          shutil.copyfile(original,target/"organism.json")
+          store=StateStore(target/"organism.json")
+          current=store.load()
+          cycle=current["cycles"]
+          store.save(current)
+          manifest=json.loads((target/"organism.json").read_bytes())
+          restored=store.load()
+          if restored.pop("updated_at",None) is None: raise SystemExit("updated_at missing")
+          current.pop("updated_at",None)
+          if restored!=current or cycle!=restored["cycles"]: raise SystemExit("original data mutated by writer")
+          if manifest["format"]!="ora-original-raw-chunks-v1": raise SystemExit("chunk writer not used")
+          if len(manifest["parts"])!=4: raise SystemExit("unexpected real original part count")
+          if any(x["bytes"]>CHUNK_BYTES for x in manifest["parts"]): raise SystemExit("oversized physical Git blob")
+          if hashlib.sha256(original.read_bytes()).hexdigest()!=sha: raise SystemExit("original growth source changed")
+          if subprocess.check_output(["git","-C",str(growth),"status","--porcelain"]).strip(): raise SystemExit("growth worktree modified")
+          print(json.dumps({"status":"EXACT_ORIGINAL_COPIED_CHUNK_WRITER","source_cycle":cycle,"source_sha256":sha,"part_count":len(manifest["parts"]),"new_original_heartbeat":False,"original_branch_writes":0},sort_keys=True))
           PY

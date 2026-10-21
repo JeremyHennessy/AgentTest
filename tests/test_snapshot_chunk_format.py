@@ -87,3 +87,67 @@ class ChunkedReaderTests(TestCase):
         self.write()
         with self.assertRaises(storage.SnapshotStorageError):
             storage.write_snapshot_bytes(self.pointer,self.original)
+
+    def test_default_raw_remains_unchanged(self):
+        import os
+        from unittest.mock import patch as mockpatch
+        from agenttest.state import StateStore,initial_state
+        with mockpatch.dict(os.environ,{"ORA_ORIGINAL_SNAPSHOT_CHUNKS":"0","ORA_ORIGINAL_SNAPSHOT_GZIP":"0"}):
+            StateStore(self.pointer).save(initial_state())
+        self.assertNotIn("format",json.loads(self.pointer.read_bytes()))
+        self.assertFalse(list(self.dir.glob("snapshot-part-*.bin")))
+
+    def test_explicit_chunk_save_and_implicit_next_generation(self):
+        import os
+        from unittest.mock import patch as mockpatch
+        from agenttest.state import StateStore,initial_state
+        self.pointer.write_bytes(self.original)
+        store=StateStore(self.pointer)
+        state=initial_state()
+        state["cycles"]=9904
+        with mockpatch.object(storage,"CHUNK_BYTES",128), mockpatch.dict(os.environ,{"ORA_ORIGINAL_SNAPSHOT_CHUNKS":"1"}):
+            store.save(state)
+        old={p.name for p in self.dir.glob("snapshot-part-*.bin")}
+        self.assertGreater(len(old),1)
+        with mockpatch.object(storage,"CHUNK_BYTES",128), mockpatch.dict(os.environ,{"ORA_ORIGINAL_SNAPSHOT_CHUNKS":"0"}):
+            next_state=store.load()
+            next_state["cycles"]=9905
+            next_state["test_continuity"]="preserved"
+            store.save(next_state)
+            after=store.load()
+        self.assertEqual(after["cycles"],9905)
+        self.assertEqual(after["test_continuity"],"preserved")
+        self.assertEqual({p.name for p in self.dir.glob("snapshot-part-*.bin")},old)
+        self.assertEqual(json.loads(self.pointer.read_bytes())["format"],storage.CHUNK_FORMAT)
+
+    def test_corrupt_chunk_refused_without_rewriting(self):
+        import os
+        from unittest.mock import patch as mockpatch
+        from agenttest.state import StateStore,initial_state
+        self.write()
+        manifest_before=self.pointer.read_bytes()
+        piece=next(self.dir.glob("snapshot-part-*.bin"))
+        piece.write_bytes(piece.read_bytes()[:-1])
+        with mockpatch.object(storage,"CHUNK_BYTES",128), mockpatch.dict(os.environ,{"ORA_ORIGINAL_SNAPSHOT_CHUNKS":"0"}):
+            with self.assertRaises(storage.SnapshotStorageError):
+                StateStore(self.pointer).save(initial_state())
+        self.assertEqual(self.pointer.read_bytes(),manifest_before)
+
+    def test_invalid_chunk_writer_config_rejected_without_writes(self):
+        import os
+        from unittest.mock import patch as mockpatch
+        from agenttest.state import StateStore,initial_state
+        with mockpatch.dict(os.environ,{"ORA_ORIGINAL_SNAPSHOT_CHUNKS":"banana"}):
+            with self.assertRaises(storage.SnapshotStorageError):
+                StateStore(self.pointer).save(initial_state())
+        self.assertFalse(self.pointer.exists())
+
+    def test_conflicting_compression_request_fails_before_write(self):
+        import os
+        from unittest.mock import patch as mockpatch
+        from agenttest.state import StateStore,initial_state
+        state=initial_state()
+        with mockpatch.dict(os.environ,{"ORA_ORIGINAL_SNAPSHOT_CHUNKS":"1","ORA_ORIGINAL_SNAPSHOT_GZIP":"1"}):
+            with self.assertRaises(storage.SnapshotStorageError):
+                StateStore(self.pointer).save(state)
+        self.assertFalse(self.pointer.exists())
