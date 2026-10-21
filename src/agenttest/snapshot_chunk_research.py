@@ -14,8 +14,8 @@ import stat
 FORMAT = "ora-original-raw-chunks-research-v1"
 CHUNK_BYTES = 32 * 1024 * 1024
 MAX_RAW = 512 * 1024 * 1024
-NAME = re.compile(r"snapshot-part-([0-9]{6})\\.bin\\Z")
-HEX = re.compile(r"[0-9a-f]{64}\\Z")
+NAME = re.compile(r"snapshot-part-([0-9]{6})\.bin\Z")
+HEX = re.compile(r"[0-9a-f]{64}\Z")
 
 
 class ChunkStudyError(ValueError):
