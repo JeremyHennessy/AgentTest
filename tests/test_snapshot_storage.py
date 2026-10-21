@@ -1,6 +1,8 @@
 """Preservation tests for default-off original snapshot dual-format reader."""
 import hashlib
 import json
+import os
+from unittest.mock import patch
 from pathlib import Path
 import tempfile
 import unittest
@@ -140,6 +142,53 @@ class SnapshotStorageTests(unittest.TestCase):
         prepare_compressed_copy(self.state.read_bytes())
         self.assertEqual(self.state.read_bytes(), self.raw)
         self.assertEqual([p.name for p in self.root.iterdir()], ["organism.json"])
+
+
+    def test_default_state_store_save_remains_raw_and_exact(self):
+        state=initial_state()
+        state["cycles"]=18
+        with patch.dict(os.environ, {"ORA_ORIGINAL_SNAPSHOT_GZIP":"0"}):
+            StateStore(self.state).save(state)
+        raw=self.state.read_bytes()
+        self.assertEqual(json.loads(raw)["cycles"],18)
+        self.assertEqual(raw, (json.dumps(json.loads(raw),separators=(",",":"),sort_keys=True) + "\n").encode())
+        self.assertFalse((self.root/"snapshot-current.json.gz").exists())
+
+    def test_explicit_pack_then_implicit_stable_repack(self):
+        state=initial_state()
+        state["cycles"]=19
+        store=StateStore(self.state)
+        with patch.dict(os.environ, {"ORA_ORIGINAL_SNAPSHOT_GZIP":"1"}):
+            store.save(state)
+        first=json.loads(self.state.read_bytes())
+        self.assertEqual(first["format"],"ora-original-gzip-v1")
+        self.assertEqual(first["gzip_file"],"snapshot-current.json.gz")
+        after=store.load()
+        self.assertEqual(after["cycles"],19)
+        after["cycles"]=20
+        after["storage_probe_marker"]="retained-new"
+        with patch.dict(os.environ, {"ORA_ORIGINAL_SNAPSHOT_GZIP":"0"}):
+            store.save(after)
+        self.assertEqual(store.load()["storage_probe_marker"],"retained-new")
+        self.assertEqual(store.load()["cycles"],20)
+        self.assertEqual([p.name for p in self.root.glob("snapshot*.json.gz")],["snapshot-current.json.gz"])
+
+    def test_corrupt_existing_envelope_never_overwritten_by_save(self):
+        envelope,name,packed=prepare_stable_compressed_copy(self.raw)
+        self.state.write_bytes(envelope)
+        (self.root/name).write_bytes(packed[:-2])
+        before=self.state.read_bytes()
+        with self.assertRaises(SnapshotStorageError):
+            StateStore(self.state).save(initial_state())
+        self.assertEqual(self.state.read_bytes(),before)
+
+    def test_invalid_requested_mode_rejected_without_state_mutation(self):
+        state=initial_state()
+        with patch.dict(os.environ, {"ORA_ORIGINAL_SNAPSHOT_GZIP":"invalid"}):
+            with self.assertRaises(SnapshotStorageError):
+                StateStore(self.state).save(state)
+        self.assertFalse(self.state.exists())
+
 
 
 if __name__ == "__main__":
